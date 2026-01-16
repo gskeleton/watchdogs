@@ -21,7 +21,6 @@
 #include  <signal.h>
 
 /* Project-specific header includes for modular functionality */
-#include  "extra.h"      /* Additional utility functions */
 #include  "endpoint.h"   /* Network/communication endpoint handling */
 #include  "utils.h"      /* General utility functions */
 #include  "units.h"      /* Unit-related functionality */
@@ -39,6 +38,7 @@
  * Returns: void
  */
 void unit_restore(void) {
+
         /* Create .watchdogs directory if it doesn't exist */
         if (dir_exists(".watchdogs") == 0)
             MKDIR(".watchdogs");
@@ -51,8 +51,8 @@ void unit_restore(void) {
         signal(SIGINT, SIG_DFL);
 
         /* Initialize system components in specific order */
-        dog_sef_restore();           /* Restore system error handling */
-        dog_toml_configs();          /* Load TOML configuration files */
+        dog_sef_path_revert();           /* Restore system error handling */
+        dog_configure_toml();          /* Load TOML configuration files */
         dog_stop_server_tasks();     /* Stop any running server tasks */
         dog_history_init();          /* Initialize command history */
         
@@ -165,8 +165,8 @@ void _unit_debugger(int debug_hard,
                     dogconfig.dog_os_type, dogconfig.dog_ptr_samp,
                     dogconfig.dog_ptr_omp, dogconfig.dog_is_samp, dogconfig.dog_is_omp,
                     dogconfig.dog_toml_proj_input, dogconfig.dog_toml_proj_output,
-                    dogconfig.dog_toml_binary, dogconfig.dog_toml_config, dogconfig.dog_toml_logs,
-                    dogconfig.dog_toml_github_tokens, dogconfig.dog_toml_aio_opt, dogconfig.dog_toml_packages);
+                    dogconfig.dog_toml_server_binary, dogconfig.dog_toml_server_config, dogconfig.dog_toml_server_logs,
+                    dogconfig.dog_toml_github_tokens, dogconfig.dog_toml_all_flags, dogconfig.dog_toml_packages);
                     
             /* Additional system information for detailed debugging */
             printf("STDC: %d\n", __STDC__);                     /* C standard compliance */
@@ -265,7 +265,7 @@ void _unit_debugger(int debug_hard,
                     dogconfig.dog_os_type, dogconfig.dog_ptr_samp,
                     dogconfig.dog_ptr_omp, dogconfig.dog_is_samp, dogconfig.dog_is_omp,
                     dogconfig.dog_toml_proj_input, dogconfig.dog_toml_proj_output,
-                    dogconfig.dog_toml_binary, dogconfig.dog_toml_config, dogconfig.dog_toml_logs,
+                    dogconfig.dog_toml_server_binary, dogconfig.dog_toml_server_config, dogconfig.dog_toml_server_logs,
                     dogconfig.dog_toml_github_tokens);
         }
 

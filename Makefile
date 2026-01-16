@@ -25,7 +25,6 @@ LDFLAGS = -fsanitize=address,undefined -rdynamic
 endif
 
 SRCS = \
-	source/extra.c \
 	source/debug.c \
 	source/curl.c \
 	source/units.c \
@@ -167,7 +166,7 @@ termux:
 
 windows: OUTPUT = watchdogs.win
 windows:
-	$(CC) -lshell32 -D_POSIX_C_SOURCE=200809L $(CFLAGS) $(SRCS) -D__WINDOWS32__ -D__W_VERSION__=\"$(FULL_VERSION)\" -o $(OUTPUT) $(LDFLAGS)
+	$(CC) -lshell32 -D_POSIX_C_SOURCE=200809L $(CFLAGS) $(SRCS) -D__WINDOWS_NT__ -D__W_VERSION__=\"$(FULL_VERSION)\" -o $(OUTPUT) $(LDFLAGS)
 
 debug: DEBUG_MODE=1
 debug: OUTPUT = watchdogs.debug
@@ -182,7 +181,7 @@ termux-debug:
 windows-debug: DEBUG_MODE=1
 windows-debug: OUTPUT = watchdogs.debug.win
 windows-debug:
-	$(CC) -lshell32 -D_POSIX_C_SOURCE=200809L $(CFLAGS) -g -D_DBG_PRINT -D__WINDOWS32__ -D__W_VERSION__=\"$(FULL_VERSION)\" $(SRCS) -o $(OUTPUT) $(LDFLAGS)
+	$(CC) -lshell32 -D_POSIX_C_SOURCE=200809L $(CFLAGS) -g -D_DBG_PRINT -D__WINDOWS_NT__ -D__W_VERSION__=\"$(FULL_VERSION)\" $(SRCS) -o $(OUTPUT) $(LDFLAGS)
 
 clean:
 	rm -rf $(OBJS) $(OUTPUT) watchdogs watchdogs.win watchdogs.tmux \

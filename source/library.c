@@ -6,12 +6,10 @@
 #include  <stdio.h>
 #include  <stdlib.h>
 #include  <string.h>
-#include  <stdbool.h>
 #include  <sys/stat.h>
 #include  <unistd.h>
 #include  <stddef.h>
 
-#include  "extra.h"
 #include  "utils.h"
 #include  "units.h"
 #include  "archive.h"

@@ -14,7 +14,6 @@
 #include  <sys/stat.h>
 #include  <curl/curl.h>
 
-#include  "extra.h"
 #include  "utils.h"
 #include  "curl.h"
 #include  "archive.h"
@@ -24,7 +23,6 @@
 #include  "replicate.h"
 
 const  char		*opr = NULL;
-static char		 command[DOG_MAX_PATH * 4];
 static char		*tag;
 static char		*path;
 static char		*path_slash;
@@ -377,8 +375,13 @@ package_gh_release_assets(const char *user, const char *repo, const char *tag,
 
 		url_len = url_end - p;
 		out_urls[url_count] = dog_malloc(url_len + 1);
-		if (!out_urls[url_count])
-			unit_ret_main(NULL);
+		if (!out_urls[url_count]) {
+		    for (int i = 0; i < url_count; ++i) {
+		        dog_free(out_urls[i]);
+		    }
+		    dog_free(json_data);
+		    return 0;
+		}
 
 		strncpy(out_urls[url_count], p, url_len);
 		out_urls[url_count][url_len] = '\0';
@@ -663,12 +666,12 @@ package_try_parsing(const char *raw_file_path, const char *raw_json_path)
 	strncpy(res_convert_f_path, raw_file_path,
 	    sizeof(res_convert_f_path));
 	res_convert_f_path[sizeof(res_convert_f_path) - 1] = '\0';
-	path_sym_convert(res_convert_f_path);
+	path_sep_to_posix(res_convert_f_path);
 
 	strncpy(res_convert_json_path, raw_json_path,
 	    sizeof(res_convert_json_path));
 	res_convert_json_path[sizeof(res_convert_json_path) - 1] = '\0';
-	path_sym_convert(res_convert_json_path);
+	path_sep_to_posix(res_convert_json_path);
 
 	if (strfind(res_convert_json_path, "pawno", true) ||
 	    strfind(res_convert_json_path, "qawno", true))
@@ -695,7 +698,7 @@ package_implementation_samp_conf(const char *config_file, const char *fw_line,
 
 	temp_file = fopen(temp_path, "w");
 
-	if (dog_server_env() != 1)
+	if (fetch_server_env() != 1)
 		return;
 
 	if (dir_exists(".watchdogs") == REPLICATE_RATE_ZERO)
@@ -777,7 +780,7 @@ package_implementation_omp_conf(const char *config_name,
 	size_t	 file_read;
 	int	 p_exist;
 
-	if (dog_server_env() != 2)
+	if (fetch_server_env() != 2)
 		return;
 
 	pr_color(stdout, DOG_COL_GREEN,
@@ -1030,7 +1033,7 @@ package_add_include(const char *modes, char *package_name,
 static void
 package_include_prints(const char *package_include)
 {
-	toml_table_t	*dog_toml_config;
+	toml_table_t	*dog_toml_server_config;
 	FILE		*this_proc_file;
 	char		 dog_buffer_error[DOG_PATH_MAX],
 			 dependencies[DOG_PATH_MAX], _directive[DOG_MAX_PATH];
@@ -1039,17 +1042,17 @@ package_include_prints(const char *package_include)
 	static int	 k = 0;
 	static const char *expect_add;
 
-	package_n = try_get_filename(package_include);
+	package_n = fetch_filename(package_include);
 	snprintf(dependencies, sizeof(dependencies), "%s", package_n);
-	direct_bnames = try_get_basename(dependencies);
+	direct_bnames = fetch_basename(dependencies);
 
 	this_proc_file = fopen("watchdogs.toml", "r");
 	if (this_proc_file) {
-		dog_toml_config = toml_parse_file(this_proc_file,
+		dog_toml_server_config = toml_parse_file(this_proc_file,
 		    dog_buffer_error, sizeof(dog_buffer_error));
 		fclose(this_proc_file);
 
-		if (!dog_toml_config) {
+		if (!dog_toml_server_config) {
 			pr_error(stdout,
 			    "failed to parse the watchdogs.toml..: %s",
 			    dog_buffer_error);
@@ -1057,8 +1060,8 @@ package_include_prints(const char *package_include)
 			return;
 		}
 
-		toml_table_t *dog_compiler = toml_table_in(dog_toml_config,
-		    "compiler");
+		toml_table_t *dog_compiler = toml_table_in(dog_toml_server_config,
+		    TOML_TABLE_COMPILER);
 		if (dog_compiler) {
 			toml_datum_t toml_proj_i = toml_string_in(dog_compiler,
 			    "input");
@@ -1068,7 +1071,7 @@ package_include_prints(const char *package_include)
 				dog_free(toml_proj_i.u.s);
 			}
 		}
-		toml_free(dog_toml_config);
+		toml_free(dog_toml_server_config);
 	}
 
 	snprintf(_directive, sizeof(_directive), "#include <%s>", direct_bnames);
@@ -1099,9 +1102,9 @@ package_include_prints(const char *package_include)
 
 	expect_add = strdup(size_userinput);
 
-	if (dog_server_env() == 1) {
+	if (fetch_server_env() == 1) {
 		DENCY_ADD_INCLUDES(expect_add, _directive, "#include <a_samp>");
-	} else if (dog_server_env() == 2) {
+	} else if (fetch_server_env() == 2) {
 		DENCY_ADD_INCLUDES(expect_add, _directive, "#include <open.mp>");
 	} else {
 		DENCY_ADD_INCLUDES(expect_add, _directive, "#include <a_samp>");
@@ -1116,9 +1119,9 @@ dump_file_type(const char *dump_path, char *dump_pattern,
     char *basename_lwr;
     int i, found, rate_has_prefix;
 
-    dog_sef_restore();
+    dog_sef_path_revert();
 
-    found = dog_sef_fdir(dump_path, dump_pattern, dump_exclude);
+    found = dog_find_path(dump_path, dump_pattern, dump_exclude);
     ++fdir_counts;
 #if defined(_DBG_PRINT)
     println(stdout, "fdir_counts (%d): %d", fdir_counts, found);
@@ -1126,9 +1129,9 @@ dump_file_type(const char *dump_path, char *dump_pattern,
 
     if (found) {
         for (i = REPLICATE_RATE_ZERO; i < dogconfig.dog_sef_count; ++i) {
-            package_names = try_get_filename(
+            package_names = fetch_filename(
                 dogconfig.dog_sef_found_list[i]);
-            basename = try_get_basename(
+            basename = fetch_basename(
                 dogconfig.dog_sef_found_list[i]);
 
             basename_lwr = strdup(basename);
@@ -1179,7 +1182,7 @@ dump_file_type(const char *dump_path, char *dump_pattern,
                 snprintf(dir_part, sizeof(dir_part), "%s%s%s",
                          dump_loc, separator, dump_place);
                 if (dir_exists(dir_part) == REPLICATE_RATE_ZERO) {
-                    dog_mkdir(dir_part);
+                    dog_mkdir_recursive(dir_part);
                 }
             } else if (rate_has_prefix) {
                 snprintf(dest_path, sizeof(dest_path), "%s%s%s",
@@ -1192,7 +1195,7 @@ dump_file_type(const char *dump_path, char *dump_pattern,
                 snprintf(plugins_dir, sizeof(plugins_dir), "%s%s",
                          dump_loc, separator);
                 if (dir_exists(plugins_dir) == REPLICATE_RATE_ZERO) {
-                    dog_mkdir(plugins_dir);
+                    dog_mkdir_recursive(plugins_dir);
                 }
             }
 
@@ -1251,15 +1254,15 @@ dump_file_type(const char *dump_path, char *dump_pattern,
             if (dump_root == 1)
                 goto done;
 
-            if (dog_server_env() == 1 &&
-                strfind(dogconfig.dog_toml_config,
+            if (fetch_server_env() == 1 &&
+                strfind(dogconfig.dog_toml_server_config,
                 ".cfg", true))
-                S_ADD_PLUGIN(dogconfig.dog_toml_config,
+                S_ADD_PLUGIN(dogconfig.dog_toml_server_config,
                     "plugins", basename);
-            else if (dog_server_env() == 2 &&
-                strfind(dogconfig.dog_toml_config,
+            else if (fetch_server_env() == 2 &&
+                strfind(dogconfig.dog_toml_server_config,
                 ".json", true))
-                M_ADD_PLUGIN(dogconfig.dog_toml_config,
+                M_ADD_PLUGIN(dogconfig.dog_toml_server_config,
                     basename);
         }
     }
@@ -1319,8 +1322,8 @@ package_move_files(const char *package_dir, const char *package_loc)
     char *separator = "/";
 #endif
 
-    if (dog_server_env() == 1) {
-        if (dog_server_env() == 2) {
+    if (fetch_server_env() == 1) {
+        if (fetch_server_env() == 2) {
 #ifdef DOG_WINDOWS
             snprintf(includes, sizeof(includes), "qawno\\include");
 #else
@@ -1336,12 +1339,12 @@ package_move_files(const char *package_dir, const char *package_loc)
     println(stdout, "Full include path: %s", full_path);
 #endif
 
-    dog_sef_restore();
-    rate_found_include = dog_sef_fdir(full_path, "*.inc", NULL);
+    dog_sef_path_revert();
+    rate_found_include = dog_find_path(full_path, "*.inc", NULL);
 
     if (rate_found_include > 0) {
         for (i = REPLICATE_RATE_ZERO; i < dogconfig.dog_sef_count; ++i) {
-            packages = try_get_filename(dogconfig.dog_sef_found_list[i]);
+            packages = fetch_filename(dogconfig.dog_sef_found_list[i]);
             char dest_path[DOG_MAX_PATH + DOG_PATH_MAX];
 
             char include_dest[DOG_MAX_PATH];
@@ -1349,7 +1352,7 @@ package_move_files(const char *package_dir, const char *package_loc)
                      package_loc, separator, includes);
 
             if (dir_exists(include_dest) == REPLICATE_RATE_ZERO) {
-                dog_mkdir(include_dest);
+                dog_mkdir_recursive(include_dest);
             }
 
             snprintf(dest_path, sizeof(dest_path), "%s%s%s",
@@ -1393,7 +1396,7 @@ package_move_files(const char *package_dir, const char *package_loc)
                  package_loc, separator);
 
         if (dir_exists(plugins_dest) == REPLICATE_RATE_ZERO) {
-            dog_mkdir(plugins_dest);
+            dog_mkdir_recursive(plugins_dest);
         }
 
 #ifdef DOG_WINDOWS
@@ -1442,31 +1445,31 @@ dog_apply_depends(const char *depends_name, const char *depends_location)
 	println(stdout, "dency dir: %s", package_dir);
 #endif
 
-	if (dog_server_env() == 1) {
+	if (fetch_server_env() == 1) {
 		snprintf(size_depends_location, sizeof(size_depends_location),
 		    "%s/pawno/include", depends_location);
 		if (dir_exists(size_depends_location) == REPLICATE_RATE_ZERO)
-			dog_mkdir(size_depends_location);
+			dog_mkdir_recursive(size_depends_location);
 
 		snprintf(size_depends_location, sizeof(size_depends_location),
 		    "%s/plugins", depends_location);
 		if (dir_exists(size_depends_location) == REPLICATE_RATE_ZERO)
-			dog_mkdir(size_depends_location);
-	} else if (dog_server_env() == 2) {
+			dog_mkdir_recursive(size_depends_location);
+	} else if (fetch_server_env() == 2) {
 		snprintf(size_depends_location, sizeof(size_depends_location),
 		    "%s/qawno/include", depends_location);
 		if (dir_exists(size_depends_location) == REPLICATE_RATE_ZERO)
-			dog_mkdir(size_depends_location);
+			dog_mkdir_recursive(size_depends_location);
 
 		snprintf(size_depends_location, sizeof(size_depends_location),
 		    "%s/plugins", depends_location);
 		if (dir_exists(size_depends_location) == REPLICATE_RATE_ZERO)
-			dog_mkdir(size_depends_location);
+			dog_mkdir_recursive(size_depends_location);
 
 		snprintf(size_depends_location, sizeof(size_depends_location),
 		    "%s/components", depends_location);
 		if (dir_exists(size_depends_location) == REPLICATE_RATE_ZERO)
-			dog_mkdir(size_depends_location);
+			dog_mkdir_recursive(size_depends_location);
 	}
 
 	package_move_files(package_dir, depends_location);
@@ -1543,10 +1546,10 @@ dog_install_depends(const char *packages, const char *branch, const char *where)
 			}
 		}
 
-		if (strrchr(package_url, __PATH_CHR_SEP_LINUX) &&
-		    *(strrchr(package_url, __PATH_CHR_SEP_LINUX) + 1)) {
+		if (strrchr(package_url, _PATH_CHR_SEP_POSIX) &&
+		    *(strrchr(package_url, _PATH_CHR_SEP_POSIX) + 1)) {
 			snprintf(package_name, sizeof(package_name), "%s",
-			    strrchr(package_url, __PATH_CHR_SEP_LINUX) + 1);
+			    strrchr(package_url, _PATH_CHR_SEP_POSIX) + 1);
 
 			if (!strend(package_name, ".tar.gz", true) &&
 			    !strend(package_name, ".tar", true) &&
@@ -1575,7 +1578,9 @@ dog_install_depends(const char *packages, const char *branch, const char *where)
 			static char	*init_location = NULL;
 
 			if (!k) {
-				printf("\n.. LIST OF DIRECTORY\n");
+				printf("\n.. LIST OF DIRECTORY: %s", dog_procure_pwd());
+				fflush(stdout);
+				print("\n");
 
 				#ifdef DOG_LINUX
 				{
@@ -1635,7 +1640,7 @@ dog_install_depends(const char *packages, const char *branch, const char *where)
 					dog_free(locations);
 				} else {
 					if (dir_exists(locations) == 0)
-						dog_mkdir(locations);
+						dog_mkdir_recursive(locations);
 					init_location = strdup(locations);
 					dog_apply_depends(package_name,
 					    locations);
@@ -1647,7 +1652,7 @@ dog_install_depends(const char *packages, const char *branch, const char *where)
 			}
 		} else {
 			if (dir_exists(where) == 0)
-				dog_mkdir(where);
+				dog_mkdir_recursive(where);
 			dog_apply_depends(package_name, where);
 		}
 	}

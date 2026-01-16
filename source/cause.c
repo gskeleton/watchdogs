@@ -6,13 +6,11 @@
 #include  <stdio.h>
 #include  <stdlib.h>
 #include  <string.h>
-#include  <stdbool.h>
 #include  <unistd.h>
 #include  <limits.h>
 
 #include  "utils.h"
 #include  "units.h"
-#include  "extra.h"
 #include  "crypto.h"
 #include  "debug.h"
 #include  "cause.h"
@@ -62,7 +60,7 @@ static void compiler_detailed(const char *dog_output,int debug,
 {
     char outbuf[DOG_MAX_PATH];
     int len;
-    
+
     if (error_count<1&&header_size>=1&&total_size>=1) {
         len = snprintf(outbuf, sizeof outbuf,
             "Compilation Complete - OK! | " DOG_COL_CYAN "%d pass (warning) " DOG_COL_DEFAULT "| " DOG_COL_BLUE "%d fail (error)\n",
@@ -72,17 +70,17 @@ static void compiler_detailed(const char *dog_output,int debug,
             "Compilation Complete - Fail :( | " DOG_COL_CYAN "%d pass (warning) " DOG_COL_DEFAULT "| " DOG_COL_BLUE "%d fail (error)\n",
             warning_count,error_count);
     }
-    
+
     if (len > 0)
         fwrite(outbuf, 1, (size_t)len, stdout);
-    
+
     fwrite("-----------------------------\n", 1, 30, stdout);
 
     int amx_access=path_exists(dog_output);
     if (amx_access&&debug!=0&&error_count<1&&header_size>=1&&total_size>=1) {
 
-        CHMOD_FULL(dog_output);
-        
+        set_default_access(dog_output);
+
         unsigned long hash=crypto_djb2_hash_file(dog_output);
 
         len = snprintf(outbuf, sizeof outbuf,
@@ -103,11 +101,11 @@ static void compiler_detailed(const char *dog_output,int debug,
         if (len > 0)
             fwrite(outbuf, 1, (size_t)len, stdout);
 
-        portable_stat_t st;
-        if (portable_stat(dog_output, &st)==0) {
+        dog_portable_stat_t st;
+        if (dog_portable_stat(dog_output, &st)==0) {
 
             len=snprintf(outbuf, sizeof outbuf,
-                "ino    : %llu   |  File   : %lluB\n"
+                "ino    : %llu   |  file   : %lluB\n"
                 "dev    : %llu\n"
                 "read   : %s   |  write  : %s\n"
                 "execute: %s   |  mode   : %020o\n"
@@ -137,10 +135,10 @@ static void compiler_detailed(const char *dog_output,int debug,
         "** Pawn Compiler %s - Copyright (c) 1997-2006, ITB CompuPhase\n",
         compiler_ver
     );
-    
+
     if (len > 0)
         fwrite(outbuf, 1, (size_t)len, stdout);
-        
+
     return;
 }
 
