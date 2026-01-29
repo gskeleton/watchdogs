@@ -172,12 +172,16 @@ compiler_refresh_data ( void )  {
 static void
 compiler_configure_libpath(void)
 {
+  // skipping WSL if signal is windows
 #ifdef DOG_LINUX
 	if ((getenv("WSL_INTEROP") || getenv("WSL_DISTRO_NAME")) &&
 			strcmp(dogconfig.dog_toml_os_type, OS_SIGNAL_WINDOWS) == 0)
 		return;
 	
 	static const char *paths[] = {
+    /// x x x y y y z z z export x x x y y y z z z
+    ///         LINUX_X TMUX_X
+    ///         e.g, local path
 		LINUX_LIB_PATH, LINUX_LIB32_PATH,
 		TMUX_LIB_PATH, TMUX_LIB_LOC_PATH,
 		TMUX_LIB_ARM64_PATH, TMUX_LIB_ARM32_PATH,
@@ -250,11 +254,12 @@ long compiler_get_milisec() {
  *   ms: Duration in milliseconds to display the stage message
  */
 void compiler_stage_trying(const char *stage, int ms) {
-    long start = compiler_get_milisec();
-    while (compiler_get_milisec() - start < ms) {
-        printf("\r%s....", stage);
-        fflush(stdout);
-    }
+  long start = compiler_get_milisec();
+  while (compiler_get_milisec() - start < ms) {
+      printf("\r%s....", stage);
+      fflush(stdout);
+  }
+  // indicates compilation is in progress
 	if (strcmp(stage, "AMX Output File??..") == 0) {
 		printf("\r\033[2K");
         fflush(stdout);
@@ -446,19 +451,20 @@ int dog_exec_compiler_process(char *pawncc_path,
 	int         result_configure = 0;
 	int         i = 0;
 	char       *unix_pointer_token = NULL;
-	const char *windows_redist_err = "Have you made sure to install "
-									"the Visual CPP (C++) "
-									"Redist All-in-One?";
-	const char *windows_redist_err2 = "   - install first: "
-									"https://www.techpowerup.com/"
-									"download/"
-									"visual-c-redistributable-"
-									"runtime-package-all-in-one"
-									"/"
-									"\n";
+	const char *windows_redist_err = /* 0 */"Have you made sure to install "
+					/* 1 */			  "the Visual CPP (C++) "
+					/* 2 */				"Redist All-in-One?";
+	const char *windows_redist_err2 = /* 0 */ "   - install first: "
+	/* 1 */								"https://www.techpowerup.com/"
+	/* 2 */								"download/"
+	/* 3 */								"visual-c-redistributable-"
+	/* 4 */								"runtime-package-all-in-one"
+	/* 5 */								"/"
+	/* 7 newline */				"\n";
 
 	if (compiler_full_includes == NULL)
-		compiler_full_includes = strdup("-ipawno/include -iqawno/include -igamemodes");
+		compiler_full_includes =
+      strdup("-ipawno/include -iqawno/include -igamemodes");
 
 	dog_proj_init(pawncc_path, input_path);
 
@@ -981,13 +987,17 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 	char          *gamemodes_back_slash = "gamemodes\\";
 	#ifdef DOG_LINUX
 	const 	char  *posix_fzf_path[] = {
-			"~/downloads",
-			"../storage/downloads",
-			".",
-			"..",
+      "download", /* download/folders/files */
+			"~/downloads", /* ~/downloads/folder/files */
+      "storage/downloads", /* storage/downloads/folders/files */
+			"../storage/downloads", /* ../storage/downloads/folders/files */
+			".", /* root/folder/files */
+			"..", /* parent/folder/files */
 			NULL};
+  // buf selection
 	char posix_fzf_select[1024];
-	char posix_fzf_finder[2048];
+	// buf finder
+  char posix_fzf_finder[2048];
 	#endif
 
 	print(DOG_COL_DEFAULT);
@@ -1113,6 +1123,11 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 		} else if (compiler_retry_stat == 2) {
 			memset(compiler_buf, 0, sizeof(compiler_buf));
 			snprintf(compiler_buf, sizeof(compiler_buf),
+          /* #define MAX_PLAYERS (100)
+           * #define MAX_VEHICLES (1000)
+           * #define MAX_ACTORS (100)
+           * #define MAX_OBJECTS (2000)
+           */
 				"MAX_PLAYERS=100 MAX_VEHICLES=1000 MAX_ACTORS=100 MAX_OBJECTS=2000");
 			if (dogconfig.dog_toml_all_flags)
 				{
@@ -1128,6 +1143,11 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 			compiler_dog_flag_fast = true, compiler_dog_flag_detailed = true;
 			memset(compiler_buf, 0, sizeof(compiler_buf));
 			snprintf(compiler_buf, sizeof(compiler_buf),
+          /* #define MAX_PLAYERS (50)
+           * #define MAX_VEHICLES (50)
+           * #define MAX_ACTORS (50)
+           * #define MAX_OBJECTS (1000)
+           */
 				"%s MAX_PLAYERS=50 MAX_VEHICLES=50 MAX_ACTORS=50 MAX_OBJECTS=1000",
 				dogconfig.dog_toml_all_flags);
 			if (dogconfig.dog_toml_all_flags)
@@ -1142,27 +1162,27 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 		unsigned int __set_bit = 0;
 
 		if (compiler_dog_flag_debug)
-			/* bit 0 = 1 (0x01) */
+			/* bit 0 = 1 (  0x01  ) */
 			__set_bit |= BIT_FLAG_DEBUG;
 
 		if (compiler_dog_flag_asm)
-			/* bit 1 = 1 (0x03) */
+			/* bit 1 = 1 (  0x03  ) */
 			__set_bit |= BIT_FLAG_ASSEMBLER;
 
 		if (compiler_dog_flag_compat)
-			/* bit 2 = 1 (0x07) */
+			/* bit 2 = 1 (  0x07  ) */
 			__set_bit |= BIT_FLAG_COMPAT;
 
 		if (compiler_dog_flag_prolix)
-			/* bit 3 = 1 (0x0F) */
+			/* bit 3 = 1 (  0x0F  ) */
 			__set_bit |= BIT_FLAG_PROLIX;
 
 		if (compiler_dog_flag_compact)
-			/* bit 4 = 1 (0x1F) */
+			/* bit 4 = 1 (  0x1F  ) */
 			__set_bit |= BIT_FLAG_COMPACT;
 
 		if (compiler_dog_flag_fast)
-			/* bit 5 = 1 (0x20) */
+			/* bit 5 = 1 (  0x20  ) */
 			__set_bit |= BIT_FLAG_TIME;
 
 		/* Build flag string from enabled options */
@@ -1260,7 +1280,12 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 					break;
 				} else
 					j++;
-			}
+			} /*
+           ../parent/folders/gamemodes/file.pwn
+           -> -i=../parent/folders/gamemodes
+           -> -i=../parent/folders/pawno/include
+           -> -i=../parent/folders/qawno/include
+        */
 
 			if (rate_parent_dir && write_pos > 0) {
 				memmove(compiler_parsing + 3, compiler_parsing, write_pos);
@@ -1432,8 +1457,19 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 					compiler_project = NULL;
 				#else
 				{
-					char *argv[] = { "command", "-v", "fzf", ">", "/dev/null", "2>&1", NULL };
-					int fzf_ok;
+					char *argv[] = {
+            "command",
+            "-v",
+            "fzf",
+            ">",
+            "/dev/null",
+            "2>&1",
+            NULL
+          };
+          // 2 = none/default
+          // 1 = false/fail
+          // 0 = true/ok
+					int fzf_ok = 2;
 
 					fzf_ok = dog_exec_command(argv);
 
@@ -1469,10 +1505,8 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 						memset(compiler_buf, 0, sizeof(compiler_buf));
 
 						snprintf(compiler_buf, sizeof(compiler_buf),
-							"%s | "
-							"fzf "
-							"--height 40%% "
-							"--reverse "
+							"%s | fzf "
+							"--height 40%% --reverse "
 							"--prompt 'Select file to compile: ' "
 							"--preview 'if [ -f {} ]; then "
 							"echo \"=== Preview ===\"; "
@@ -1496,6 +1530,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 
 						dog_free(dogconfig.dog_toml_proj_input);
 						
+            // merged
 						dogconfig.dog_toml_proj_input = strdup(posix_fzf_select);
 						if (dogconfig.dog_toml_proj_input == NULL) {
 							pr_error(stdout, "Memory allocation failed");
@@ -1506,7 +1541,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 						pclose(this_proc_file);
 					} else {
 						printf(
-							" * input likely:\n"
+							" * input examples such as:\n"
 							"   bare.pwn | grandlarc.pwn | main.pwn | server.p\n"
 							"   ../storage/downloads/dog/gamemodes/main.pwn\n"
 							"   ../storage/downloads/osint/gamemodes/gm.pwn\n"
