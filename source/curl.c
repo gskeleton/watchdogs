@@ -467,7 +467,7 @@ static int setup_linux_library(void)
 			break;
 		}
 	}
-	
+
 	if (!libpawnc_path) {
 		return (-1);
 	}
@@ -652,7 +652,7 @@ dog_apply_pawncc(void)
 		copy_compiler_tool(pawnc_dll_src, "pawnc.dll", dest_dir);
 
 	setup_linux_library();
-	
+
 	#ifdef DOG_WINDOWS
 		DWORD attr = GetFileAttributesA(pawncc_dir_source);
 		if (attr != INVALID_FILE_ATTRIBUTES && (attr & FILE_ATTRIBUTE_DIRECTORY)) {
@@ -978,11 +978,11 @@ dog_download_file(const char *url, const char *output_filename)
 
 				if (installing_package) {
 					if (path_exists(
-              final_filename) == 1) {
-              destroy_arch_dir(final_filename);
-          }
-        } else {
-					if (installing_pawncc) {
+                      final_filename) == 1) {
+                      destroy_arch_dir(final_filename);
+                  }
+                } else {
+					if (installing_pawncc && prompt_apply_pawncc() == 1) {
 						if (path_exists(
 						    final_filename) == 1) {
 							destroy_arch_dir(
@@ -1005,10 +1005,6 @@ dog_download_file(const char *url, const char *output_filename)
 						}
 						dog_free(confirm);
 					}
-				}
-
-    			if (installing_pawncc && prompt_apply_pawncc() == 1)
-				{
 					pawncc_dir_source = strdup(
 					    size_filename);
 					dog_apply_pawncc();
