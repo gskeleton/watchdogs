@@ -124,7 +124,7 @@ compiler_refresh_data ( void )  {
 
 	if ( dir_exists( ".watchdogs" ) == 0 )
 		MKDIR( ".watchdogs" );
-	
+
 	/* sef reset */
 	dog_sef_path_revert();
 
@@ -177,7 +177,7 @@ compiler_configure_libpath(void)
 	if ((getenv("WSL_INTEROP") || getenv("WSL_DISTRO_NAME")) &&
 			strcmp(dogconfig.dog_toml_os_type, OS_SIGNAL_WINDOWS) == 0)
 		return;
-	
+
 	static const char *paths[] = {
     /// x x x y y y z z z export x x x y y y z z z
     ///         LINUX_X TMUX_X
@@ -272,8 +272,8 @@ void compiler_stage_trying(const char *stage, int ms) {
 			"** Preparing all tasks..\n",
 			NULL
 		};
-	
-    print(DOG_COL_BCYAN);	
+
+    print(DOG_COL_BCYAN);
 		for (int i = 0; amx_stage_lines[i]; ++i) {
 			print(amx_stage_lines[i]);
 		}
@@ -296,7 +296,7 @@ static
 void dog_proj_init(char *input_path, char *pawncc_path) {
 
 	compiler_configure_libpath();
-	
+
 	static bool rate_init_proc = false;
 	if (rate_init_proc == false) {
 		if ( path_exists("gamemodes") == 1 )
@@ -938,7 +938,7 @@ int dog_exec_compiler_process(char *pawncc_path,
 				pr_error(stdout,
 					"posix_spawn failed: %s",
 					strerror(process_spawn_result));
-				if (strfind(strerror(process_spawn_result), "Exec format error", true)) 
+				if (strfind(strerror(process_spawn_result), "Exec format error", true))
 					pr_error(stdout, "^ The compiler executable is not compatible with your system.");
 				if (strfind(strerror(process_spawn_result), "Permission denied", true))
 					pr_error(stdout, "^ You do not have permission to execute the compiler executable.");
@@ -1065,11 +1065,11 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 		/* Parse command-line arguments and set corresponding flags */
 		for (int i = 0; i < 8 && argv_buf[i] != NULL; ++i) {
 			const char *arg = argv_buf[i];
-			
+
 			if (arg[0] != '-') continue;
-			
+
 			for (OptionMap *opt = compiler_all_flag_map; opt->full_name; ++opt) {
-				if (strcmp(arg, opt->full_name) == 0 || 
+				if (strcmp(arg, opt->full_name) == 0 ||
 					strcmp(arg, opt->short_name) == 0) {
 					*(opt->flag_ptr) = true;
 					break;
@@ -1199,7 +1199,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 		}
 
 		*p = '\0';
-		
+
 	/* Merge flag list with existing compiler flags */
 	next_:
 		if (compiler_retry_stat == 2)
@@ -1429,7 +1429,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 					compile_args_val, dogconfig.dog_toml_proj_input);
 				#ifndef DOG_LINUX
 					printf(
-						" * input likely:\n"
+						" * Input examples such as:\n"
 						"   bare.pwn | grandlarc.pwn | main.pwn | server.p\n"
 						"   ../storage/downloads/dog/gamemodes/main.pwn\n"
 						"   ../storage/downloads/osint/gamemodes/gm.pwn\n"
@@ -1458,17 +1458,17 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 				#else
 				{
 					char *argv[] = {
-            "command",
-            "-v",
-            "fzf",
-            ">",
-            "/dev/null",
-            "2>&1",
-            NULL
-          };
-          // 2 = none/default
-          // 1 = false/fail
-          // 0 = true/ok
+                        "command",
+                        "-v",
+                        "fzf",
+                        ">",
+                        "/dev/null",
+                        "2>&1",
+                        NULL
+                    };
+                    // 2 = none/default
+                    // 1 = false/fail
+                    // 0 = true/ok
 					int fzf_ok = 2;
 
 					fzf_ok = dog_exec_command(argv);
@@ -1484,7 +1484,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 						strlcpy(posix_fzf_finder,
 							"find ",
 							sizeof(posix_fzf_finder));
-						
+
 						int i;
 						for (i = 0; posix_fzf_path[i] != NULL; i++) {
 							if (path_exists(posix_fzf_path[i]) == 1) {
@@ -1529,8 +1529,8 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 						strlcpy(posix_fzf_select, compiler_buf, sizeof(posix_fzf_select));
 
 						dog_free(dogconfig.dog_toml_proj_input);
-						
-            // merged
+
+                        // merged
 						dogconfig.dog_toml_proj_input = strdup(posix_fzf_select);
 						if (dogconfig.dog_toml_proj_input == NULL) {
 							pr_error(stdout, "Memory allocation failed");
@@ -1922,14 +1922,14 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 					'.');
 				if (extension)
 					*extension = '\0';
-				
+
 				ctx->container_output = strdup(compiler_temp);
 
 				snprintf(compiler_temp, sizeof(compiler_temp),
 					"%s.amx", ctx->container_output);
-					
+
 				char *compiler_temp2 = strdup(compiler_temp);
-				
+
 				/* Execute compilation process */
 				int _process = dog_exec_compiler_process(
 						dogconfig.dog_sef_found_list[0],
@@ -2114,7 +2114,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
         fflush(stdout);
 
 		print_restore_color();
-		
+
 		char *pointer_signalA = readline("");
 
 		if (pointer_signalA && (pointer_signalA[0] == '\0' ||
