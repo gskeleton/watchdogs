@@ -816,7 +816,8 @@ void unit_show_help(const char *cmd)
 		{"stop", "stop: stopped server task. | Usage: \"stop\"\n\tHalt everything! Stop your server tasks.\n"},
 		{"restart", "restart: re-start server task. | Usage: \"restart\"\n\tFresh start! Restart your server.\n"},
 		{"tracker", "tracker: account tracking. | Usage: \"tracker\" | [<args>]\n\tTrack accounts across platforms.\n"},
-		{"compress", "compress: create a compressed archive from a file or folder. | Usage: \"compress <input> <output>\"\n\tGenerates a compressed file (e.g., .zip/.tar.gz) from the specified source.\n"},
+		{"compress", "compress: create a compressed archive from a file or folder. | Usage: \"compress <input> <output>\"\n\t"
+      "Generates a compressed file (e.g., .zip/.tar.gz) from the specified source.\n"},
 		{"send", "send: send file to Discord channel via webhook. | Usage: \"send <files>\"\n\tUploads a file directly to a Discord channel using a webhook.\n"}
 	};
 
