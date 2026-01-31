@@ -2,6 +2,8 @@
 
 ## GNU/Linux
 
+> Choose one.
+
 * GNU/wget
 
 ```yaml
@@ -66,50 +68,7 @@ apt update && apt upgrade && apt install -y aria2 && aria2c -o install.sh https:
 
 ![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/indicate.png)
 
-> **Use the command `pawncc` to set up the compiler (simulation):**
-
-```yaml
-# pawncc
-== Select a Platform ==
-  [l] Linux
-  [w] Windows
-  ^ (Supported for: WSL/WSL2 ; not: Docker or Podman on WSL)
-  [t] Termux
-==> t
-== Select PawnCC Version ==
-  A) Pawncc 3.10.11  - new
-  B) Pawncc 3.10.10  - new
-  C) Pawncc 3.10.9   - new
-  D) Pawncc 3.10.8   - stable
-  E) Pawncc 3.10.7   - stable
-> e
-<= Recv header:
-100  365k  100  365k    0     0   194k      0  0:00:01  0:00:01 --:--:--  376k
- % successful: 374172 bytes to pawncc-termux-37.zip
- Try Extracting pawncc-termux-37.zip archive file...
-@ Hey!: Removing: pawncc-termux-37.zip..
-==> Apply pawncc?
-   answer (y/n): y
-[sudo] password for unix:
-@ Hey!: moved (with sudo): 'pawncc-termux-37/pawncc' -> 'pawno/pawncc'
-@ Hey!: moved (with sudo): 'pawncc-termux-37/pawndisasm' -> 'pawno/pawndisasm'
-@ Hey!: Fetching pawncc-termux-37/libpawnc.so binary hex..
-@ Uh-oh!: 'rm' command detected!
-00000000  7f 45 4c 46 02 01 01 00  00 00 00 00 00 00 00 00  |.ELF............|
-00000010  03 00 b7 00 01 00 00 00  00 00 00 00 00 00 00 00  |................|
-00000020  40 00 00 00 00 00 00 00  08 df 0e 00 00 00 00 00  |@...............|
-00000030  00 00 00 00 40 00 38 00  09 00 40 00 21 00 1f 00  |....@.8...@.!...|
-00000040  06 00 00 00 04 00 00 00  40 00 00 00 00 00 00 00  |........@.......|
-00000050  40 00 00 00 00 00 00 00  40 00 00 00 00 00 00 00  |@.......@.......|
-00000060  f8 01 00 00 00 00 00 00  f8 01 00 00 00 00 00 00  |................|
-00000070  08 00 00 00 00 00 00 00  01 00 00 00 05 00 00 00  |................|
-00000080
-@ Hey!: Success..
-@ Hey!: moved (with sudo): 'pawncc-termux-37/libpawnc.so' -> '/usr/local/lib/libpawnc.so'
-@ Hey!: Congratulations! - Done.
-```
-
----
+> **Use the command `pawncc` to set up the compiler:**
 
 ![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/pawncc.png)
 
@@ -135,9 +94,6 @@ apt update && apt upgrade && apt install -y aria2 && aria2c -o install.sh https:
 ```yaml
 powershell -Command "Invoke-WebRequest 'https://raw.githubusercontent.com/gskeleton/watchdogs/refs/heads/main/__windows.cmd' -OutFile 'install.cmd'; .\install.cmd"
 ```
-
-> watchdogs.win is supported in Microsoft/Terminal https://github.com/microsoft/terminal
-![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/terminal.png)
 
 ---
 
@@ -206,9 +162,14 @@ watchdogs
 
 ---
 
+## How does Pawn works?
+
+![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/pawn.png)
+
 ## Compilation
 
-> You do not need a specific installation of Watchdogs in the GameMode folder or in the ~/Downloads area. You just need to ensure the folder containing the watchdogs binary such as watchdogs or watchdogs.tmux is within a folder in Downloads, and your project folder is also within a folder in Downloads. (*THIS DOES NOT APPLY TO watchdogs.win)
+You do not need a specific installation of Watchdogs in the GameMode folder or in the ~/Downloads area. You just need to ensure the folder containing the watchdogs binary such as watchdogs or watchdogs.tmux is within a folder in Downloads, and your project folder is also within a folder in Downloads. (*THIS DOES NOT APPLY TO watchdogs.win)
+
 ```yml
 # Example structure:
 Downloads
@@ -217,20 +178,20 @@ Downloads
 └── myproj
     └── gamemodes
         └── proj.p
-        # ^ then you can run the watchdogs located in the dog/ folder
-        # ^ and you only need to compile it with the parent symbol as follows
-        # ^ compile ../myproj/gamemodes/proj.p
-        # ^ this location is just an example.
+      # ^ then you can run the watchdogs located in the dog/ folder
+      # ^ and you only need to compile it with the parent symbol as follows
+      # ^ compile ../myproj/gamemodes/proj.p
+      # ^ this location is just an example.
 ```
 
-## Compilation Commands – With Parent Directory in Termux
+## Compilation Commands – Parent in Termux
 
 ```yaml
 compile ../storage/downloads/_GAMEMODE_FOLDER_NAME_/gamemodes/_PAWN_FILE_NAME_.pwn
 ```
 
 **Example:**
-I have a gamemode folder named `parent` in Downloads (via ZArchiver), and the main file `pain.pwn` is inside `gamemodes/`.
+I have a gamemode folder named `parent` in Downloads, and the main file `pain.pwn` is inside `gamemodes/`.
 Then the path used is:
 
 ```yaml

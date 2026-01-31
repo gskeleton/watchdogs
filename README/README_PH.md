@@ -1,9 +1,8 @@
-
-> watchdogs.win dapat dijalankan pada Microsoft/Terminal https://github.com/microsoft/terminal
-![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/terminal.png)
 ![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/image.png)
 
 ## GNU/Linux
+
+> Pumili ng isa.
 
 * GNU/wget
 
@@ -34,17 +33,18 @@ aria2c -o install.sh https://github.com/gskeleton/watchdogs/raw/refs/heads/main/
    * Android 5/6:
      [https://github.com/termux/termux-app/releases/download/v0.119.0-beta.3/termux-app_v0.119.0-beta.3+apt-android-5-github-debug_universal.apk](https://github.com/termux/termux-app/releases/download/v0.119.0-beta.3/termux-app_v0.119.0-beta.3+apt-android-5-github-debug_universal.apk)
 
-2. **I-install ang na-download na .apk file at pagkatapos ay patakbuhin ang Termux.**
+2. **I-install ang na-download na .apk file at patakbuhin ang Termux.**
 
-3. **Sa unang pagkakataon, patakbuhin ang sumusunod na command sa Termux:**
+3. **Sa unang beses, patakbuhin ang sumusunod na command sa Termux:**
 
-> pumili ng isa.
+> Pumili ng isa.
 
 * GNU/wget
 
 ```yaml
 apt update && apt upgrade && apt install -y wget && wget -O install.sh https://github.com/gskeleton/watchdogs/raw/refs/heads/main/__termux.sh && chmod +x install.sh && ./install.sh
 ```
+
 ![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/wget.png)
 
 * cURL
@@ -52,6 +52,7 @@ apt update && apt upgrade && apt install -y wget && wget -O install.sh https://g
 ```yaml
 apt update && apt upgrade && apt install -y curl && curl -L -o install.sh https://github.com/gskeleton/watchdogs/raw/refs/heads/main/__termux.sh && chmod +x install.sh && ./install.sh
 ```
+
 ![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/curl.png)
 
 * aria2
@@ -59,74 +60,32 @@ apt update && apt upgrade && apt install -y curl && curl -L -o install.sh https:
 ```yaml
 apt update && apt upgrade && apt install -y aria2 && aria2c -o install.sh https://github.com/gskeleton/watchdogs/raw/refs/heads/main/__termux.sh && chmod +x install.sh && ./install.sh
 ```
+
 ![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/aria.png)
 
-> Kung may ibang tanong (halimbawa: pagpili ng mirror ng Termux `?` (-openssl.cnf (Y/I/N/O/D/Z [default=N] ?)-), piliin ang pinakataas o **pindutin lang ang Enter**.
+> Kung may iba pang tanong (hal., pagpili ng Termux mirror `?` (-openssl.cnf (Y/I/N/O/D/Z [default=N] ?)-), piliin ang nasa itaas o **pindutin lang ang Enter**.
 
 ![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/mirror.png)
 
-4. **Indikasyon na matagumpay na na-install ang Watchdogs:**
+4. **Palatandaan na matagumpay na na-install ang Watchdogs:**
 
 ![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/indicate.png)
 
-> **Gamitin ang command na `pawncc` para mag-set up ng compiler (simulation):**
-
-```yaml
-# pawncc
-== Select a Platform ==
-  [l] Linux
-  [w] Windows
-  ^ (Supported for: WSL/WSL2 ; not: Docker or Podman on WSL)
-  [t] Termux
-==> t
-== Select PawnCC Version ==
-  A) Pawncc 3.10.11  - new
-  B) Pawncc 3.10.10  - new
-  C) Pawncc 3.10.9   - new
-  D) Pawncc 3.10.8   - stable
-  E) Pawncc 3.10.7   - stable
-> e
-<= Recv header:
-100  365k  100  365k    0     0   194k      0  0:00:01  0:00:01 --:--:--  376k
- % successful: 374172 bytes to pawncc-termux-37.zip
- Try Extracting pawncc-termux-37.zip archive file...
-@ Hey!: Removing: pawncc-termux-37.zip..
-==> Apply pawncc?
-   answer (y/n): y
-[sudo] password for unix:
-@ Hey!: moved (with sudo): 'pawncc-termux-37/pawncc' -> 'pawno/pawncc'
-@ Hey!: moved (with sudo): 'pawncc-termux-37/pawndisasm' -> 'pawno/pawndisasm'
-@ Hey!: Fetching pawncc-termux-37/libpawnc.so binary hex..
-@ Uh-oh!: 'rm' command detected!
-00000000  7f 45 4c 46 02 01 01 00  00 00 00 00 00 00 00 00  |.ELF............|
-00000010  03 00 b7 00 01 00 00 00  00 00 00 00 00 00 00 00  |................|
-00000020  40 00 00 00 00 00 00 00  08 df 0e 00 00 00 00 00  |@...............|
-00000030  00 00 00 00 40 00 38 00  09 00 40 00 21 00 1f 00  |....@.8...@.!...|
-00000040  06 00 00 00 04 00 00 00  40 00 00 00 00 00 00 00  |........@.......|
-00000050  40 00 00 00 00 00 00 00  40 00 00 00 00 00 00 00  |@.......@.......|
-00000060  f8 01 00 00 00 00 00 00  f8 01 00 00 00 00 00 00  |................|
-00000070  08 00 00 00 00 00 00 00  01 00 00 00 05 00 00 00  |................|
-00000080
-@ Hey!: Success..
-@ Hey!: moved (with sudo): 'pawncc-termux-37/libpawnc.so' -> '/usr/local/lib/libpawnc.so'
-@ Hey!: Congratulations! - Done.
-```
-
----
+> **Gamitin ang command na `pawncc` para i-set up ang compiler:**
 
 ![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/pawncc.png)
 
-> Kung makikita mo ang simbolong `>` **pindutin lang ang Enter** maliban kung may hinihinging partikular na sagot (halimbawa: apply pawncc = yes).
+> Kung makita mo ang `>` **pindutin lang ang Enter** maliban kung may hinihinging partikular na sagot (hal., apply pawncc = yes).
 
-> Para sa mga hakbang sa compilation, alamin: [here](#compilation-commands--with-parent-directory-in-termux)
+> Para sa mga hakbang sa compilation, alamin: [dito](#compilation-commands--with-parent-directory-in-termux)
 
 ---
 
 ## Windows Native
 
-> **Mag-build para sa Windows?** Gamitin ang **MSYS2** (recommended).
+> **Mag-build para sa Windows?** Gamitin ang **MSYS2** (inirerekomenda).
 
-1. **I-install ang Visual C++ Redistributable Runtimes (kailangan para sa pawncc)**
+1. **I-install ang Visual C++ Redistributable Runtimes (kinakailangan para sa pawncc)**
 
    * Bisitahin: [https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/](https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/)
    * I-click ang **Download**
@@ -139,22 +98,19 @@ apt update && apt upgrade && apt install -y aria2 && aria2c -o install.sh https:
 powershell -Command "Invoke-WebRequest 'https://raw.githubusercontent.com/gskeleton/watchdogs/refs/heads/main/__windows.cmd' -OutFile 'install.cmd'; .\install.cmd"
 ```
 
-> Maaaring patakbuhin ang watchdogs.win sa Microsoft/Terminal https://github.com/microsoft/terminal
-![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/terminal.png)
-
 ---
 
-## Sanggunian sa Make Command
+## Sanggunian ng Make Command
 
 ```yaml
-make                # Mag-install ng library at mag-build
+make                # I-install ang library at mag-build
 make linux          # Mag-build para sa Linux
 make windows        # Mag-build para sa Windows
 make termux         # Mag-build para sa Termux
 make clean          # Linisin ang mga resulta ng build
-make debug          # Mag-build gamit ang debug mode (Linux)
-make debug-termux   # Mag-build gamit ang debug mode (Termux)
-make windows-debug  # Mag-build gamit ang debug mode (Windows)
+make debug          # Mag-build na may debug mode (Linux)
+make debug-termux   # Mag-build na may debug mode (Termux)
+make windows-debug  # Mag-build na may debug mode (Windows)
 ```
 
 ---
@@ -163,28 +119,28 @@ make windows-debug  # Mag-build gamit ang debug mode (Windows)
 
 ```yaml
 # Hakbang 1 - Patakbuhin ang debugger (GDB) kasama ang programa
-# Pumili ng executable ayon sa platform:
+# Piliin ang executable ayon sa platform:
 gdb ./watchdogs.debug        # Para sa Linux
 gdb ./watchdogs.debug.tmux   # Para sa Termux (Android)
 gdb ./watchdogs.debug.win    # Para sa Windows (kung gumagamit ng GDB)
 
 # Hakbang 2 - Patakbuhin ang programa sa loob ng GDB
-# Ang programa ay pinapatakbo sa ilalim ng kontrol ng debugger
+# Ang programa ay tatakbo sa ilalim ng kontrol ng debugger
 run                           # i-type ang 'run' tapos Enter
 
-# Hakbang 3 - Hawakan ang crash o interruptions
-# Kung mag-crash ang programa (halimbawa: segmentation fault) o manual na itinigil (Ctrl+C),
-# Ihihinto ng GDB ang execution at magpapakita ng prompt.
+# Hakbang 3 - Paghawak ng crash o interruption
+# Kung mag-crash ang programa (hal., segmentation fault) o manu-manong ihinto (Ctrl+C),
+# hihinto ang GDB at magpapakita ng prompt.
 
-# Hakbang 4 - Tingnan ang status ng programa gamit ang backtrace
-# Ipinapakita ng backtrace ang sequence ng function calls sa oras ng crash.
+# Hakbang 4 - Suriin ang status ng programa gamit ang backtrace
+# Ipinapakita ng backtrace ang sunod-sunod na function calls sa oras ng crash.
 bt           # Pangunahing backtrace (mga pangalan ng function)
-bt full      # Kumpletong backtrace (mga function, variable, arguments)
+bt full      # Buong backtrace (mga function, variable, argumento)
 ```
 
 ---
 
-## Pag-execute gamit ang arguments
+## Pagpapatakbo na may Args
 
 ```yaml
 ./watchdogs command
@@ -201,7 +157,7 @@ echo "alias watchdogs='./watchdogs'" >> ~/.bashrc
 source ~/.bashrc
 ```
 
-**Patakbuhin ang alias:**
+**Pagpapatakbo ng alias:**
 
 ```yaml
 watchdogs
@@ -209,32 +165,37 @@ watchdogs
 
 ---
 
+## Paano gumagana ang Pawn?
+
+![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/pawn.png)
+
 ## Compilation
 
-> Hindi mo kailangan ng partikular na pag-install ng Watchdogs sa folder ng GameMode o sa area ng ~/Downloads. Kailangan mo lang siguraduhin na ang folder na naglalaman ng binary watchdogs tulad ng watchdogs o watchdogs.tmux ay nasa loob ng folder na nasa Downloads, at ang folder ng iyong proyekto ay nasa loob din ng folder na nasa Downloads. (*HINDI ITO NAAANGKOP SA watchdogs.win)
+Hindi mo kailangan ng partikular na pag-install ng Watchdogs sa GameMode folder o sa ~/Downloads na lugar. Kailangan mo lang tiyakin na ang folder na naglalaman ng watchdogs binary gaya ng watchdogs o watchdogs.tmux ay nasa loob ng isang folder sa Downloads, at ang iyong project folder ay nasa loob din ng isang folder sa Downloads. (*HINDI ITO NAAANGKOP SA watchdogs.win)
+
 ```yml
-# Halimbawang estruktura:
+# Halimbawang istruktura:
 Downloads
 ├── dog
 │   ├── watchdogs
 └── myproj
     └── gamemodes
         └── proj.p
-        # ^ kaya maaari mong patakbuhin ang watchdogs na nasa folder dog/
-        # ^ at kailangan mo lang i-compile ito gamit ang parent symbol tulad ng sumusunod
-        # ^ compile ../myproj/gamemodes/proj.p
-        # ^ ang lokasyong ito ay halimbawa lamang
+      # ^ maaari mong patakbuhin ang watchdogs na nasa dog/ folder
+      # ^ at kailangan mo lang itong i-compile gamit ang parent symbol tulad ng sumusunod
+      # ^ compile ../myproj/gamemodes/proj.p
+      # ^ ang lokasyong ito ay halimbawa lamang.
 ```
 
-## Mga Command sa Compilation – Gamit ang Parent Directory sa Termux
+## Mga Command sa Compilation – Parent sa Termux
 
 ```yaml
-compile ../storage/downloads/_PANGALAN_NG_GAMEMODE_FOLDER_/gamemodes/_PANGALAN_NG_PAWN_FILE_.pwn
+compile ../storage/downloads/_GAMEMODE_FOLDER_NAME_/gamemodes/_PAWN_FILE_NAME_.pwn
 ```
 
 **Halimbawa:**
-Mayroon akong folder ng gamemode na pinangalanang `parent` sa Downloads (sa pamamagitan ng ZArchiver), at ang pangunahing file na `pain.pwn` ay nasa loob ng `gamemodes/`.
-Kaya ang path na ginamit ay:
+Mayroon akong gamemode folder na pinangalanang `parent` sa Downloads, at ang pangunahing file na `pain.pwn` ay nasa loob ng `gamemodes/`.
+Kaya ang path na gagamitin ay:
 
 ```yaml
 compile ../storage/downloads/parent/pain.pwn
@@ -244,7 +205,8 @@ compile ../storage/downloads/parent/pain.pwn
 
 ## Mga Command sa Compilation – Pangkalahatan
 
-> Pangunahing tuntunin
+> Pangunahing Compile
+
 ```yaml
 compile
 ```
@@ -254,23 +216,23 @@ compile
 > **I-compile ang `server.pwn`:**
 
 ```yaml
-# Default compilation
+# Default na compilation
 compile .
 compile.
 ```
 
-> **Mag-compile gamit ang specific na path**
+> **I-compile na may partikular na path**
 
 ```yaml
 compile server.pwn
 compile path/to/server.pwn
 ```
 
-> **Mag-compile gamit ang parent location (automatic include path)**
+> **I-compile gamit ang parent location (awtomatikong include path)**
 
 ```yaml
 compile ../path/to/project/server.pwn
-# automatic: -i/path/to/path/pawno -i/path/to/path/qawno -i/path/to/path/gamemodes
+# awtomatiko: -i/path/to/path/pawno -i/path/to/path/qawno -i/path/to/path/gamemodes
 ```
 
 ---
@@ -282,22 +244,22 @@ compile ../path/to/project/server.pwn
 ```
 --------------------     --------------------------                -
 |                  |     |                        |                -
-|       ARGS       | --> |        FILTERING       |                -
+|       ARGS       | --> |        PAG-SALA         |                -
 |                  |     |                        |                -
 --------------------     --------------------------                -
                                      |
                                      v
 ---------------------    --------------------------                -
 |                   |    |                        |                -
-|  LOGGING OUTPUT   |    |   EXIST FILE VALIDATE  |                -
+|  LOGGING OUTPUT   |    |   BERIPIKASYON NG FILE  |                -
 |                   |    |                        |                -
 ---------------------    --------------------------                -
          ^                           |
          |                           v
 --------------------     --------------------------                -
 |                  |     |                        |                -
-|  RUNNING BINARY  | <-- |     EDITING CONFIG     |                -
-|                  |     |    kung mayroong args  |                -
+|  PINAPATAKBONG   | <-- |   PAG-EDIT NG CONFIG   |                -
+|     BINARY       |     |  kung may args na meron|                -
 --------------------     --------------------------                -
 ```
 
@@ -321,7 +283,7 @@ compiles .
 compiles.
 ```
 
-**I-compile at patakbuhin gamit ang partikular na path:**
+**I-compile at patakbuhin na may partikular na path:**
 
 ```yaml
 compiles server
@@ -334,21 +296,21 @@ compiles server
 ```
 --------------------     --------------------------                -
 |                  |     |                        |                -
-|     BASE URL     | --> |      URL CHECKING      |                -
+|     BASE URL     | --> |    PAG-SURI NG URL      |                -
 |                  |     |                        |                -
 --------------------     --------------------------                -
                                     |
                                     v
 ---------------------    --------------------------                -
 |                   |    |                        |                -
-|     APPLYING      |    |  PATTERNS - FILTERING  |                -
+|    PAG-AAPLAY     |    |  MGA PATTERN - SALA     |                -
 |                   |    |                        |                -
 ---------------------    --------------------------                -
          ^                          |
          |                          v
 --------------------     --------------------------                -
 |                  |     |                        |                -
-|  FILES CHECKING  | <-- |       INSTALLING       |                -
+|  PAG-SURI NG FILE| <-- |     PAG-I-INSTALL      |                -
 |                  |     |                        |                -
 --------------------     --------------------------                -
 ```
