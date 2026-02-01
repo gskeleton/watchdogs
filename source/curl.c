@@ -988,26 +988,10 @@ dog_download_file(const char *url, const char *output_filename)
 							destroy_arch_dir(
 							    final_filename);
 						}
-					} else {
-						pr_color(stdout, DOG_COL_CYAN,
-							"==> Remove archive %s? ",
-							final_filename);
-						char *confirm = readline("(y/n): ");
-
-						if (confirm[0] == '\0' ||
-							confirm[0] == 'Y' ||
-							confirm[0] == 'y') {
-							if (path_exists(
-								final_filename) == 1) {
-								destroy_arch_dir(
-									final_filename);
-							}
-						}
-						dog_free(confirm);
+						pawncc_dir_source = strdup(
+							size_filename);
+						dog_apply_pawncc();
 					}
-					pawncc_dir_source = strdup(
-					    size_filename);
-					dog_apply_pawncc();
 				}
 
 				return (0);
