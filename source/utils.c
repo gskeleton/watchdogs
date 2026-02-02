@@ -2257,11 +2257,11 @@ dog_generate_toml_content(FILE *file, const char *dog_os_type,
 		fprintf(file, "   output = \"%s.amx\" # project output\n",
 		    sef_path);
 	} else {
-		if (path_exists(".gitkeep/server.p") == 1) {
+		if (path_exists("doguu/server.p") == 1) {
 			fprintf(file,
-			    "   input = \".gitkeep/server.p\" # project input\n");
+			    "   input = \"doguu/server.p\" # project input\n");
 			fprintf(file,
-			    "   output = \".gitkeep/server.amx\" # project output\n");
+			    "   output = \"doguu/server.amx\" # project output\n");
 		} else {
 			fprintf(file,
 			    "   input = \"gamemodes/bare.pwn\" # project input\n");
@@ -2751,7 +2751,6 @@ out_:
 			pr_warning(stdout,
 			    "toml key null/crc32 false (%s) detected in key: %s * do not set to empty!.",
 			    CRC32_FALSE, field_name);
-			printf("   Example: https://github.com/gskeleton/watchdogs/blob/main/.gitkeep/toml.toml\n");
 			printf("   Support: https://github.com/gskeleton/watchdogs/issues\n");
 			fflush(stdout);
 			exit(1);
