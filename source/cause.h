@@ -20,17 +20,36 @@ typedef struct {
 #define HELP_PICK6 "first: backup your \"gamemodes\" folder to \"swp_gamemodes\" and copy \"swp_gamemodes\" to \"gamemodes\"\n"
 #define HELP_PICK7 "shell (bash) operation:\n"
 #define HELP_PICK8 "linux native:\n"
-#define HELP_PICK9 "   bash -c 'BASE=\"gamemodes\"; find \"$BASE\" -type f " \
-"\\( -name \"*.pwn\" -o -name \"*.inc\" \\) -exec sed -i -E \"s|(#include[[:space:]]+\\\")([^\\\"]+)(\\\")|\\1\\L\\2\\3|g\" {} " \
-"+ && find \"$BASE\" -depth | while IFS= read -r p; do [ \"$p\" = \"$BASE\" ] && continue; d=$(dirname \"$p\"); b=$(basename \"$p\" | " \
-"tr \"A-Z\" \"a-z\"); [ \"$p\" != \"$d/$b\" ] && mv \"$p\" \"$d/$b\"; done'\n"
+#define HELP_PICK9 \
+"   bash -c 'basepath=\"gamemodes\"; " \
+"find \"$basepath\" -type f \\( -name \"*.pwn\" -o -name \"*.inc\" \\) | " \
+"while IFS= read -r p; do " \
+"  d=$(dirname \"$p\"); " \
+"  b=$(basename \"$p\" | tr \"A-Z\" \"a-z\"); " \
+"  [ \"$p\" != \"$d/$b\" ] && mv -- \"$p\" \"$d/$b\"; " \
+"done; " \
+"find \"$basepath\" -depth | while IFS= read -r p; do " \
+"  [ \"$p\" = \"$basepath\" ] && continue; " \
+"  d=$(dirname \"$p\"); " \
+"  b=$(basename \"$p\" | tr \"A-Z\" \"a-z\"); " \
+"  [ \"$p\" != \"$d/$b\" ] && mv -- \"$p\" \"$d/$b\"; " \
+"done'\n"
 #define HELP_PICK01 "termux (android - please change the 'GAMEMODE_FOLDER_NAME' to folder name of your gamemode in downloads/):\n"
-#define HELP_PICK02 "   bash -c 'BASE=\"../storage/downloads/GAMEMODE_FOLDER_NAME/gamemodes\"; " \
-"find \"$BASE\" -type f \\( -name \"*.pwn\" -o -name \"*.inc\" \\) " \
-"-exec sh -c \"for f; do perl -i -pe \\\"s/(#include\\\\\\\\s+\\\\\\\\\\\")" \
-"([^\\\\\\\\\\\"]+)(\\\\\\\\\\\")/\\\\\\\\$1\\\\\\\\L\\\\\\\\$2\\\\\\\\$3/g\\\" \\\"\\\\\\\\$f\\\"; done\" sh {} + && " \
-"find \"$BASE\" -depth | while IFS= read -r p; do [ -e \\\"$p\\\" ] && d=\\\\$(dirname \\\"$p\\\"); " \
-"b=\\\\$(basename \\\"$p\\\" | tr \\\"A-Z\\\" \\\"a-z\\\"); [ \\\"$p\\\" != \\\"$d/$b\\\" ] && mv \\\"$p\\\" \\\"$d/$b\\\"; done'\n"
+#define HELP_PICK02 \
+"   bash -c 'basepath=\"../storage/downloads/GAMEMODE_FOLDER_NAME/gamemodes\"; " \
+"find \"$basepath\" -type f \\( -name \"*.pwn\" -o -name \"*.inc\" \\) | " \
+"while IFS= read -r p; do " \
+"  sed -i -E \"s|(#include[[:space:]]+\\\")([^\\\"]+)(\\\")|\\1\\L\\2\\3|g\" \"$p\"; " \
+"  d=$(dirname \"$p\"); " \
+"  b=$(basename \"$p\" | tr \"A-Z\" \"a-z\"); " \
+"  [ \"$p\" != \"$d/$b\" ] && mv -- \"$p\" \"$d/$b\"; " \
+"done; " \
+"find \"$basepath\" -depth | while IFS= read -r p; do " \
+"  [ \"$p\" = \"$basepath\" ] && continue; " \
+"  d=$(dirname \"$p\"); " \
+"  b=$(basename \"$p\" | tr \"A-Z\" \"a-z\"); " \
+"  [ \"$p\" != \"$d/$b\" ] && mv -- \"$p\" \"$d/$b\"; " \
+"done'\n"
 
 #define COMPILER_DT_PICK000001 "expected token"
 #define COMPILER_DT_PICK000002 "only a single statement"
