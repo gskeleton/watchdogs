@@ -1086,7 +1086,7 @@ dog_server_crash_check(void)
                 char *recompiled = readline("Recompiled script now? (Auto-fix)");
                 if (recompiled && (recompiled[0] == '\0' || !strcmp(recompiled, "Y") || !strcmp(recompiled, "y"))) {
                     dog_free(recompiled);
-                    printf(DOG_COL_BCYAN "Please input the pawn file\n\t* (enter for %s - input E/e to exit):" DOG_COL_DEFAULT, dogconfig.dog_toml_proj_input);
+                    printf(DOG_COL_BCYAN "Please input the pawn file\n\t* (enter for %s - input E/e to exit):" DOG_COL_DEFAULT, dogconfig.dog_toml_serv_input);
                     char *gamemode_compile = readline(" ");
                     if (gamemode_compile && strlen(gamemode_compile) < 1) {
                         /* Use default project input */

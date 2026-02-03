@@ -145,7 +145,7 @@ void _unit_debugger(int hard_debug,
             #endif
                     dogconfig.dog_os_type, dogconfig.dog_ptr_samp,
                     dogconfig.dog_ptr_omp, dogconfig.dog_is_samp, dogconfig.dog_is_omp,
-                    dogconfig.dog_toml_proj_input, dogconfig.dog_toml_proj_output,
+                    dogconfig.dog_toml_serv_input, dogconfig.dog_toml_serv_output,
                     dogconfig.dog_toml_server_binary, dogconfig.dog_toml_server_config, dogconfig.dog_toml_server_logs,
                     dogconfig.dog_toml_github_tokens, dogconfig.dog_toml_all_flags, dogconfig.dog_toml_packages);
                     
@@ -244,7 +244,7 @@ void _unit_debugger(int hard_debug,
             #endif
                     dogconfig.dog_os_type, dogconfig.dog_ptr_samp,
                     dogconfig.dog_ptr_omp, dogconfig.dog_is_samp, dogconfig.dog_is_omp,
-                    dogconfig.dog_toml_proj_input, dogconfig.dog_toml_proj_output,
+                    dogconfig.dog_toml_serv_input, dogconfig.dog_toml_serv_output,
                     dogconfig.dog_toml_server_binary, dogconfig.dog_toml_server_config, dogconfig.dog_toml_server_logs,
                     dogconfig.dog_toml_github_tokens);
         }

@@ -699,7 +699,7 @@ _reexecute_command:
         while (*args == ' ') ++args;
         char *args2 = strtok(args, " ");
         
-        char *size_arg1 = args2 ? args2 : dogconfig.dog_toml_proj_output;
+        char *size_arg1 = args2 ? args2 : dogconfig.dog_toml_serv_output;
         
         int needed = snprintf(NULL, 0, "Watchdogs | @ running | args: %s | config: %s | CTRL + C to stop. | \"debug\" for debugging",
                                 size_arg1, dogconfig.dog_toml_server_config) + 1;
@@ -1437,8 +1437,8 @@ loop_main:
         if (dogconfig.dog_toml_all_flags) { free(dogconfig.dog_toml_all_flags); dogconfig.dog_toml_all_flags = NULL; }
         if (dogconfig.dog_toml_root_patterns) { free(dogconfig.dog_toml_root_patterns); dogconfig.dog_toml_root_patterns = NULL; }
         if (dogconfig.dog_toml_packages) { free(dogconfig.dog_toml_packages); dogconfig.dog_toml_packages = NULL; }
-        if (dogconfig.dog_toml_proj_input) { free(dogconfig.dog_toml_proj_input); dogconfig.dog_toml_proj_input = NULL; }
-        if (dogconfig.dog_toml_proj_output) { free(dogconfig.dog_toml_proj_output); dogconfig.dog_toml_proj_output = NULL; }
+        if (dogconfig.dog_toml_serv_input) { free(dogconfig.dog_toml_serv_input); dogconfig.dog_toml_serv_input = NULL; }
+        if (dogconfig.dog_toml_serv_output) { free(dogconfig.dog_toml_serv_output); dogconfig.dog_toml_serv_output = NULL; }
         if (dogconfig.dog_toml_webhooks) { free(dogconfig.dog_toml_webhooks); dogconfig.dog_toml_webhooks = NULL; }
         if (compiler_full_includes) { free(compiler_full_includes); compiler_full_includes = NULL; }
         

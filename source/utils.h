@@ -184,8 +184,8 @@ typedef struct {
     char * dog_toml_all_flags    ;
     char * dog_toml_root_patterns;
     char * dog_toml_packages     ;
-    char * dog_toml_proj_input   ;
-    char * dog_toml_proj_output  ;
+    char * dog_toml_serv_input   ;
+    char * dog_toml_serv_output  ;
     char * dog_toml_github_tokens;
     char * dog_toml_webhooks     ;
 } WatchdogConfig;

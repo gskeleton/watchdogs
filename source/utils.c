@@ -39,8 +39,8 @@ WatchdogConfig	 dogconfig = {
 	.dog_toml_all_flags     = NULL,
 	.dog_toml_root_patterns = NULL,
 	.dog_toml_packages      = NULL,
-	.dog_toml_proj_input    = NULL,
-	.dog_toml_proj_output   = NULL,
+	.dog_toml_serv_input    = NULL,
+	.dog_toml_serv_output   = NULL,
 	.dog_toml_webhooks      = NULL
 };
 
@@ -48,8 +48,8 @@ const char	*toml_char_field[] = {
 	"dog_toml_os_type", "dog_toml_server_binary",
 	"dog_toml_server_config", "dog_toml_server_logs",
 	"dog_toml_all_flags", "dog_toml_root_patterns",
-	"dog_toml_packages", "dog_toml_proj_input",
-	"dog_toml_proj_output", "dog_toml_webhooks"
+	"dog_toml_packages", "dog_toml_serv_input",
+	"dog_toml_serv_output", "dog_toml_webhooks"
 };
 
 char		**toml_pointers[] = {
@@ -60,8 +60,8 @@ char		**toml_pointers[] = {
 	&dogconfig.dog_toml_all_flags,
 	&dogconfig.dog_toml_root_patterns,
 	&dogconfig.dog_toml_packages,
-	&dogconfig.dog_toml_proj_input,
-	&dogconfig.dog_toml_proj_output,
+	&dogconfig.dog_toml_serv_input,
+	&dogconfig.dog_toml_serv_output,
 	&dogconfig.dog_toml_webhooks
 };
 
@@ -2264,9 +2264,9 @@ dog_generate_toml_content(FILE *file, const char *dog_os_type,
 			    "   output = \"doguu/server.amx\" # project output\n");
 		} else {
 			fprintf(file,
-			    "   input = \"gamemodes/bare.pwn\" # project input\n");
+			    "   input = \"gamemodes/grandlarc.pwn\" # project input\n");
 			fprintf(file,
-			    "   output = \"gamemodes/bare.amx\" # project output\n");
+			    "   output = \"gamemodes/grandlarc.amx\" # project output\n");
 		}
 	}
 
@@ -2610,27 +2610,27 @@ out_:
 
 		input_val = toml_string_in(dog_toml_compiler, "input");
 		if (input_val.ok) {
-			if (dogconfig.dog_toml_proj_input == NULL ||
-				strcmp(dogconfig.dog_toml_proj_input, input_val.u.s) != 0) {
-				if (dogconfig.dog_toml_proj_input)
+			if (dogconfig.dog_toml_serv_input == NULL ||
+				strcmp(dogconfig.dog_toml_serv_input, input_val.u.s) != 0) {
+				if (dogconfig.dog_toml_serv_input)
 					{
-						dog_free(dogconfig.dog_toml_proj_input);
-						dogconfig.dog_toml_proj_input = NULL;
+						dog_free(dogconfig.dog_toml_serv_input);
+						dogconfig.dog_toml_serv_input = NULL;
 					}
-				dogconfig.dog_toml_proj_input = strdup(input_val.u.s);
+				dogconfig.dog_toml_serv_input = strdup(input_val.u.s);
 			}
 			dog_free(input_val.u.s);
 		}
 		output_val = toml_string_in(dog_toml_compiler, "output");
 		if (output_val.ok) {
-			if (dogconfig.dog_toml_proj_output == NULL ||
-				strcmp(dogconfig.dog_toml_proj_output, output_val.u.s) != 0) {
-				if (dogconfig.dog_toml_proj_output)
+			if (dogconfig.dog_toml_serv_output == NULL ||
+				strcmp(dogconfig.dog_toml_serv_output, output_val.u.s) != 0) {
+				if (dogconfig.dog_toml_serv_output)
 					{
-						dog_free(dogconfig.dog_toml_proj_output);
-						dogconfig.dog_toml_proj_output = NULL;
+						dog_free(dogconfig.dog_toml_serv_output);
+						dogconfig.dog_toml_serv_output = NULL;
 					}
-				dogconfig.dog_toml_proj_output = strdup(output_val.u.s);
+				dogconfig.dog_toml_serv_output = strdup(output_val.u.s);
 			}
 			dog_free(output_val.u.s);
 		}

@@ -99,7 +99,7 @@ static char    compiler_parsing[DOG_PATH_MAX] = { 0 };	/* Path parsing buffer */
 static char    compiler_path_include_buf[DOG_PATH_MAX] = { 0 };	/* Include path buffer */
 static char    compiler_input[DOG_MAX_PATH] = { 0 };	/* Compiler command input buffer */
 static char    compiler_dog_flag_list[456] = { 0 };	/* Flag list string buffer */
-static char   *compiler_proj_path = NULL;	/* Project path pointer */
+static char   *compiler_serv_path = NULL;	/* Project path pointer */
 static char   *compiler_size_last_slash = NULL;	/* Last path separator position */
 static char   *compiler_back_slash = NULL;	/* Backslash position pointer */
 static char   *size_include_extra = NULL;	/* Extra include size pointer */
@@ -282,7 +282,7 @@ void compiler_stage_trying(const char *stage, int ms) {
 }
 
 /*
- * dog_proj_init
+ * dog_serv_init
  * Initialize the project compilation environment. This function
  * configures library paths, sets up default access paths for
  * gamemodes, pawno, and qawno directories, and displays compilation
@@ -293,7 +293,7 @@ void compiler_stage_trying(const char *stage, int ms) {
  *   pawncc_path: Path to the pawncc compiler executable
  */
 static
-void dog_proj_init(char *input_path, char *pawncc_path) {
+void dog_serv_init(char *input_path, char *pawncc_path) {
 
 	compiler_configure_libpath();
 
@@ -466,7 +466,7 @@ int dog_exec_compiler_process(char *pawncc_path,
 		compiler_full_includes =
       strdup("-ipawno/include -iqawno/include -igamemodes");
 
-	dog_proj_init(pawncc_path, input_path);
+	dog_serv_init(pawncc_path, input_path);
 
 	/* Initialize log file path based on platform */
 #ifdef DOG_WINDOWS
@@ -1377,10 +1377,10 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 		if (*compile_args_val == '\0' ||
 			(compile_args_val[0] == '.' &&
 			compile_args_val[1] == '\0')) {
-			if (path_exists(dogconfig.dog_toml_proj_input) ==
+			if (path_exists(dogconfig.dog_toml_serv_input) ==
 				0) {
 				pr_error(stdout, "%s not found!.",
-					dogconfig.dog_toml_proj_input);
+					dogconfig.dog_toml_serv_input);
 				goto compiler_end;
 			}
 			/* Prompt user for compilation target if not specified */
@@ -1426,7 +1426,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 					DOG_COL_GREEN "%s " DOG_COL_BCYAN
 					"(enter), \n"
 					"|- * or do you want to compile for something else?\n",
-					compile_args_val, dogconfig.dog_toml_proj_input);
+					compile_args_val, dogconfig.dog_toml_serv_input);
 				#ifndef DOG_LINUX
 					printf(
 						" * Input examples such as:\n"
@@ -1443,10 +1443,10 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 					if (compiler_project &&
 						strlen(compiler_project) > 0) {
 						dog_free(
-							dogconfig.dog_toml_proj_input);
-						dogconfig.dog_toml_proj_input =
+							dogconfig.dog_toml_serv_input);
+						dogconfig.dog_toml_serv_input =
 							strdup(compiler_project);
-						if (!dogconfig.dog_toml_proj_input) {
+						if (!dogconfig.dog_toml_serv_input) {
 							pr_error(stdout,
 								"Memory allocation failed");
 							dog_free(compiler_project);
@@ -1478,7 +1478,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 							DOG_COL_DEFAULT
 							" [Using fzf, press Ctrl+C for: "
 							DOG_COL_GREEN "%s" DOG_COL_DEFAULT "]\n",
-							dogconfig.dog_toml_proj_input);
+							dogconfig.dog_toml_serv_input);
 						fflush(stdout);
 
 						strlcpy(posix_fzf_finder,
@@ -1528,11 +1528,11 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 
 						strlcpy(posix_fzf_select, compiler_buf, sizeof(posix_fzf_select));
 
-						dog_free(dogconfig.dog_toml_proj_input);
+						dog_free(dogconfig.dog_toml_serv_input);
 
                         // merged
-						dogconfig.dog_toml_proj_input = strdup(posix_fzf_select);
-						if (dogconfig.dog_toml_proj_input == NULL) {
+						dogconfig.dog_toml_serv_input = strdup(posix_fzf_select);
+						if (dogconfig.dog_toml_serv_input == NULL) {
 							pr_error(stdout, "Memory allocation failed");
 							goto fzf_end;
 						}
@@ -1555,10 +1555,10 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 						if (compiler_project &&
 							strlen(compiler_project) > 0) {
 							dog_free(
-								dogconfig.dog_toml_proj_input);
-							dogconfig.dog_toml_proj_input =
+								dogconfig.dog_toml_serv_input);
+							dogconfig.dog_toml_serv_input =
 								strdup(compiler_project);
-							if (!dogconfig.dog_toml_proj_input) {
+							if (!dogconfig.dog_toml_serv_input) {
 								pr_error(stdout,
 									"Memory allocation failed");
 								dog_free(compiler_project);
@@ -1575,8 +1575,8 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 			/* Execute compilation process */
 			int _process = dog_exec_compiler_process(
 					dogconfig.dog_sef_found_list[0],
-					dogconfig.dog_toml_proj_input,
-					dogconfig.dog_toml_proj_output);
+					dogconfig.dog_toml_serv_input,
+					dogconfig.dog_toml_serv_output);
 			if (_process != 0) {
 				goto compiler_end;
 			}
@@ -1585,7 +1585,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 			if (path_exists(".watchdogs/compiler.log")) {
 				print("\n");
 				char *ca = NULL;
-				ca = dogconfig.dog_toml_proj_output;
+				ca = dogconfig.dog_toml_serv_output;
 				bool cb = 0;
 				if (compiler_have_debug_flag)
 					cb = 1;
@@ -1618,9 +1618,9 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 				fclose(this_proc_file);
 				this_proc_file = NULL;
 				if (has_err) {
-					if (dogconfig.dog_toml_proj_output != NULL &&
-						path_access(dogconfig.dog_toml_proj_output))
-						remove(dogconfig.dog_toml_proj_output);
+					if (dogconfig.dog_toml_serv_output != NULL &&
+						path_access(dogconfig.dog_toml_serv_output))
+						remove(dogconfig.dog_toml_serv_output);
 					compiler_is_err = true;
 				} else {
 					compiler_is_err = false;
@@ -1893,24 +1893,24 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 					memset(compiler_buf, 0, sizeof(compiler_buf));
 					snprintf(compiler_buf, sizeof(compiler_buf),
 						"%s", compiler_temp);
-						if (compiler_proj_path)
+						if (compiler_serv_path)
 							{
-								free(compiler_proj_path);
-								compiler_proj_path = NULL;
+								free(compiler_serv_path);
+								compiler_serv_path = NULL;
 							}
-					compiler_proj_path = strdup(compiler_buf);
+					compiler_serv_path = strdup(compiler_buf);
 				}
 			}
 
 #if defined(_DBG_PRINT)
-			if (compiler_proj_path != NULL)
-				pr_info(stdout, "compiler_proj_path: %s", compiler_proj_path);
+			if (compiler_serv_path != NULL)
+				pr_info(stdout, "compiler_serv_path: %s", compiler_serv_path);
 #endif
 			/* Generate output filename and execute compilation */
-			if (path_exists(compiler_proj_path) == 1) {
-				if (compiler_proj_path) {
+			if (path_exists(compiler_serv_path) == 1) {
+				if (compiler_serv_path) {
 					memset(compiler_temp, 0, sizeof(compiler_temp));
-					strncpy(compiler_temp, compiler_proj_path,
+					strncpy(compiler_temp, compiler_serv_path,
 						sizeof(compiler_temp) - 1);
 					compiler_temp[sizeof(compiler_temp) - 1] = '\0';
 				} else {
@@ -1933,14 +1933,14 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 				/* Execute compilation process */
 				int _process = dog_exec_compiler_process(
 						dogconfig.dog_sef_found_list[0],
-						compiler_proj_path,
+						compiler_serv_path,
 						compiler_temp2);
 				if (_process != 0) {
 					goto compiler_end;
 				}
-				if (compiler_proj_path) {
-					free(compiler_proj_path);
-					compiler_proj_path = NULL;
+				if (compiler_serv_path) {
+					free(compiler_serv_path);
+					compiler_serv_path = NULL;
 				}
 
 				if (path_exists(

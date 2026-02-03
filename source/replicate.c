@@ -1180,12 +1180,12 @@ package_include_prints(const char *package_include)
 		toml_table_t *dog_compiler = toml_table_in(dog_toml_server_config,
 		    TOML_TABLE_COMPILER);
 		if (dog_compiler) {
-			toml_datum_t toml_proj_i = toml_string_in(dog_compiler,
+			toml_datum_t toml_serv_i = toml_string_in(dog_compiler,
 			    "input");
-			if (toml_proj_i.ok) {
-				dogconfig.dog_toml_proj_input =
-				    strdup(toml_proj_i.u.s);
-				dog_free(toml_proj_i.u.s);
+			if (toml_serv_i.ok) {
+				dogconfig.dog_toml_serv_input =
+				    strdup(toml_serv_i.u.s);
+				dog_free(toml_serv_i.u.s);
 			}
 		}
 		toml_free(dog_toml_server_config);
@@ -1197,11 +1197,11 @@ package_include_prints(const char *package_include)
 		printf(DOG_COL_BCYAN
 		    "Where do you want to install %s? (enter for: %s)"
 		    DOG_COL_DEFAULT, _directive,
-		    dogconfig.dog_toml_proj_input);
+		    dogconfig.dog_toml_serv_input);
 		fflush(stdout);
 		userinput = readline(" ");
 		if (userinput[0] == '\0')
-			userinput = strdup(dogconfig.dog_toml_proj_input);
+			userinput = strdup(dogconfig.dog_toml_serv_input);
 		expect_add = strdup(userinput);
 		dog_free(userinput);
 		k = true;
