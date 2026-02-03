@@ -187,7 +187,6 @@ typedef struct {
     char * dog_toml_serv_input   ;
     char * dog_toml_serv_output  ;
     char * dog_toml_github_tokens;
-    char * dog_toml_webhooks     ;
 } WatchdogConfig;
 
 extern WatchdogConfig dogconfig;

@@ -18,7 +18,7 @@ const char	*unit_command_list[] = {
 	"help", "exit", "sha1", "sha256", "crc32", "djb2", "pbkdf2", "config",
 	"replicate", "gamemode", "pawncc", "debug",
 	"compile", "decompile", "running", "compiles", "stop", "restart",
-	"tracker", "compress", "send"
+	"tracker", "compress"
 };
 
 const size_t	 unit_command_len = sizeof(unit_command_list) /
@@ -40,8 +40,7 @@ WatchdogConfig	 dogconfig = {
 	.dog_toml_root_patterns = NULL,
 	.dog_toml_packages      = NULL,
 	.dog_toml_serv_input    = NULL,
-	.dog_toml_serv_output   = NULL,
-	.dog_toml_webhooks      = NULL
+	.dog_toml_serv_output   = NULL
 };
 
 const char	*toml_char_field[] = {
@@ -49,7 +48,7 @@ const char	*toml_char_field[] = {
 	"dog_toml_server_config", "dog_toml_server_logs",
 	"dog_toml_all_flags", "dog_toml_root_patterns",
 	"dog_toml_packages", "dog_toml_serv_input",
-	"dog_toml_serv_output", "dog_toml_webhooks"
+	"dog_toml_serv_output"
 };
 
 char		**toml_pointers[] = {
@@ -61,8 +60,7 @@ char		**toml_pointers[] = {
 	&dogconfig.dog_toml_root_patterns,
 	&dogconfig.dog_toml_packages,
 	&dogconfig.dog_toml_serv_input,
-	&dogconfig.dog_toml_serv_output,
-	&dogconfig.dog_toml_webhooks
+	&dogconfig.dog_toml_serv_output
 };
 
 void dog_sef_path_revert(void)
@@ -712,6 +710,8 @@ int dog_portable_stat(const char *path, dog_portable_stat_t *out) {
 }
 
 void unit_show_dog(void) {
+	if (path_exists(".watchdogs/notice") == 0) {
+	print(" type: touch .watchdogs/notice | type nul > .watchdogs/notice for hide this message.\n");
 	#ifndef DOG_ANDROID
 	static const char *dog_ascii =
 		"\n                         \\/%%#z.     \\/.%%#z./   /,z#%%\\/\n"
@@ -742,6 +742,7 @@ void unit_show_dog(void) {
 	#endif
 	fwrite(dog_ascii, 1, strlen(dog_ascii), stdout);
 	print("Use \"help\" for more.\n");
+	}
 }
 
 void unit_show_help(const char *cmd)
@@ -787,9 +788,7 @@ void unit_show_help(const char *cmd)
 	"  tracker @ account tracking | "
 	"Usage: \"tracker\" | [<args>] " DOG_COL_YELLOW "\n  ; Track accounts across platforms." DOG_COL_DEFAULT "\n"
 	"  compress @ create a compressed archive | "
-	"Usage: \"compress <input> <output>\" " DOG_COL_YELLOW "\n  ; Generates a compressed file (e.g., .zip/.tar.gz) from the specified source." DOG_COL_DEFAULT "\n"
-	"  send @ send file to Discord channel via webhook | "
-	"Usage: \"send <files>\" " DOG_COL_YELLOW "\n  ; Uploads a file directly to a Discord channel using a webhook." DOG_COL_DEFAULT "\n";
+	"Usage: \"compress <input> <output>\" " DOG_COL_YELLOW "\n  ; Generates a compressed file (e.g., .zip/.tar.gz) from the specified source." DOG_COL_DEFAULT "\n";
 	fwrite(help_text, 1, strlen(help_text), stdout);
 	return;
 	}
@@ -817,8 +816,7 @@ void unit_show_help(const char *cmd)
 		{"restart", "restart: re-start server task. | Usage: \"restart\"\n\tFresh start! Restart your server.\n"},
 		{"tracker", "tracker: account tracking. | Usage: \"tracker\" | [<args>]\n\tTrack accounts across platforms.\n"},
 		{"compress", "compress: create a compressed archive from a file or folder. | Usage: \"compress <input> <output>\"\n\t"
-      "Generates a compressed file (e.g., .zip/.tar.gz) from the specified source.\n"},
-		{"send", "send: send file to Discord channel via webhook. | Usage: \"send <files>\"\n\tUploads a file directly to a Discord channel using a webhook.\n"}
+      "Generates a compressed file (e.g., .zip/.tar.gz) from the specified source.\n"}
 	};
 
 	for (size_t i = 0; i < sizeof(cmd_help) / sizeof(cmd_help[0]); i++) {
@@ -2723,19 +2721,6 @@ out_:
 				dogconfig.dog_toml_server_logs = strdup(logs_val.u.s);
 			}
 			dog_free(logs_val.u.s);
-		}
-		webhooks_val = toml_string_in(general_table, "webhooks");
-		if (webhooks_val.ok) {
-			if (dogconfig.dog_toml_webhooks == NULL ||
-				strcmp(dogconfig.dog_toml_webhooks, webhooks_val.u.s) != 0) {
-				if (dogconfig.dog_toml_webhooks)
-					{
-						dog_free(dogconfig.dog_toml_webhooks);
-						dogconfig.dog_toml_webhooks = NULL;
-					}
-				dogconfig.dog_toml_webhooks = strdup(webhooks_val.u.s);
-			}
-			dog_free(webhooks_val.u.s);
 		}
 	}
 

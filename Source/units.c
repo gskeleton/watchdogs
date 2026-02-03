@@ -1230,111 +1230,6 @@ _reexecute_command:
         ret_code = -1;
         goto cleanup;
         
-    } else if (strncmp(ptr_command, "send", strlen("send")) == 0) {
-        char *args = ptr_command + strlen("send");
-        while (*args == ' ') ++args;
-        
-        timestamp = dog_malloc(64);
-        
-        if (*args == '\0') {
-            println(stdout, "Usage: send [<file_path>]");
-            ret_code = -1;
-            goto cleanup;
-        }
-        
-        if (path_access(args) == 0) {
-            pr_error(stdout, "file not found: %s", args);
-            ret_code = -1;
-            goto cleanup;
-        }
-        
-        if (!dogconfig.dog_toml_webhooks || strfind(dogconfig.dog_toml_webhooks, "DO_HERE", true) ||
-            strlen(dogconfig.dog_toml_webhooks) < 1) {
-            pr_color(stdout, DOG_COL_YELLOW, " ~ Discord webhooks not available");
-            ret_code = -1;
-            goto cleanup;
-        }
-        
-        char *filename = args;
-        if (strrchr(args, _PATH_CHR_SEP_POSIX) && strrchr(args, _PATH_CHR_SEP_WIN32)) {
-            filename = (strrchr(args, _PATH_CHR_SEP_POSIX) > strrchr(args, _PATH_CHR_SEP_WIN32)) ?
-                      strrchr(args, _PATH_CHR_SEP_POSIX) + 1 : strrchr(args, _PATH_CHR_SEP_WIN32) + 1;
-        } else if (strrchr(args, _PATH_CHR_SEP_POSIX)) {
-            filename = strrchr(args, _PATH_CHR_SEP_POSIX) + 1;
-        } else if (strrchr(args, _PATH_CHR_SEP_WIN32)) {
-            filename = strrchr(args, _PATH_CHR_SEP_WIN32) + 1;
-        }
-        
-        CURL *curl = curl_easy_init();
-        if (curl) {
-            CURLcode res;
-            curl_mime *mime;
-            
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
-            curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "gzip");
-            
-            mime = curl_mime_init(curl);
-            if (!mime) {
-                fprintf(stderr, "Failed to create MIME handle\n");
-                minimal_debugging();
-                curl_easy_cleanup(curl);
-                ret_code = -1;
-                goto cleanup;
-            }
-            
-            curl_mimepart *part;
-            time_t t = time(NULL);
-            struct tm tm = *localtime(&t);
-            if (timestamp) {
-                snprintf(timestamp, 64, "%04d/%02d/%02d %02d:%02d:%02d",
-                        tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                        tm.tm_hour, tm.tm_min, tm.tm_sec);
-            }
-            
-            dog_portable_stat_t st;
-            if (dog_portable_stat(filename, &st) == 0) {
-                char *content_data = dog_malloc(DOG_MAX_PATH);
-                if (content_data) {
-                    snprintf(content_data, DOG_MAX_PATH,
-                            "### received send command - %s\n"
-                            "> Metadata\n"
-                            "- Name: %s\n- Size: %llu bytes\n- Last modified: %llu\n%s",
-                            timestamp ? timestamp : "unknown",
-                            filename,
-                            (unsigned long long)st.st_size,
-                            (unsigned long long)st.st_lmtime,
-                            "-# Please note that if you are using webhooks with a public channel,"
-                            "always convert the file into an archive with a password known only to you.");
-                    
-                    part = curl_mime_addpart(mime);
-                    curl_mime_name(part, "content");
-                    curl_mime_data(part, content_data, CURL_ZERO_TERMINATED);
-                    dog_free(content_data);
-                }
-            }
-            
-            part = curl_mime_addpart(mime);
-            curl_mime_name(part, "file");
-            curl_mime_filedata(part, args);
-            curl_mime_filename(part, filename);
-            
-            curl_easy_setopt(curl, CURLOPT_URL, dogconfig.dog_toml_webhooks);
-            curl_easy_setopt(curl, CURLOPT_MIMEPOST, mime);
-            
-            res = curl_easy_perform(curl);
-            if (res != CURLE_OK) {
-                fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-            }
-            
-            curl_mime_free(mime);
-            curl_easy_cleanup(curl);
-        }
-        
-        curl_global_cleanup();
-        ret_code = -1;
-        goto cleanup;
-        
     } else if (strcmp(ptr_command, "watchdogs") == 0 || strcmp(ptr_command, "dog") == 0) {
         unit_show_dog();
         ret_code = -1;
@@ -1439,7 +1334,6 @@ loop_main:
         if (dogconfig.dog_toml_packages) { free(dogconfig.dog_toml_packages); dogconfig.dog_toml_packages = NULL; }
         if (dogconfig.dog_toml_serv_input) { free(dogconfig.dog_toml_serv_input); dogconfig.dog_toml_serv_input = NULL; }
         if (dogconfig.dog_toml_serv_output) { free(dogconfig.dog_toml_serv_output); dogconfig.dog_toml_serv_output = NULL; }
-        if (dogconfig.dog_toml_webhooks) { free(dogconfig.dog_toml_webhooks); dogconfig.dog_toml_webhooks = NULL; }
         if (compiler_full_includes) { free(compiler_full_includes); compiler_full_includes = NULL; }
         
         exit(0);
