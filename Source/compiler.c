@@ -1376,162 +1376,53 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 			/* Prompt user for compilation target if not specified */
 			if (compile_args_val[0] != '.')
 			{
-				pr_color(stdout, DOG_COL_YELLOW,
-					DOG_COL_BYELLOW
-					"** COMPILER TARGET\n");
-				int tree_ret = -1;
-				{
-					char *tree[] = { "tree", ">", "/dev/null 2>&1", NULL };
-					tree_ret = dog_exec_command(tree);
-				}
-				if (!tree_ret) {
-					if (path_exists("../storage/downloads") == 1) {
-						char *tree[] = {
-							"tree", "-P", "\"*.p\"", "-P", "\"*.pwn\"", "../storage/downloads", NULL };
-						dog_exec_command(tree);
-					} else {
-						char *tree[] = { "tree", "-P", "\"*.p\"", "-P", "\"*.pwn\"", ".", NULL };
-						dog_exec_command(tree);
+				static bool one_try = false;
+				if (one_try == false) {
+					one_try = true;
+					pr_color(stdout, DOG_COL_YELLOW,
+						DOG_COL_BYELLOW
+						"** COMPILER TARGET\n");
+					int tree_ret = -1;
+					{
+						char *tree[] = { "tree", ">", "/dev/null 2>&1", NULL };
+						tree_ret = dog_exec_command(tree);
 					}
-				} else {
-					#ifdef DOG_LINUX
-					if (path_exists("../storage/downloads") == 1) {
-						char *argv[] = { "ls", "../storage/downloads", "-R", NULL };
-						dog_exec_command(argv);
+					if (!tree_ret) {
+						if (path_exists("../storage/downloads") == 1) {
+							char *tree[] = {
+								"tree", "-P", "\"*.p\"", "-P", "\"*.pwn\"", "../storage/downloads", NULL };
+							dog_exec_command(tree);
+						} else {
+							char *tree[] = { "tree", "-P", "\"*.p\"", "-P", "\"*.pwn\"", ".", NULL };
+							dog_exec_command(tree);
+						}
 					} else {
-						char *argv[] = { "ls", ".", "-R", NULL };
+						#ifdef DOG_LINUX
+						if (path_exists("../storage/downloads") == 1) {
+							char *argv[] = { "ls", "../storage/downloads", "-R", NULL };
+							dog_exec_command(argv);
+						} else {
+							char *argv[] = { "ls", ".", "-R", NULL };
+							dog_exec_command(argv);
+						}
+						#else
+						char *argv[] = { "dir", ".", "-s", NULL };
 						dog_exec_command(argv);
+						#endif
 					}
-					#else
-					char *argv[] = { "dir", ".", "-s", NULL };
-					dog_exec_command(argv);
-					#endif
-				}
-				printf(DOG_COL_BCYAN);
-				printf("-------------------------------------\n");
-				printf(
-					"|- * You run the compiler command "
-					"without any args | compile %s | compile mode.pwn\n"
-					"|- * Do you want to compile for "
-					DOG_COL_GREEN "%s " DOG_COL_BCYAN
-					"(enter), \n"
-					"|- * or do you want to compile for something else?\n",
-					compile_args_val, dogconfig.dog_toml_serv_input);
-				#ifndef DOG_LINUX
+					printf(DOG_COL_BCYAN);
+					printf("-------------------------------------\n");
 					printf(
-						" * Input examples such as:\n"
-						"   bare.pwn | grandlarc.pwn | main.pwn | server.p\n"
-						"   ../storage/downloads/dog/gamemodes/main.pwn\n"
-						"   ../storage/downloads/osint/gamemodes/gm.pwn\n"
-					);
-					fflush(stdout);
-					print_restore_color();
-					printf(DOG_COL_CYAN ">"
-						DOG_COL_DEFAULT);
-					fflush(stdout);
-					compiler_project = readline(" ");
-					if (compiler_project &&
-						strlen(compiler_project) > 0) {
-						dog_free(
-							dogconfig.dog_toml_serv_input);
-						dogconfig.dog_toml_serv_input =
-							strdup(compiler_project);
-						if (!dogconfig.dog_toml_serv_input) {
-							pr_error(stdout,
-								"Memory allocation failed");
-							dog_free(compiler_project);
-							goto compiler_end;
-						}
-					}
-					dog_free(compiler_project);
-					compiler_project = NULL;
-				#else
-				{
-					char *argv[] = {
-                        "command",
-                        "-v",
-                        "fzf",
-                        ">",
-                        "/dev/null",
-                        "2>&1",
-                        NULL
-                    };
-                    // 2 = none/default
-                    // 1 = false/fail
-                    // 0 = true/ok
-					int fzf_ok = 2;
-
-					fzf_ok = dog_exec_command(argv);
-
-					if (fzf_ok == 0) {
-						printf(DOG_COL_CYAN ">"
-							DOG_COL_DEFAULT
-							" [Using fzf, press Ctrl+C for: "
-							DOG_COL_GREEN "%s" DOG_COL_DEFAULT "]\n",
-							dogconfig.dog_toml_serv_input);
-						fflush(stdout);
-
-						strlcpy(posix_fzf_finder,
-							"find ",
-							sizeof(posix_fzf_finder));
-
-						int i;
-						for (i = 0; posix_fzf_path[i] != NULL; i++) {
-							if (path_exists(posix_fzf_path[i]) == 1) {
-								strlcat(posix_fzf_finder,
-									posix_fzf_path[i], sizeof(posix_fzf_finder));
-								strlcat(posix_fzf_finder, " ", sizeof(posix_fzf_finder));
-							}
-						}
-
-						strlcat(posix_fzf_finder,
-							"-type "
-							"f "
-							"\\( -name \"*.pwn\" "
-							"-o -name \"*.p\" \\) "
-							"2>/dev/null",
-							sizeof(posix_fzf_finder));
-
-						memset(compiler_buf, 0, sizeof(compiler_buf));
-
-						snprintf(compiler_buf, sizeof(compiler_buf),
-							"%s | fzf "
-							"--height 40%% --reverse "
-							"--prompt 'Select file to compile: ' "
-							"--preview 'if [ -f {} ]; then "
-							"echo \"=== Preview ===\"; "
-							"head -n 20 {}; "
-							"echo \"=== Path ===\"; "
-							"realpath {}; fi'",
-							posix_fzf_finder);
-
-						this_proc_file = popen(compiler_buf, "r");
-						if (this_proc_file == NULL)
-							goto compiler_end;
-
-						if (fgets(compiler_buf, sizeof(compiler_buf), this_proc_file) == NULL)
-							goto fzf_end;
-
-						compiler_buf[strcspn(compiler_buf, "\n")] = '\0';
-						if (compiler_buf[0] == '\0')
-							goto fzf_end;
-
-						strlcpy(posix_fzf_select, compiler_buf, sizeof(posix_fzf_select));
-
-						dog_free(dogconfig.dog_toml_serv_input);
-
-                        // merged
-						dogconfig.dog_toml_serv_input = strdup(posix_fzf_select);
-						if (dogconfig.dog_toml_serv_input == NULL) {
-							pr_error(stdout, "Memory allocation failed");
-							goto fzf_end;
-						}
-
-					fzf_end:
-						pclose(this_proc_file);
-					} else {
+						"|- * You run the compiler command "
+						"without any args | compile %s | compile mode.pwn\n"
+						"|- * Do you want to compile for "
+						DOG_COL_GREEN "%s " DOG_COL_BCYAN
+						"(enter), \n"
+						"|- * or do you want to compile for something else?\n",
+						compile_args_val, dogconfig.dog_toml_serv_input);
+					#ifndef DOG_LINUX
 						printf(
-							" * input examples such as:\n"
+							" * Input examples such as:\n"
 							"   bare.pwn | grandlarc.pwn | main.pwn | server.p\n"
 							"   ../storage/downloads/dog/gamemodes/main.pwn\n"
 							"   ../storage/downloads/osint/gamemodes/gm.pwn\n"
@@ -1557,9 +1448,122 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 						}
 						dog_free(compiler_project);
 						compiler_project = NULL;
+					#else
+					{
+						char *argv[] = {
+							"command",
+							"-v",
+							"fzf",
+							">",
+							"/dev/null",
+							"2>&1",
+							NULL
+						};
+						// 2 = none/default
+						// 1 = false/fail
+						// 0 = true/ok
+						int fzf_ok = 2;
+
+						fzf_ok = dog_exec_command(argv);
+
+						if (fzf_ok == 0) {
+							printf(DOG_COL_CYAN ">"
+								DOG_COL_DEFAULT
+								" [Using fzf, press Ctrl+C for: "
+								DOG_COL_GREEN "%s" DOG_COL_DEFAULT "]\n",
+								dogconfig.dog_toml_serv_input);
+							fflush(stdout);
+
+							strlcpy(posix_fzf_finder,
+								"find ",
+								sizeof(posix_fzf_finder));
+
+							int i;
+							for (i = 0; posix_fzf_path[i] != NULL; i++) {
+								if (path_exists(posix_fzf_path[i]) == 1) {
+									strlcat(posix_fzf_finder,
+										posix_fzf_path[i], sizeof(posix_fzf_finder));
+									strlcat(posix_fzf_finder, " ", sizeof(posix_fzf_finder));
+								}
+							}
+
+							strlcat(posix_fzf_finder,
+								"-type "
+								"f "
+								"\\( -name \"*.pwn\" "
+								"-o -name \"*.p\" \\) "
+								"2>/dev/null",
+								sizeof(posix_fzf_finder));
+
+							memset(compiler_buf, 0, sizeof(compiler_buf));
+
+							snprintf(compiler_buf, sizeof(compiler_buf),
+								"%s | fzf "
+								"--height 40%% --reverse "
+								"--prompt 'Select file to compile: ' "
+								"--preview 'if [ -f {} ]; then "
+								"echo \"=== Preview ===\"; "
+								"head -n 20 {}; "
+								"echo \"=== Path ===\"; "
+								"realpath {}; fi'",
+								posix_fzf_finder);
+
+							this_proc_file = popen(compiler_buf, "r");
+							if (this_proc_file == NULL)
+								goto compiler_end;
+
+							if (fgets(compiler_buf, sizeof(compiler_buf), this_proc_file) == NULL)
+								goto fzf_end;
+
+							compiler_buf[strcspn(compiler_buf, "\n")] = '\0';
+							if (compiler_buf[0] == '\0')
+								goto fzf_end;
+
+							strlcpy(posix_fzf_select, compiler_buf, sizeof(posix_fzf_select));
+
+							dog_free(dogconfig.dog_toml_serv_input);
+
+							// merged
+							dogconfig.dog_toml_serv_input = strdup(posix_fzf_select);
+							if (dogconfig.dog_toml_serv_input == NULL) {
+								pr_error(stdout, "Memory allocation failed");
+								goto fzf_end;
+							}
+
+						fzf_end:
+							pclose(this_proc_file);
+						} else {
+							printf(
+								" * input examples such as:\n"
+								"   bare.pwn | grandlarc.pwn | main.pwn | server.p\n"
+								"   ../storage/downloads/dog/gamemodes/main.pwn\n"
+								"   ../storage/downloads/osint/gamemodes/gm.pwn\n"
+							);
+							fflush(stdout);
+							print_restore_color();
+							printf(DOG_COL_CYAN ">"
+								DOG_COL_DEFAULT);
+							fflush(stdout);
+							compiler_project = readline(" ");
+							if (compiler_project &&
+								strlen(compiler_project) > 0) {
+								dog_free(
+									dogconfig.dog_toml_serv_input);
+								dogconfig.dog_toml_serv_input =
+									strdup(compiler_project);
+								if (!dogconfig.dog_toml_serv_input) {
+									pr_error(stdout,
+										"Memory allocation failed");
+									dog_free(compiler_project);
+									goto compiler_end;
+								}
+							}
+							dog_free(compiler_project);
+							compiler_project = NULL;
+						}
 					}
+					#endif
 				}
-				#endif
 			}
 
 			/* Execute compilation process */

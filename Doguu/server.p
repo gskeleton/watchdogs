@@ -7,4 +7,3 @@ native
 main() {
    printf "Hello, World!"
 }
-#include "K"
