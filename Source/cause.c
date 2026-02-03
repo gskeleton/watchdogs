@@ -194,6 +194,7 @@ void cause_compiler_expl(const char *log_file, const char *dog_output, int debug
                     fprintf(help, HELP_PICK6);
                     fprintf(help, HELP_PICK8);
                     fprintf(help, HELP_PICK9);
+                    fprintf(help, "\n");
                     fprintf(help, HELP_PICK01);
                     fprintf(help, HELP_PICK02);
                     fclose(help);
