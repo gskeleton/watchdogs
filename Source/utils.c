@@ -2249,7 +2249,7 @@ dog_generate_toml_content(FILE *file, const char *dog_os_type,
 	}
 
 	fprintf(file, "   includes = [\"gamemodes/\"," \
-		"\"pawno/include/\", \"qawno/include/\"] # compiler include path\n");
+		"\"pawno/External/\", \"qawno/External/\"] # compiler include path\n");
 
 	if (has_gamemodes && sef_path[0]) {
 		fprintf(file, "   input = \"%s.pwn\" # project input\n",
@@ -2257,11 +2257,11 @@ dog_generate_toml_content(FILE *file, const char *dog_os_type,
 		fprintf(file, "   output = \"%s.amx\" # project output\n",
 		    sef_path);
 	} else {
-		if (path_exists("doguu/server.p") == 1) {
+		if (path_exists("Doguu/server.p") == 1) {
 			fprintf(file,
-			    "   input = \"doguu/server.p\" # project input\n");
+			    "   input = \"Doguu/server.p\" # project input\n");
 			fprintf(file,
-			    "   output = \"doguu/server.amx\" # project output\n");
+			    "   output = \"Doguu/server.amx\" # project output\n");
 		} else {
 			fprintf(file,
 			    "   input = \"gamemodes/grandlarc.pwn\" # project input\n");

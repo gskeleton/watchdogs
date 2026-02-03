@@ -69,8 +69,8 @@
     # include <spawn.h>
 # endif
 
-# include "../include/cJSON/cJSON.h"
-# include "../include/tomlc/toml.h"
+# include "../External/cJSON/cJSON.h"
+# include "../External/tomlc/toml.h"
 
 # define _PATH_CHR_SEP_POSIX '/'
 # define _PATH_CHR_SEP_WIN32 '\\'

@@ -31,6 +31,10 @@
 >  https://sampwiki.blast.hk/wiki/Errors_List<br>
 >  https://sampforum.blast.hk/showthread.php?tid=185407<br>
 
+## Compiler/Pawn Doc
+- https://github.com/pawn-lang/compiler/tree/master/doc
+- https://github.com/compuphase/pawn/tree/main/doc
+
 # Useful links
 ## Text Editor
 - VSCode: https://code.visualstudio.com/

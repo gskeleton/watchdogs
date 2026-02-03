@@ -460,20 +460,31 @@ int dog_exec_compiler_process(char *pawncc_path,
 	/* 3 */								"visual-c-redistributable-"
 	/* 4 */								"runtime-package-all-in-one"
 	/* 5 */								"/"
-	/* 7 newline */				"\n";
+	/* 7 newline */				        "\n";
 
 	if (compiler_full_includes == NULL)
 		compiler_full_includes =
       strdup("-ipawno/include -iqawno/include -igamemodes");
 
 	dog_serv_init(pawncc_path, input_path);
+	
+	/* Build compiler command line string */
+	result_configure = snprintf(compiler_input,
+		sizeof(compiler_input), "%s %s -o%s %s %s %s",
+		/// ./.\path/path/pawncc a.pwn -oa.amx -d:3 -i=pawno/include
+		pawncc_path, // pawncc
+		input_path, // input
+		output_path, // output
+		dogconfig.dog_toml_all_flags, // flag
+		compiler_full_includes, // includes
+		compiler_path_include_buf); // includes
 
 	/* Initialize log file path based on platform */
-#ifdef DOG_WINDOWS
+	#ifdef DOG_WINDOWS
 	#define COMPILER_LOG ".watchdogs\\compiler.log"
-#else
+	#else
 	#define COMPILER_LOG ".watchdogs/compiler.log"
-#endif
+	#endif
 
 	#ifdef DOG_WINDOWS
 		ZeroMemory(&_STARTUPINFO,
@@ -509,17 +520,6 @@ int dog_exec_compiler_process(char *pawncc_path,
 		}
 		_STARTUPINFO.hStdInput = GetStdHandle(
 			STD_INPUT_HANDLE);
-
-		/* Build compiler command line string */
-		result_configure = snprintf(compiler_input,
-			sizeof(compiler_input),
-			"%s %s -o%s %s %s %s",
-			pawncc_path,
-			input_path,
-			output_path,
-			dogconfig.dog_toml_all_flags,
-			compiler_full_includes,
-			compiler_path_include_buf);
 
 		if (compiler_input_debug == true) {
 		#ifdef DOG_ANDROID
@@ -669,16 +669,6 @@ int dog_exec_compiler_process(char *pawncc_path,
 			CloseHandle(hFile);
 		}
 	#else
-		result_configure = snprintf(compiler_input,
-			sizeof(compiler_input),
-			"%s %s -o%s %s %s %s",
-			pawncc_path,
-			input_path,
-			output_path,
-			dogconfig.dog_toml_all_flags,
-			compiler_full_includes,
-			compiler_path_include_buf);
-
 		if (result_configure < 0 ||
 			result_configure >= sizeof(compiler_input)) {
 			pr_error(stdout,
@@ -1321,13 +1311,13 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 			memset(compiler_buf, 0, sizeof(compiler_buf));
 
 			if (!strstr(ret, "gamemodes/") &&
-				!strstr(ret, "pawno/include/") &&
-				!strstr(ret, "qawno/include/")) {
+				!strstr(ret, "pawno/External/") &&
+				!strstr(ret, "qawno/External/")) {
 					snprintf(compiler_buf, sizeof(compiler_buf),
 						"-i" "=%s "
 						"-i" "=%s" "gamemodes/ "
-						"-i" "=%s" "pawno/include/ "
-						"-i" "=%s" "qawno/include/ ",
+						"-i" "=%s" "pawno/External/ "
+						"-i" "=%s" "qawno/External/ ",
 						compiler_temp, compiler_temp, compiler_temp, compiler_temp);
 			} else {
 					snprintf(compiler_buf, sizeof(compiler_buf),

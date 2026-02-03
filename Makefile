@@ -8,19 +8,19 @@ CFLAGS         = -O2 -pipe
 LDFLAGS        = -lm -lcurl -lreadline -lhistory -larchive
 
 SRCS = \
-	source/debug.c \
-	source/curl.c \
-	source/units.c \
-	source/utils.c \
-	source/replicate.c \
-	source/cause.c \
-	source/compiler.c \
-	source/archive.c \
-	source/library.c \
-	source/endpoint.c \
-	source/crypto.c \
-	include/tomlc/toml.c \
-	include/cJSON/cJSON.c
+	Source/debug.c \
+	Source/curl.c \
+	Source/units.c \
+	Source/utils.c \
+	Source/replicate.c \
+	Source/cause.c \
+	Source/compiler.c \
+	Source/archive.c \
+	Source/library.c \
+	Source/endpoint.c \
+	Source/crypto.c \
+	External/tomlc/toml.c \
+	External/cJSON/cJSON.c
 
 OBJS = $(SRCS:.c=.o)
 
