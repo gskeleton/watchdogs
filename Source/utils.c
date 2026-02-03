@@ -2247,7 +2247,7 @@ dog_generate_toml_content(FILE *file, const char *dog_os_type,
 	}
 
 	fprintf(file, "   includes = [\"gamemodes/\"," \
-		"\"pawno/External/\", \"qawno/External/\"] # compiler include path\n");
+		"\"pawno/include/\", \"qawno/include/\"] # compiler include path\n");
 
 	if (has_gamemodes && sef_path[0]) {
 		fprintf(file, "   input = \"%s.pwn\" # project input\n",

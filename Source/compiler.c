@@ -1311,13 +1311,13 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 			memset(compiler_buf, 0, sizeof(compiler_buf));
 
 			if (!strstr(ret, "gamemodes/") &&
-				!strstr(ret, "pawno/External/") &&
-				!strstr(ret, "qawno/External/")) {
+				!strstr(ret, "pawno/include/") &&
+				!strstr(ret, "qawno/include/")) {
 					snprintf(compiler_buf, sizeof(compiler_buf),
 						"-i" "=%s "
 						"-i" "=%s" "gamemodes/ "
-						"-i" "=%s" "pawno/External/ "
-						"-i" "=%s" "qawno/External/ ",
+						"-i" "=%s" "pawno/include/ "
+						"-i" "=%s" "qawno/include/ ",
 						compiler_temp, compiler_temp, compiler_temp, compiler_temp);
 			} else {
 					snprintf(compiler_buf, sizeof(compiler_buf),
