@@ -50,7 +50,7 @@ this_os_archive(const char *filename)
 	strncpy(size_host_os, opr, sizeof(size_host_os) - 1);
 	size_host_os[sizeof(size_host_os) - 1] = '\0';
 
-	for (int i = 0; size_host_os[i]; i++)
+	for (long int i = 0; size_host_os[i]; i++)
 		size_host_os[i] = tolower(size_host_os[i]);
 
 	if (strfind(size_host_os, "win", true))
@@ -270,7 +270,6 @@ package_url_checking(const char *url, const char *github_token)
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
 
 	printf("   Try Connecting... ");
-	fflush(stdout);
 
 	res = curl_easy_perform(curl);
 	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
@@ -815,7 +814,7 @@ package_implementation_samp_conf(const char *config_file, const char *fw_line,
 
 	temp_file = fopen(temp_path, "w");
 
-	if (fetch_server_env() != 1)
+	if (fet_server_env() != false)
 		return;
 
 	if (dir_exists(".watchdogs") == 0)
@@ -898,7 +897,7 @@ package_implementation_omp_conf(const char *config_name,
 	size_t	 file_read;
 	int	 p_exist;
 
-	if (fetch_server_env() != 2)
+	if (fet_server_env() != true)
 		return;
 
 	pr_color(stdout, DOG_COL_GREEN,
@@ -1137,7 +1136,7 @@ package_add_include(const char *modes, char *package_name,
 				    n_file);
 		} else {
 			fprintf(n_file, "%s\n", package_name);
-			fwrite(ct_modes, 1, fle_size, n_file);
+			fwrite(ct_modes, 1, (size_t)fle_size, n_file);
 		}
 	}
 
@@ -1159,9 +1158,9 @@ package_include_prints(const char *package_include)
 	static bool	 k = false;
 	static const char *expect_add;
 
-	package_n = fetch_filename(package_include);
+	package_n = fet_filename(package_include);
 	snprintf(dependencies, sizeof(dependencies), "%s", package_n);
-	direct_bnames = fetch_basename(dependencies);
+	direct_bnames = fet_basename(dependencies);
 
 	this_proc_file = fopen("watchdogs.toml", "r");
 	if (this_proc_file) {
@@ -1198,7 +1197,6 @@ package_include_prints(const char *package_include)
 		    "Where do you want to install %s? (enter for: %s)"
 		    DOG_COL_DEFAULT, _directive,
 		    dogconfig.dog_toml_serv_input);
-		fflush(stdout);
 		userinput = readline(" ");
 		if (userinput[0] == '\0')
 			userinput = strdup(dogconfig.dog_toml_serv_input);
@@ -1219,9 +1217,9 @@ package_include_prints(const char *package_include)
 
 	expect_add = strdup(size_userinput);
 
-	if (fetch_server_env() == 1) {
+	if (fet_server_env() == false) {
 		DENCY_ADD_INCLUDES(expect_add, _directive, "#include <a_samp>");
-	} else if (fetch_server_env() == 2) {
+	} else if (fet_server_env() == true) {
 		DENCY_ADD_INCLUDES(expect_add, _directive, "#include <open.mp>");
 	} else {
 		DENCY_ADD_INCLUDES(expect_add, _directive, "#include <a_samp>");
@@ -1249,9 +1247,9 @@ dump_file_type(const char *dump_path, char *dump_pattern,
 
     if (found) {
         for (i = 0; i < dogconfig.dog_sef_count; ++i) {
-            package_names = fetch_filename(
+            package_names = fet_filename(
                 dogconfig.dog_sef_found_list[i]);
-            basename = fetch_basename(
+            basename = fet_basename(
                 dogconfig.dog_sef_found_list[i]);
 
             basename_lwr = strdup(basename);
@@ -1365,12 +1363,12 @@ dump_file_type(const char *dump_path, char *dump_pattern,
             if (dump_root == 1)
                 goto done;
 
-            if (fetch_server_env() == 1 &&
+            if (fet_server_env() == false &&
                 strfind(dogconfig.dog_toml_server_config,
                 	".cfg", true))
                 S_ADD_PLUGIN(dogconfig.dog_toml_server_config,
                     "plugins", basename);
-            else if (fetch_server_env() == 2 &&
+            else if (fet_server_env() == true &&
                 strfind(dogconfig.dog_toml_server_config,
                 	".json", true))
                 M_ADD_PLUGIN(dogconfig.dog_toml_server_config,
@@ -1415,7 +1413,7 @@ void package_move_files(const char *package_dir, const char *package_loc)
 	    snprintf(includes, sizeof(includes), "pawno/include");
 	#endif
 
-    int _ret = fetch_server_env();
+    int _ret = fet_server_env();
     if (_ret == 1) {
         snprintf(includes, sizeof(includes), "pawno/include");
     } else {
@@ -1600,7 +1598,7 @@ dog_apply_depends(const char *depends_name, const char *depends_location)
 	println(stdout, "dency dir: %s", package_dir);
 #endif
 
-	if (fetch_server_env() == 1) {
+	if (fet_server_env() == false) {
 		snprintf(size_depends_location, sizeof(size_depends_location),
 		    "%s/pawno/include", depends_location);
 		if (dir_exists(size_depends_location) == 0)
@@ -1610,7 +1608,7 @@ dog_apply_depends(const char *depends_name, const char *depends_location)
 		    "%s/plugins", depends_location);
 		if (dir_exists(size_depends_location) == 0)
 			dog_mkdir_recursive(size_depends_location);
-	} else if (fetch_server_env() == 2) {
+	} else if (fet_server_env() == true) {
 		snprintf(size_depends_location, sizeof(size_depends_location),
 		    "%s/qawno/include", depends_location);
 		if (dir_exists(size_depends_location) == 0)
@@ -1633,11 +1631,11 @@ dog_apply_depends(const char *depends_name, const char *depends_location)
 void
 dog_install_depends(const char *packages, const char *branch, const char *where)
 {
-	char			 buffer[1024], package_url[1024],
-				 package_name[DOG_PATH_MAX];
-	char			*procure_buffer, *fetch_pwd, *init_location,
-				*locations;
-	const char		*dependencies[MAX_DEPENDS];
+	char			 buffer[1024] = {0}, package_url[1024] = {0},
+				 package_name[DOG_PATH_MAX] = {0};
+	char			*procure_buffer = NULL, *fet_pwd = NULL, *init_location = NULL,
+				*locations = NULL;
+	const char		*dependencies[MAX_DEPENDS] = {0};
 	struct _repositories	 repo;
 	int			 package_counts = 0, i;
 	static int   k = false;
@@ -1736,7 +1734,6 @@ dog_install_depends(const char *packages, const char *branch, const char *where)
 					   ".."
 					   "LIST OF DIRECTORY: "
 					   "%s", dog_procure_pwd());
-				fflush(stdout);
 				print("\n");
 
 				#ifdef DOG_LINUX
@@ -1783,20 +1780,18 @@ dog_install_depends(const char *packages, const char *branch, const char *where)
 				#endif
 
 				print("\n");
-				fflush(stdout);
 
 				printf(DOG_COL_BCYAN
 				    "Where do you want to install %s? "
 				    "(enter for: %s)" DOG_COL_DEFAULT,
 				    package_name, dog_procure_pwd());
-				fflush(stdout);
 
 				locations = readline(" ");
 				if (locations[0] == '\0' || locations[0] == '.') {
-					fetch_pwd = dog_procure_pwd();
-					init_location = strdup(fetch_pwd);
+					fet_pwd = dog_procure_pwd();
+					init_location = strdup(fet_pwd);
 					dog_apply_depends(package_name,
-					    fetch_pwd);
+					    fet_pwd);
 					dog_free(locations);
 				} else {
 					if (dir_exists(locations) == 0)

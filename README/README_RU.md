@@ -81,7 +81,7 @@ apt update && apt upgrade && apt install -y aria2 && aria2c -o install.sh https:
 
 ---
 
-## Windows Native
+## Windows и POSIX для Windows
 
 > **Сборка для Windows?** Используйте **MSYS2** (рекомендуется).
 

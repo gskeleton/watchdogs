@@ -122,9 +122,19 @@
 # define _set_full_access(wx) chmod(wx, 0777)
 # endif
 
+# define __set_default_access(wx) _set_full_access(wx)
+
 # define bool _Bool
 # define true 1
 # define false 0
+
+# ifndef EXIT_FAILURE
+    # define EXIT_FAILURE 1
+# endif
+# ifndef EXIT_SUCCESS
+    # define EXIT_SUCCESS 0
+#endif
+
 # define print(wx) fputs(wx, stdout)
 
 # define __UNUSED__      __attribute__((unused))
@@ -175,6 +185,7 @@ typedef struct {
     char   dog_sef_found_list \
             [MAX_SEF_ENTRIES] \
             [MAX_SEF_PATH_SIZE]  ;
+    char * dog_pawncc_path       ;
     char * dog_ptr_samp          ;
     char * dog_ptr_omp           ;
     char * dog_toml_os_type      ;
@@ -240,35 +251,6 @@ extern WatchdogConfig dogconfig;
 # define DOG_COL_DEFAULT    "\033[39m"
 # define BKG_DEFAULT    "\033[49m"
 
-# ifndef S_IFREG
-  # define S_IFREG 0100000
-# endif
-# ifndef S_IFDIR
-  # define S_IFDIR 0040000
-# endif
-# ifndef S_IFLNK
-  # define S_IFLNK 0120000
-# endif
-
-# ifndef S_IRUSR
-  # define S_IRUSR 0400
-  # define S_IWUSR 0200
-  # define S_IXUSR 0100
-# endif
-
-typedef struct {
-        uint64_t st_size;     /* file size in bytes */
-        uint64_t st_ino;      /* inode (0 if not available) */
-        uint64_t st_dev;      /* device id (0 if not available) */
-        unsigned int st_mode; /* file type & permission bits (emulated on Windows) */
-        time_t st_latime;     /* last access time */
-        time_t st_lmtime;     /* last modification time */
-        time_t st_mctime;     /* metadata change time (POSIX) or creation/metadata time on Windows */
-} dog_portable_stat_t;
-
-int dog_portable_stat(const char *path, dog_portable_stat_t *out);
-int dog_portable_stat(const char *path, dog_portable_stat_t *out);
-
 # define pr_color printf_colour
 # define pr_info printf_info
 # define pr_warning printf_warning
@@ -315,10 +297,7 @@ void* dog_calloc(size_t count, size_t size);
 void* dog_realloc(void* ptr, size_t size);
 void  dog_free(void *ptr);
 
-int fetch_server_env(void);
-int is_running_in_container(void);
-int is_running_in_termux(void);
-int is_running_in_wintive(void);
+bool fet_server_env(void);
 
 int dir_exists(const char *path);
 int path_exists(const char *path);
@@ -327,16 +306,12 @@ int path_access(const char *path);
 int file_regular(const char *path);
 int file_same_file(const char *a, const char *b);
 int dog_dot_or_dotdot(const char *name);
-int condition_check(char *path);
+int binary_condition_check(char *path);
 
 void path_sep_to_posix(char *path);
-const char *look_up_sep(const char *sep_path);
-const char *fetch_filename(const char *path);
-char * fetch_basename(const char *path);
-
-void unit_show_dog(void);
-void compiler_show_tip(void);
-void unit_show_help(const char* command);
+const char *lookup_path_sep(const char *sep_path);
+const char *fet_filename(const char *path);
+char * fet_basename(const char *path);
 
 char *dog_procure_pwd(void);
 char* dog_masked_text(int reveal, const char *text);
@@ -344,17 +319,14 @@ int dog_mkdir_recursive(const char *path);
 int dog_exec_command(char *const argv[]);
 
 void dog_printfile(const char *path);
-int dog_console_title(const char *__title);
-void dog_strip_dot_fns(char *dst, size_t dst_sz, const char *src);
+bool dog_console_title(const char *__title);
 
 bool dog_strcase(const char *text, const char *pattern);
 bool strend(const char *str, const char *suffix, bool nocase);
 bool strfind(const char *text, const char *pattern, bool nocase);
 int match_wildcard(const char *str, const char *pat);
 
-void __set_default_access(const char *c_dest);
-
-int dog_kill_process(const char *process);
+bool dog_kill_process(const char *process);
 
 int dog_find_path(const char *sef_path, const char *sef_name, const char *ignore_dir);
 

@@ -46,7 +46,6 @@ extern const CompilerOption object_opt[];
 
 #ifdef DOG_WINDOWS
 
-/* Thread data structure for _beginthreadex */
 typedef struct {
 	char *compiler_input;
 	STARTUPINFO *startup_info;

@@ -11,13 +11,22 @@
 #include  "compiler.h"
 #include  "utils.h"
 
-static char
-	command[DOG_MAX_PATH] = {0};
+static
+	char
+	stock
+	[DOG_MAX_PATH]
+		= {0};
 
 const char	*unit_command_list[] = {
-	"help", "exit", "sha1", "sha256", "crc32", "djb2", "pbkdf2", "config",
-	"replicate", "gamemode", "pawncc", "debug",
-	"compile", "decompile", "running", "compiles", "stop", "restart",
+	"help", "exit",
+	"sha1", "sha256",
+	"crc32", "djb2",
+	"pbkdf2", "config",
+	"replicate", "gamemode",
+	"pawncc", "debug",
+	"compile", "decompile",
+	"running", "compiles",
+	"stop", "restart",
 	"tracker", "compress"
 };
 
@@ -25,29 +34,34 @@ const size_t	 unit_command_len = sizeof(unit_command_list) /
 									sizeof(unit_command_list[0]);
 
 WatchdogConfig	 dogconfig = {
-	.dog_os_type            = CRC32_FALSE,
-	.dog_is_samp            = CRC32_FALSE,
-	.dog_is_omp             = CRC32_FALSE,
-	.dog_sef_count          = RATE_SEF_EMPTY,
-	.dog_sef_found_list     = { { RATE_SEF_EMPTY } },
-	.dog_ptr_samp           = NULL,
-	.dog_ptr_omp            = NULL,
-	.dog_toml_os_type       = NULL,
+	.dog_os_type = CRC32_FALSE,
+    .dog_is_samp = CRC32_FALSE,
+	.dog_is_omp  = CRC32_FALSE,
+	.dog_sef_count = RATE_SEF_EMPTY,
+	.dog_sef_found_list = { { RATE_SEF_EMPTY } },
+	.dog_pawncc_path = NULL,
+	.dog_ptr_samp = NULL,
+	.dog_ptr_omp = NULL,
+	.dog_toml_os_type = NULL,
 	.dog_toml_server_binary = NULL,
 	.dog_toml_server_config = NULL,
-	.dog_toml_server_logs   = NULL,
-	.dog_toml_all_flags     = NULL,
+	.dog_toml_server_logs = NULL,
+	.dog_toml_all_flags = NULL,
 	.dog_toml_root_patterns = NULL,
-	.dog_toml_packages      = NULL,
-	.dog_toml_serv_input    = NULL,
-	.dog_toml_serv_output   = NULL
+	.dog_toml_packages = NULL,
+	.dog_toml_serv_input = NULL,
+	.dog_toml_serv_output = NULL
 };
 
 const char	*toml_char_field[] = {
-	"dog_toml_os_type", "dog_toml_server_binary",
-	"dog_toml_server_config", "dog_toml_server_logs",
-	"dog_toml_all_flags", "dog_toml_root_patterns",
-	"dog_toml_packages", "dog_toml_serv_input",
+	"dog_toml_os_type",
+	"dog_toml_server_binary",
+	"dog_toml_server_config",
+	"dog_toml_server_logs",
+	"dog_toml_all_flags",
+	"dog_toml_root_patterns",
+	"dog_toml_packages",
+	"dog_toml_serv_input",
 	"dog_toml_serv_output"
 };
 
@@ -65,15 +79,17 @@ char		**toml_pointers[] = {
 
 void dog_sef_path_revert(void)
 {
-	size_t	 i, rate_sef_entries;
+	size_t	 i, fet_sef_ent;
 
-	rate_sef_entries = sizeof(dogconfig.dog_sef_found_list) /
+	fet_sef_ent
+		= sizeof(dogconfig.dog_sef_found_list) /
 	    sizeof(dogconfig.dog_sef_found_list[0]);
 
-	for (i = 0; i < rate_sef_entries; i++)
+	for (i = 0; i < fet_sef_ent; i++)
 		dogconfig.dog_sef_found_list[i][0] = '\0';
 
-	dogconfig.dog_sef_count = RATE_SEF_EMPTY;
+	dogconfig.dog_sef_count
+		= RATE_SEF_EMPTY;
 	memset(dogconfig.dog_sef_found_list, RATE_SEF_EMPTY,
 	    sizeof(dogconfig.dog_sef_found_list));
 }
@@ -154,7 +170,8 @@ void * dog_malloc(size_t size)
 	void	*ptr = malloc(size);
 
 	if (!ptr) {
-		fprintf(stderr, "malloc failed: %zu bytes\n", size);
+		fprintf(stderr,
+			"malloc failed: %zu bytes\n", size);
 		minimal_debugging();
 	}
 	return (ptr);
@@ -166,7 +183,8 @@ void * dog_calloc(size_t count, size_t size)
 
 	if (!ptr) {
 		fprintf(stderr,
-		    "calloc failed: %zu elements x %zu bytes\n", count, size);
+		    "calloc failed: %zu "
+			"elements x %zu bytes\n", count, size);
 		return (NULL);
 	}
 	return (ptr);
@@ -174,10 +192,12 @@ void * dog_calloc(size_t count, size_t size)
 
 void * dog_realloc(void *ptr, size_t size)
 {
-	void	*new_ptr = (ptr ? realloc(ptr, size) : malloc(size));
+	void	*new_ptr
+		= (ptr ? realloc(ptr, size) : malloc(size));
 
 	if (!new_ptr) {
-		fprintf(stderr, "realloc failed: %zu bytes\n", size);
+		fprintf(stderr,
+		"realloc failed: %zu bytes\n", size);
 		return (NULL);
 	}
 	return (new_ptr);
@@ -185,90 +205,58 @@ void * dog_realloc(void *ptr, size_t size)
 
 void dog_free(void *ptr)
 {
-	if (ptr)
-	{
+	if (ptr) {
 		free(ptr);
 		ptr = NULL;
 	}
 	return;
 }
 
-int
-fetch_server_env(void)
+bool
+fet_server_env(void)
 {
-	if (strcmp(dogconfig.dog_is_samp, CRC32_TRUE) == 0) {
-		return (1);
-	} else if (strcmp(dogconfig.dog_is_omp, CRC32_TRUE) == 0) {
-		return (2);
-	} else {
-		return (1);
+	if (strcmp(dogconfig.dog_is_samp, CRC32_TRUE)
+		== 0) {
+		return (false);
+	} else if (strcmp(dogconfig.dog_is_omp, CRC32_TRUE)
+		== 0) {
+		return (true);
 	}
+	return false;
 }
 
-int
+static
+bool
 is_running_in_container(void)
 {
 	FILE	*fp;
 
 	if (path_access("/.dockerenv"))
-		return (1);
+		return (true);
 	if (path_access("/run/.containerenv"))
-		return (1);
+		return (true);
+
+	memset(stock, 0, sizeof(stock));
 
 	fp = fopen("/proc/1/cgroup", "r");
 	if (fp) {
-		while (fgets(command, sizeof(command), fp)) {
-			if (strstr(command, "/docker/") ||
-			    strstr(command, "/podman/") ||
-			    strstr(command, "/containerd/")) {
+		while (fgets(stock, sizeof(stock), fp)) {
+			if (strstr(stock, "/docker/") ||
+			    strstr(stock, "/podman/") ||
+			    strstr(stock, "/containerd/"))
+			{
 				fclose(fp);
-				return (1);
+				return (true);
 			}
 		}
 		fclose(fp);
 	}
 
-	return (0);
+	return (false);
 }
 
-int
-is_running_in_termux(void)
-{
-	int	 is_termux = 0;
-#if defined(DOG_ANDROID)
-	is_termux = 1;
-	return (is_termux);
-#endif
-
-	if (path_exists("/data/data/com.termux/files/usr/local/lib/") == 1 ||
-	    path_exists("/data/data/com.termux/files/usr/lib/") == 1 ||
-	    path_exists("/data/data/com.termux/arm64/usr/lib") == 1 ||
-	    path_exists("/data/data/com.termux/arm32/usr/lib") == 1 ||
-	    path_exists("/data/data/com.termux/amd32/usr/lib") == 1 ||
-	    path_exists("/data/data/com.termux/amd64/usr/lib") == 1)
-	{
-		is_termux = 1;
-	}
-
-	return (is_termux);
-}
-
-int
-is_running_in_wintive(void)
-{
-#if defined(DOG_LINUX) || defined(DOG_ANDROID)
-	return (0);
-#endif
-	char	*msys2_env;
-
-	msys2_env = getenv("MSYSTEM");
-	if (msys2_env)
-		return (0);
-	else
-		return (1);
-}
-
-void path_sep_to_posix(char *path)
+void
+path_sep_to_posix(char *path)
 {
 	char	*pos;
 
@@ -337,7 +325,8 @@ file_same_file(const char *a, const char *b)
 	return (sa.st_ino == sb.st_ino && sa.st_dev == sb.st_dev);
 }
 
-const char *look_up_sep(const char *sep_path) {
+const char
+*lookup_path_sep(const char *sep_path) {
     if (!sep_path)
         return NULL;
 
@@ -350,16 +339,16 @@ const char *look_up_sep(const char *sep_path) {
         return (_l ? _l : _w);
 }
 
-const char * fetch_filename(const char *path)
+const char * fet_filename(const char *path)
 {
-	const char	*p = look_up_sep(path);
+	const char	*p = lookup_path_sep(path);
 
 	return (p ? p + 1 : path);
 }
 
-char * fetch_basename(const char *path)
+char * fet_basename(const char *path)
 {
-    const char *filename = fetch_filename(path);
+    const char *filename = fet_filename(path);
 
     char *base = strdup(filename);
     if (!base)
@@ -376,21 +365,12 @@ char * fetch_basename(const char *path)
 
 char * dog_procure_pwd(void)
 {
-	static char	 dog_work_dir[DOG_PATH_MAX];
+	static char	 dog_work_dir[DOG_PATH_MAX] = { 0 };
 
 	if (dog_work_dir[0] == '\0') {
-#ifdef DOG_WINDOWS
-		DWORD	 size_len;
-
-		size_len = GetCurrentDirectoryA(sizeof(dog_work_dir),
-		    dog_work_dir);
-		if (size_len == 0 || size_len >= sizeof(dog_work_dir))
-			dog_work_dir[0] = '\0';
-#else
 		if (getcwd(dog_work_dir, sizeof(dog_work_dir)) == NULL) {
 			dog_work_dir[0] = '\0';
 		}
-#endif
 	}
 	return (dog_work_dir);
 }
@@ -425,23 +405,25 @@ dog_masked_text(int reveal, const char *text)
 }
 
 int dog_mkdir_recursive(const char *path)
-{;
+{
 	char	*p;
 	size_t	 len;
 
 	if (!path || !*path)
 		return (-1);
 
-	snprintf(command, sizeof(command), "%s", path);
-	len = strlen(command);
+	memset(stock, 0, sizeof(stock));
 
-	if (len > 1 && command[len - 1] == '/')
-		command[len - 1] = '\0';
+	snprintf(stock, sizeof(stock), "%s", path);
+	len = strlen(stock);
 
-	for (p = command + 1; *p; p++) {
+	if (len > 1 && stock[len - 1] == '/')
+		stock[len - 1] = '\0';
+
+	for (p = stock + 1; *p; p++) {
 		if (*p == '/') {
 			*p = '\0';
-			if (MKDIR(command) != 0 && errno != EEXIST) {
+			if (MKDIR(stock) != 0 && errno != EEXIST) {
 				perror("mkdir");
 				return (-1);
 			}
@@ -449,7 +431,7 @@ int dog_mkdir_recursive(const char *path)
 		}
 	}
 
-	if (MKDIR(command) != 0 && errno != EEXIST) {
+	if (MKDIR(stock) != 0 && errno != EEXIST) {
 		perror("mkdir");
 		return (-1);
 	}
@@ -457,7 +439,7 @@ int dog_mkdir_recursive(const char *path)
 	return (0);
 }
 
-int condition_check(char *path) {
+int binary_condition_check(char *path) {
 	
 	int fd;
 	struct stat st;
@@ -467,7 +449,7 @@ int condition_check(char *path) {
 	if (fd < 0) {
 	    pr_error(stderr, "open failed");
 	    minimal_debugging();
-	    return (1);
+	    return (false);
 	}
 	HANDLE h = (HANDLE)_get_osfhandle(fd);
 	SetHandleInformation(h, HANDLE_FLAG_INHERIT, 0);
@@ -483,7 +465,7 @@ int condition_check(char *path) {
 	if (fd < 0) {
 	    pr_error(stderr, "open failed");
 	    minimal_debugging();
-	    return (1);
+	    return (false);
 	}
 	#endif
 
@@ -491,359 +473,106 @@ int condition_check(char *path) {
 	    pr_error(stderr, "fstat failed");
 	    minimal_debugging();
 	    close(fd);
-	    return (1);
+	    return (false);
 	}
 
 	if (!S_ISREG(st.st_mode)) {
 	    pr_error(stderr, "Not a regular file");
 	    minimal_debugging();
 	    close(fd);
-	    return (1);
+	    return (false);
 	}
 
 	if (!(st.st_mode & S_IXUSR)) {
 	    pr_error(stderr, "File not executable");
 	    minimal_debugging();
 	    close(fd);
-	    return (1);
+	    return (false);
 	}
 
 	close(fd);
 
-    return (0);
+    return (true);
 }
 
 void print_restore_color(void) {
 
-	print(BKG_DEFAULT)    ;
-
-	print(DOG_COL_RESET)  ;
-
+	print(BKG_DEFAULT);
+	print(DOG_COL_RESET);
 	print(DOG_COL_DEFAULT);
 
 	return;
 }
 
-void println(FILE *stream, const char *format, ...)
-{
-	va_list args;
+void println(FILE *stream, const char *format, ...) {
+	va_list    args;
 	va_start(args, format);
-	
 	print_restore_color();
-
 	vfprintf(stream, format, args);
-	
 	print("\n");
-	
 	print_restore_color();
-
 	va_end(args);
 	fflush(stream);
 }
 
-void printf_colour(FILE *stream, const char *color, const char *format, ...)
+void
+printf_colour(FILE *stream,
+			  const char *color,
+			  const char *format, ...)
 {
-	va_list args;
+	va_list    args;
 	va_start(args, format);
-
 	print_restore_color();
-
 	printf("%s", color);
-	
 	vfprintf(stream, format, args);
-	
 	print_restore_color();
-
 	va_end(args);
 	fflush(stream);
 }
 
-void printf_info(FILE *stream, const char *format, ...)
-{
-	va_list args;
+void
+printf_info(FILE *stream, const char *format, ...) {
+	va_list    args;
 	va_start(args, format);
-	
 	print_restore_color();
-
 	print(DOG_COL_YELLOW);
 	print("@ Hey!");
-	
 	print_restore_color();
-
 	print(": ");
-
 	vfprintf(stream, format, args);
-	
 	print("\n");
-	
 	va_end(args);
-	
 	fflush(stream);
 }
 
-void printf_warning(FILE *stream, const char *format, ...)
-{
-	va_list args;
+void
+printf_warning(FILE *stream, const char *format, ...) {
+	va_list    args;
 	va_start(args, format);
-	
 	print_restore_color();
-
 	print(DOG_COL_GREEN);
 	print("@ Uh-oh!");
-	
 	print_restore_color();
-
 	print(": ");
-
 	vfprintf(stream, format, args);
-	
 	print("\n");
-	
 	va_end(args);
-	
 	fflush(stream);
 }
 
-void printf_error(FILE *stream, const char *format, ...)
-{
-	va_list args;
+void
+printf_error(FILE *stream, const char *format, ...) {
+	va_list    args;
 	va_start(args, format);
-	
 	print_restore_color();
-
 	print(DOG_COL_RED);
 	print("@ Oops!");
-	
 	print_restore_color();
-
 	print(": ");
-
 	vfprintf(stream, format, args);
-	
 	print("\n");
-	
 	va_end(args);
-	
 	fflush(stream);
-}
-
-#ifdef DOG_WINDOWS
-
-static time_t filetime_to_time_t(const FILETIME *ft) {
-	const uint64_t
-		EPOCH_DIFF = 116444736000000000ULL;
-	uint64_t
-		v = ((uint64_t)ft->dwHighDateTime << 32) | ft->dwLowDateTime;
-	if (v < EPOCH_DIFF) return (time_t)0;
-	return (time_t)((v - EPOCH_DIFF) / 10000000ULL);
-}
-#endif
-
-int dog_portable_stat(const char *path, dog_portable_stat_t *out) {
-	if (!path || !out) return (-1); 
-	memset(out, 0, sizeof(*out));
-
-#ifdef DOG_WINDOWS
-	int len = MultiByteToWideChar(CP_UTF8, 0, path, -1, NULL, 0);
-
-	wchar_t
-		buffer[DOG_MAX_PATH]
-		;
-
-	if (len == 0 || len > DOG_MAX_PATH) {
-			if (!MultiByteToWideChar(CP_ACP, 0, path, -1, buffer, DOG_MAX_PATH)) return (-1);
-	} else {
-			MultiByteToWideChar(CP_UTF8, 0, path, -1, buffer, DOG_MAX_PATH);
-	}
-
-	WIN32_FILE_ATTRIBUTE_DATA fad;
-	if (!GetFileAttributesExW(buffer, GetFileExInfoStandard, &fad)) {
-			return (-1);
-	}
-
-	uint64_t size = ((uint64_t)fad.nFileSizeHigh << 32) | fad.nFileSizeLow;
-	out->st_size = size;
-
-	out->st_latime = filetime_to_time_t(&fad.ftLastAccessTime);
-	out->st_lmtime = filetime_to_time_t(&fad.ftLastWriteTime);
-	out->st_mctime = filetime_to_time_t(&fad.ftCreationTime);
-
-	DWORD attrs = fad.dwFileAttributes;
-
-	if (attrs & FILE_ATTRIBUTE_DIRECTORY) {
-			out->st_mode |= S_IFDIR;
-	} else {
-			out->st_mode |= S_IFREG;
-	}
-
-	if (attrs & FILE_ATTRIBUTE_READONLY) {
-			out->st_mode |= S_IRUSR;
-	} else {
-			out->st_mode |= (S_IRUSR | S_IWUSR);
-	}
-
-	const char *extension = strrchr(path, '.');
-	if (extension && (_stricmp(extension, ".exe") == 0 ||
-				_stricmp(extension, ".bat") == 0 ||
-				_stricmp(extension, ".com") == 0)) {
-			out->st_mode |= S_IXUSR;
-	}
-
-	out->st_ino = 0;
-	out->st_dev = 0;
-
-	return (0);
-#else
-	struct stat st;
-	if (stat(path, &st) != 0) return (-1);
-
-	out->st_size = (uint64_t)st.st_size;
-	out->st_ino  = (uint64_t)st.st_ino;
-	out->st_dev  = (uint64_t)st.st_dev;
-	out->st_mode = (unsigned int)st.st_mode;
-	out->st_latime = st.st_atime;
-	out->st_lmtime = st.st_mtime;
-	out->st_mctime = st.st_ctime;
-
-	return (0);
-#endif
-}
-
-void unit_show_dog(void) {
-	if (path_exists(".watchdogs/notice") == 0) {
-	print(" type: touch .watchdogs/notice | type nul > .watchdogs/notice for hide this message.\n");
-	#ifndef DOG_ANDROID
-	static const char *dog_ascii =
-		"\n                         \\/%%#z.     \\/.%%#z./   /,z#%%\\/\n"
-		"                         \\X##k      /X#####X\\   /d##X/\n"
-		"                         \\888\\   /888/ \\888\\   /888/\n"
-		"                        `v88;  ;88v'   `v88;  ;88v'\n"
-		"                         \\77xx77/       \\77xx77/\n"
-		"                        `::::'         `::::'\n\n"
-		"---------------------------------------------------------------------------------------------\n"
-		"                                            -----------------------------------------        \n"
-		"      ;printf(\"Hello, World\")               |  plugin installer                     |        \n"
-		"                                            v          v                            |        \n"
-		"pawncc | compile | gamemode | running | compiles | replicate | restart | stop       |        \n"
-		"  ^        ^          ^          ^ -----------------------       ^         ^        v        \n"
-		"  -------  ---------   ------------------                |       |         | compile n run  \n"
-		"        v          |                    |                |       v         --------          \n"
-		" install compiler  v                    v                v  restart server        |          \n"
-		"               compile gamemode  install gamemode  running server             stop server    \n"
-		"---------------------------------------------------------------------------------------------\n";
-	#else
-	static const char *dog_ascii =
-		"\n          \\/%%#z.     \\/.%%#z./   /,z#%%\\/\n"
-		"          \\X##k      /X#####X\\   /d##X/\n"
-		"          \\888\\   /888/ \\888\\   /888/\n"
-		"         `v88;  ;88v'   `v88;  ;88v'\n"
-		"          \\77xx77/       \\77xx77/\n"
-		"         `::::'         `::::'\n\n";
-	#endif
-	fwrite(dog_ascii, 1, strlen(dog_ascii), stdout);
-	print("Use \"help\" for more.\n");
-	}
-}
-
-void unit_show_help(const char *cmd)
-{
-	if (strlen(cmd) == 0) {
-	static const char *help_text =
-	"Usage: help <command> | help sha1\n\n"
-	"Commands:\n"
-	"  exit @ exit from watchdogs | "
-	"Usage: \"exit\" " DOG_COL_YELLOW "\n  ; Just type 'exit' and you're outta here!" DOG_COL_DEFAULT "\n"
-	"  sha1 @ generate sha1 hash | "
-	"Usage: \"sha1\" | [<args>] " DOG_COL_YELLOW "\n  ; Get that SHA1 hash for your text." DOG_COL_DEFAULT "\n"
-	"  sha256 @ generate sha256 hash | "
-	"Usage: \"sha256\" | [<args>] " DOG_COL_YELLOW "\n  ; Get that SHA256 hash for your text." DOG_COL_DEFAULT "\n"
-	"  crc32 @ generate crc32 checksum | "
-	"Usage: \"crc32\" | [<args>] " DOG_COL_YELLOW "\n  ; Quick CRC32 checksum generation." DOG_COL_DEFAULT "\n"
-	"  djb2 @ generate djb2 hash file | "
-	"Usage: \"djb2\" | [<args>] " DOG_COL_YELLOW "\n  ; djb2 hashing for your files." DOG_COL_DEFAULT "\n"
-	"  pbkdf2 @ generate passphrase | "
-	"Usage: \"pbkdf2\" | [<args>] " DOG_COL_YELLOW "\n  ; Password to Passphrase." DOG_COL_DEFAULT "\n"
-	"  config @ re-write watchdogs.toml | "
-	"Usage: \"config\" " DOG_COL_YELLOW "\n  ; Reset your config file to default settings." DOG_COL_DEFAULT "\n"
-	"  replicate @ dependency installer | "
-	"Usage: \"replicate\" " DOG_COL_YELLOW "\n  ; Downloads & Install Our Dependencies." DOG_COL_DEFAULT "\n"
-	"  gamemode @ download SA-MP gamemode | "
-	"Usage: \"gamemode\" " DOG_COL_YELLOW "\n  ; Grab some SA-MP gamemodes quickly." DOG_COL_DEFAULT "\n"
-	"  pawncc @ download SA-MP pawncc | "
-	"Usage: \"pawncc\" " DOG_COL_YELLOW "\n  ; Get the Pawn Compiler for SA-MP/open.mp." DOG_COL_DEFAULT "\n"
-	"  debug @ debugging & logging server logs | "
-	"Usage: \"debug\" " DOG_COL_YELLOW "\n  ; Keep an eye on your server logs." DOG_COL_DEFAULT "\n"
-	"  compile @ compile your project | "
-	"Usage: \"compile\" | [<args>] " DOG_COL_YELLOW "\n  ; Turn your code into something runnable!" DOG_COL_DEFAULT "\n"
-	"  decompile @ de-compile your project | "
-	"Usage: \"decompile\" | [<args>] " DOG_COL_YELLOW "\n  ; De-compile .amx into readable .asm." DOG_COL_DEFAULT "\n"
-	"  running @ running your project | "
-	"Usage: \"running\" | [<args>] " DOG_COL_YELLOW "\n  ; Fire up your project and see it in action." DOG_COL_DEFAULT "\n"
-	"  compiles @ compile and running your project | "
-	"Usage: \"compiles\" | [<args>] " DOG_COL_YELLOW "\n  ; Two-in-one: compile then run immediately!." DOG_COL_DEFAULT "\n"
-	"  stop @ stopped server tasks | "
-	"Usage: \"stop\" " DOG_COL_YELLOW "\n  ; Halt everything! Stop your server tasks." DOG_COL_DEFAULT "\n"
-	"  restart @ re-start server tasks | "
-	"Usage: \"restart\" " DOG_COL_YELLOW "\n  ; Fresh start! Restart your server." DOG_COL_DEFAULT "\n"
-	"  tracker @ account tracking | "
-	"Usage: \"tracker\" | [<args>] " DOG_COL_YELLOW "\n  ; Track accounts across platforms." DOG_COL_DEFAULT "\n"
-	"  compress @ create a compressed archive | "
-	"Usage: \"compress <input> <output>\" " DOG_COL_YELLOW "\n  ; Generates a compressed file (e.g., .zip/.tar.gz) from the specified source." DOG_COL_DEFAULT "\n";
-	fwrite(help_text, 1, strlen(help_text), stdout);
-	return;
-	}
-
-	static const struct {
-		const char *cmd;
-		const char *help;
-	} cmd_help[] = {
-		{"exit", "exit: exit from watchdogs. | Usage: \"exit\"\n\tJust type 'exit' and you're outta here!\n"},
-		{"sha1", "sha1: generate sha1. | Usage: \"sha1\" | [<args>]\n\tGet that SHA1 hash for your text.\n"},
-		{"sha256", "sha256: generate sha256. | Usage: \"sha256\" | [<args>]\n\tGet that SHA256 hash for your text.\n"},
-		{"crc32", "crc32: generate crc32. | Usage: \"crc32\" | [<args>]\n\tQuick CRC32 checksum generation.\n"},
-		{"djb2", "djb2: generate djb2 hash file. | Usage: \"djb2\" | [<args>]\n\tdjb2 hashing for your files.\n"},
-		{"pbkdf2", "pbkdf2: generate passphrase. | Usage: \"pbkdf2\" | [<args>]\n\tPassword to Passphrase.\n"},
-		{"config", "config: re-write watchdogs.toml. | Usage: \"config\"\n\tReset your config file to default settings.\n"},
-		{"replicate", "replicate: dependency installer. | Usage: \"replicate\"\n\tDownloads & Install Our Dependencies.\n"},
-		{"gamemode", "gamemode: download SA-MP gamemode. | Usage: \"gamemode\"\n\tGrab some SA-MP gamemodes quickly.\n"},
-		{"pawncc", "pawncc: download SA-MP pawncc. | Usage: \"pawncc\"\n\tGet the Pawn Compiler for SA-MP/open.mp.\n"},
-		{"debug", "debug: debugging & logging server debug. | Usage: \"debug\"\n\tKeep an eye on your server logs.\n"},
-		{"compile", "compile: compile your project. | Usage: \"compile\" | [<args>]\n\tTurn your code into something runnable!\n"},
-		{"decompile", "decompile: decompile your project. | Usage: \"decompile\" | [<args>]\n\tDecompile .amx -> .asm\n"},
-		{"running", "running: running your project. | Usage: \"running\" | [<args>]\n\tFire up your project and see it in action.\n"},
-		{"compiles", "compiles: compile and running your project. | Usage: \"compiles\" | [<args>]\n\tTwo-in-one: compile then run immediately!\n"},
-		{"stop", "stop: stopped server task. | Usage: \"stop\"\n\tHalt everything! Stop your server tasks.\n"},
-		{"restart", "restart: re-start server task. | Usage: \"restart\"\n\tFresh start! Restart your server.\n"},
-		{"tracker", "tracker: account tracking. | Usage: \"tracker\" | [<args>]\n\tTrack accounts across platforms.\n"},
-		{"compress", "compress: create a compressed archive from a file or folder. | Usage: \"compress <input> <output>\"\n\t"
-      "Generates a compressed file (e.g., .zip/.tar.gz) from the specified source.\n"}
-	};
-
-	for (size_t i = 0; i < sizeof(cmd_help) / sizeof(cmd_help[0]); i++) {
-		if (strcmp(cmd, cmd_help[i].cmd) == 0) {
-			print(cmd_help[i].help);
-			return;
-		}
-	}
-
-	print("help can't found for: '");
-	pr_color(stdout, DOG_COL_YELLOW, "%s", cmd);
-	print("'\n     Oops! That command doesn't exist. Try 'help' to see available commands.\n");
-}
-
-void compiler_show_tip(void) {
-    static const char *tip_options =
-    DOG_COL_BCYAN " o [--watchdogs/--detailed/-w] * Enable detailed watchdog output\n"
-    DOG_COL_BCYAN " o [--debug/-d]                * Enable debugger options\n"
-    DOG_COL_BCYAN " o [--prolix/-p]               * Enable verbose compilation\n"
-    DOG_COL_BCYAN " o [--assembler/-a]            * Show assembler output\n"
-    DOG_COL_BCYAN " o [--compact/-m]              * Use compact encoding\n"
-    DOG_COL_BCYAN " o [--compat/-c]               * Active cross path separator\n"
-    DOG_COL_BCYAN " o [--fast/-f]                 * Enable faster compilation mode\n"
-    DOG_COL_BCYAN " o [--clean/-n]                * Enable safe mode or clean mode\n";
-    fwrite(tip_options, 1, strlen(tip_options), stdout);
-    print_restore_color();
-    return;
 }
 
 int
@@ -855,13 +584,15 @@ dog_exec_command(char *const av[])
     size_t rem;
     int rv;
     unsigned char c;
+	memset(stock, 0, sizeof(stock));
 
     if (av == NULL || av[0] == NULL)
         return (-1);
 
     for (i = 0; i < 256 && av[i] != NULL; i++) {
         if (i >= 255) {
-            pr_warning(stdout, "too many arguments!");
+            pr_warning(stdout,
+				"too many arguments!");
             return (-1);
         }
     }
@@ -872,12 +603,11 @@ dog_exec_command(char *const av[])
 
             if (c == '`' || c == '$' || c == '(' || c == ')' ||
                 c == '\n' || c == '|' ||
-                c == '!' || c == '?' || c == '*' || c == '[' ||
-                c == ']' || c == '{' || c == '}' ||
-                (c < 0x20 && c != '\0')) {
+                c == '!' || c == '?' || c == '[' ||
+                c == ']' || c == '{' || c == '}') {
                     pr_warning(stdout,
                     	"shell injection potent: %s", p);
-                	printf("   file.txt; rm name.txt << sample of dangerous!..\n");
+                	printf("  like: file.txt; rm name.txt - potent!..\n");
             }
 
             if (c == '.' && p[1] == '.' && p[2] == '/') {
@@ -887,17 +617,17 @@ dog_exec_command(char *const av[])
         }
 
         if (i > 0) {
-            rem = sizeof(command) - len;
+            rem = sizeof(stock) - len;
             if (rem < 2) {
                 pr_warning(stdout, "command buffer exhausted!");
                 return (-1);
             }
-            command[len++] = ' ';
-            command[len] = '\0';
+            stock[len++] = ' ';
+            stock[len] = '\0';
         }
 
-        rem = sizeof(command) - len;
-        rv = snprintf(command + len, rem, "%s", av[i]);
+        rem = sizeof(stock) - len;
+        rv = snprintf(stock + len, rem, "%s", av[i]);
         if (rv < 0) {
             pr_warning(stdout, "snprintf failed!");
             return (-1);
@@ -909,12 +639,12 @@ dog_exec_command(char *const av[])
         len += (size_t)rv;
     }
 
-    if (len == 0 || len >= sizeof(command)) {
+    if (len == 0 || len >= sizeof(stock)) {
         pr_warning(stdout, "invalid command length!");
         return (-1);
     }
 
-    char *cmd = strdup(command);
+    char *cmd = strdup(stock);
     if (cmd == NULL) {
         pr_warning(stdout, "memory allocation failed!");
         return (-1);
@@ -1168,11 +898,11 @@ dog_printfile(const char *path)
 	return;
 }
 
-int dog_console_title(const char *title)
+bool dog_console_title(const char *title)
 {
 	const char	*new_title;
 #ifdef DOG_ANDROID
-	return (0);
+	return (false);
 #endif
 
 	if (!title)
@@ -1189,13 +919,11 @@ int dog_console_title(const char *title)
 #else
 	if (isatty(STDOUT_FILENO))
 		printf("\033]0;%s\007", new_title);
-	else
-		pr_error(stdout,
-			"linux: title failed..: is not tty.");
 #endif
-	return (0);
+	return (false);
 }
 
+static
 void
 dog_strip_dot_fns(char *dst, size_t dst_sz, const char *src)
 {
@@ -1329,14 +1057,14 @@ int match_wildcard(const char *str, const char *pat)
 	return (*p == '\0');
 }
 
-static void configure_path_sep(char *out, size_t out_sz,
+static void configure_path_sep(char *out, size_t sk_dependssz,
                                const char *open_dir,
                                const char *entry_name)
 {
     size_t dir_len, entry_len, need;
     int dir_has_sep, entry_has_sep;
 
-    if (!out || out_sz == 0 || !open_dir || !entry_name)
+    if (!out || sk_dependssz == 0 || !open_dir || !entry_name)
         return;
 
     dir_len = strlen(open_dir);
@@ -1350,7 +1078,7 @@ static void configure_path_sep(char *out, size_t out_sz,
     if (!dir_has_sep && !entry_has_sep)
         need += 1;
 
-    if (need > out_sz) {
+    if (need > sk_dependssz) {
         out[0] = '\0';
         return;
     }
@@ -1421,8 +1149,9 @@ static int __command_suggest(const char *s1, const char *s2)
 	return (prev[len2]);
 }
 
-const char * dog_find_near_command(const char *cmd, const char *commands[],
-    size_t num_cmds, int *out_distance)
+const char * dog_find_near_command(const char *cmd,
+								   const char *commands[],
+    size_t 						   num_cmds, int *sk_dependsdistance)
 {
 	int		 best_distance = INT_MAX;
 	const char	*best_cmd = NULL;
@@ -1439,17 +1168,10 @@ const char * dog_find_near_command(const char *cmd, const char *commands[],
 		}
 	}
 
-	if (out_distance)
-		*out_distance = best_distance;
+	if (sk_dependsdistance)
+		*sk_dependsdistance = best_distance;
 
 	return (best_cmd);
-}
-
-void __set_default_access(const char *c_dest)
-{
-	_set_full_access(c_dest);
-	
-	return;
 }
 
 static const char * dog_procure_os(void)
@@ -1463,9 +1185,10 @@ static const char * dog_procure_os(void)
 	strncpy(os, "linux", sizeof(os));
 #endif
 
+#define PROC_WSLINTEROP_PATH "/proc/sys/fs/binfmt_misc/WSLInterop"
 	if (is_running_in_container())
 		strncpy(os, "linux", sizeof(os));
-	else if (path_access("/proc/sys/fs/binfmt_misc/WSLInterop") == 1)
+	else if (path_access(PROC_WSLINTEROP_PATH) == 1)
 		strncpy(os, "windows", sizeof(os));
 
 	os[sizeof(os)-1] = '\0';
@@ -1474,7 +1197,7 @@ static const char * dog_procure_os(void)
 
 __PURE__
 static int
-ensure_parent_dir(char *out_parent, size_t n, const char *dest)
+ensure_parent_dir(char *sk_dependsparent, size_t n, const char *dest)
 {
 	char	 tmp[DOG_PATH_MAX];
 	char	*parent;
@@ -1488,18 +1211,20 @@ ensure_parent_dir(char *out_parent, size_t n, const char *dest)
 	if (!parent)
 		return (-1);
 
-	strncpy(out_parent, parent, n);
-	out_parent[n-1] = '\0';
+	strncpy(sk_dependsparent, parent, n);
+	sk_dependsparent[n-1] = '\0';
 	return (0);
 }
 
-int
+bool
 dog_kill_process(const char *process)
 {
     if (!process)
-        return (-1);
+        return (false);
 
 #ifdef DOG_WINDOWS
+	memset(stock, 0, sizeof(stock));
+
     STARTUPINFOA _STARTUPINFO;
     PROCESS_INFORMATION _PROCESS_INFO;
     SECURITY_ATTRIBUTES _ATTRIBUTES;
@@ -1510,29 +1235,32 @@ dog_kill_process(const char *process)
 
     _STARTUPINFO.cb = sizeof(_STARTUPINFO);
 
-    snprintf(command, sizeof(command),
+    snprintf(stock, sizeof(stock),
         "C:\\Windows\\System32\\taskkill.exe /F /IM \"%s\"",
         process
     );
 
     if (!CreateProcessA(
-		NULL, command,
+		NULL, stock,
 		NULL, NULL, FALSE,
 		CREATE_NO_WINDOW,
 		NULL, NULL,
 		&_STARTUPINFO,
 		&_PROCESS_INFO))
-        return (-1);
+        return (false);
 
     WaitForSingleObject(_PROCESS_INFO.hProcess, INFINITE);
     CloseHandle(_PROCESS_INFO.hProcess);
     CloseHandle(_PROCESS_INFO.hThread);
 
-    return (0);
+    return (true);
 
 #else
 
 #if !defined(DOG_ANDROID) && defined(DOG_LINUX)
+	if (process[0] == '.')
+		return (false);
+		
     pid_t pid;
     pid = fork();
     if (pid == 0) {
@@ -1540,9 +1268,9 @@ dog_kill_process(const char *process)
         _exit(127);
     }
     if (pid < 0)
-        return (-1);
+        return (false);
     waitpid(pid, NULL, 0);
-    return (0);
+    return (true);
 #else
     pid_t pid;
     pid = fork();
@@ -1551,9 +1279,9 @@ dog_kill_process(const char *process)
         _exit(127);
     }
     if (pid < 0)
-        return (-1);
+        return (false);
     waitpid(pid, NULL, 0);
-    return (0);
+    return (true);
 #endif
 
 #endif
@@ -1759,8 +1487,9 @@ _run_windows_command(const char *cmds)
 static int
 validate_src_dest(const char *c_src, const char *c_dest)
 {
-    char parent[DOG_PATH_MAX];
     struct stat st;
+
+	memset(stock, 0, sizeof(stock));
 
     if (!c_src || !c_dest)
         return (0);
@@ -1780,10 +1509,10 @@ validate_src_dest(const char *c_src, const char *c_dest)
     if (path_exists(c_dest) && file_same_file(c_src, c_dest))
         return (0);
 
-    if (ensure_parent_dir(parent, sizeof(parent), c_dest))
+    if (ensure_parent_dir(stock, sizeof(stock), c_dest))
         return (0);
 
-    if (stat(parent, &st))
+    if (stat(stock, &st))
         return (0);
 
     if (!S_ISDIR(st.st_mode))
@@ -1858,23 +1587,27 @@ _run_file_operation(
 				*p = _PATH_CHR_SEP_WIN32;
 		}
 
+	memset(stock, 0, sizeof(stock));
+
     if (strcmp(operation, "mv") == 0) {
-        snprintf(command, sizeof(command),
+        snprintf(stock, sizeof(stock),
             "cmd.exe /C move /Y \"%s\" \"%s\"", s_src, s_dest);
     } else {
-        snprintf(command, sizeof(command),
+        snprintf(stock, sizeof(stock),
             "cmd.exe /C xcopy /Y \"%s\" \"%s\"", s_src, s_dest);
     }
 
-    int ret = _run_windows_command(command);
+    int ret = _run_windows_command(stock);
     if (ret > 0) {
     	if (strcmp(operation, "mv") == 0) {
-    		snprintf(command, sizeof(command), "\"%s\" \"%s\"", s_src, s_dest);
-	    	char *argv[] = { "cmd.exe", "/C", "move", "/Y", command, NULL };
+    		snprintf(stock,
+				sizeof(stock), "\"%s\" \"%s\"", s_src, s_dest);
+	    	char *argv[] = { "cmd.exe", "/C", "move", "/Y", stock, NULL };
 	    	ret = dog_exec_command(argv);
 	    } else {
-    		snprintf(command, sizeof(command), "\"%s\" \"%s\"", s_src, s_dest);
-	    	char *argv[] = { "cmd.exe", "/C", "xcopy", "/Y", command, NULL };
+    		snprintf(stock,
+				sizeof(stock), "\"%s\" \"%s\"", s_src, s_dest);
+	    	char *argv[] = { "cmd.exe", "/C", "xcopy", "/Y", stock, NULL };
 	    	ret = dog_exec_command(argv);
 	    }
     }
@@ -1983,7 +1716,6 @@ static void
 dog_check_compiler_options(int *compatibility, int *optimized_lt)
 {
 	FILE	*this_proc_fileile;
-	char	 log_line[1024];
 	int	 found_Z = 0, found_ver = 0;
 
 	if (dir_exists(".watchdogs") == 0)
@@ -1992,7 +1724,7 @@ dog_check_compiler_options(int *compatibility, int *optimized_lt)
 	if (path_access(".watchdogs/compiler_test.log"))
 		remove(".watchdogs/compiler_test.log");
 
-    if (condition_check(dogconfig.dog_sef_found_list[0]) == 1) {
+    if (binary_condition_check(dogconfig.dog_sef_found_list[0]) == false) {
     	return;
     }
 
@@ -2018,19 +1750,21 @@ dog_check_compiler_options(int *compatibility, int *optimized_lt)
 		NULL
 	);
 
+	memset(stock, 0, sizeof(stock));
+
 	if (hFile != INVALID_HANDLE_VALUE) {
 		_STARTUPINFO.cb = sizeof(_STARTUPINFO);
 		_STARTUPINFO.dwFlags = STARTF_USESTDHANDLES;
 		_STARTUPINFO.hStdOutput = hFile;
 		_STARTUPINFO.hStdError = hFile;
 
-		snprintf(command, sizeof(command),
+		snprintf(stock, sizeof(stock),
 			"\"%s\" -N00000000:FF000000 -F000000=FF000000",
 			dogconfig.dog_sef_found_list[0]
 		);
 
 		if (CreateProcessA(
-	    NULL, command, NULL, NULL, TRUE,
+	    NULL, stock, NULL, NULL, TRUE,
 	    CREATE_NO_WINDOW,  NULL, NULL,
 	    &_STARTUPINFO,
 	    &_PROCESS_INFO))
@@ -2073,16 +1807,18 @@ dog_check_compiler_options(int *compatibility, int *optimized_lt)
 	}
 	#endif
 
+	memset(stock, 0, sizeof(stock));
+
 	this_proc_fileile = fopen(".watchdogs/compiler_test.log", "r");
 	if (this_proc_fileile) {
-		while (fgets(log_line, sizeof(log_line),
+		while (fgets(stock, sizeof(stock),
 		    this_proc_fileile) != NULL) {
-			if (!found_Z && strfind(log_line, "-Z", true))
+			if (!found_Z && strfind(stock, "-Z", true))
 				found_Z = 1;
-			if (!found_ver && strfind(log_line, "3.10.11", true))
+			if (!found_ver && strfind(stock, "3.10.11", true))
 				found_ver = 1;
-			if (strfind(log_line, "error while loading shared libraries:", true) ||
-				strfind(log_line, "required file not found", true)) {
+			if (strfind(stock, "error while loading shared libraries:", true) ||
+				strfind(stock, "required file not found", true)) {
 				dog_printfile(
 					".watchdogs/compiler_test.log");
 			}
@@ -2117,12 +1853,14 @@ dog_parse_toml_config(void)
 		return (0);
 	}
 
-	dog_toml_parse = toml_parse_file(this_proc_fileile, command,
-	    sizeof(command));
+	memset(stock, 0, sizeof(stock));
+
+	dog_toml_parse = toml_parse_file(this_proc_fileile, stock,
+	    sizeof(stock));
 	fclose(this_proc_fileile);
 
 	if (!dog_toml_parse) {
-		pr_error(stdout, "Parsing TOML: %s", command);
+		pr_error(stdout, "Parsing TOML: %s", stock);
 		minimal_debugging();
 		return (0);
 	}
@@ -2155,22 +1893,21 @@ dog_find_compiler(const char *dog_os_type)
 	int		 is_windows = (strcmp(dog_os_type, "windows") == 0);
 	const char	*compiler_name = is_windows ? "pawncc.exe" : "pawncc";
 
-	if (fetch_server_env() == 1)
+	if (fet_server_env() == false)
 		return (dog_find_path("pawno", compiler_name, NULL));
-	else if (fetch_server_env() == 2)
+	else if (fet_server_env() == true)
 		return (dog_find_path("qawno", compiler_name, NULL));
 	else
 		return (dog_find_path("pawno", compiler_name, NULL));
 }
 
-static int	samp_server_stat = -1;
-
+static bool	samp_server_stat = false;
 static void
 dog_generate_toml_content(FILE *file, const char *dog_os_type,
     int has_gamemodes, int compatible, int optimized_lt, char *sef_path)
 {
 	char	*p;
-	int	 first_item = 1, is_container = 0;
+	int	 is_container = 0;
 
 	if (sef_path[0]) {
 		char	*extension = strrchr(sef_path, '.');
@@ -2205,7 +1942,7 @@ dog_generate_toml_content(FILE *file, const char *dog_os_type,
 		}
 	}
 
-	if (samp_server_stat == 0) {
+	if (samp_server_stat == true) {
 		if (!strcmp(dog_os_type, "windows")) {
 			fprintf(file, "   binary = \"%s\" # open.mp binary files\n",
 			    "omp-server.exe");
@@ -2282,6 +2019,66 @@ dog_generate_toml_content(FILE *file, const char *dog_os_type,
 	fprintf(file, "\n");
 }
 
+static void
+compiler_configure_libpath(void)
+{
+  	// skipping WSL if signal is windows
+	#ifdef DOG_LINUX
+	if ((getenv("WSL_INTEROP") || getenv("WSL_DISTRO_NAME")) &&
+			strcmp(dogconfig.dog_toml_os_type, OS_SIGNAL_WINDOWS) == 0)
+		return;
+
+	static const char *paths[] = {
+		LINUX_LIB_PATH, LINUX_LIB32_PATH,
+		TMUX_LIB_PATH, TMUX_LIB_LOC_PATH,
+		TMUX_LIB_ARM64_PATH, TMUX_LIB_ARM32_PATH,
+		TMUX_LIB_AMD64_PATH, TMUX_LIB_AMD32_PATH
+	};
+	static int done = 0;
+
+	char buf[DOG_PATH_MAX * 2];
+	char so[DOG_PATH_MAX];
+	const char *old;
+	size_t len = 0;
+	size_t i;
+	int n;
+
+	if (done)
+		return;
+
+	buf[0] = '\0';
+	old = getenv("LD_LIBRARY_PATH");
+
+	if (old && *old) {
+		len = strlcpy(buf, old, sizeof(buf));
+		if (len >= sizeof(buf))
+			len = sizeof(buf) - 1;
+	}
+
+	for (i = 0; i < sizeof(paths)/sizeof(paths[0]); i++) {
+		n = snprintf(so, sizeof(so), "%s/libpawnc.so", paths[i]);
+		if (n < 0 || (size_t)n >= sizeof(so))
+			continue;
+
+		if (path_exists(so)) {
+			if (len > 0 && len + 1 < sizeof(buf))
+				buf[len++] = ':';
+
+			len += strlcpy(buf + len, paths[i],
+			    sizeof(buf) - len);
+		}
+	}
+
+	if (len > 0) {
+		setenv("LD_LIBRARY_PATH", buf, 1);
+		done = 1;
+	} else {
+		pr_warning(stdout,
+		    "libpawnc.so not found in any target path..");
+	}
+	#endif
+}
+
 int
 dog_configure_toml(void)
 {
@@ -2290,8 +2087,8 @@ dog_configure_toml(void)
 	const char	*dog_os_type;
 	FILE		*toml_file;
 	char
-				 clean_path[DOG_PATH_MAX],
-				 formatted[DOG_PATH_MAX + 10];
+				 clp[DOG_PATH_MAX],
+				 fmt[DOG_PATH_MAX + 10];
 	toml_table_t	*dog_toml_parse;
 	toml_table_t	*dog_toml_depends, *dog_toml_compiler, *general_table;
 	toml_array_t	*dog_toml_root_patterns;
@@ -2299,10 +2096,12 @@ dog_configure_toml(void)
 	toml_datum_t	 bin_val, conf_val, logs_val, webhooks_val;
 	size_t		 arr_sz;
 	char		*expect = NULL;
-	char        *buffer = NULL;
-	char 		*new_buffer = NULL;
-	size_t       buffer_size = 0;
-	size_t       buffer_len = 0;
+	char        *buf = NULL;
+	char 		*new_buf = NULL;
+	size_t       buf_size = 0;
+	size_t       buf_len = 0;
+	int            ret_pawncc = 0;
+	char          *_pawncc_ptr = NULL;
 	char iflag[3]          = { 0 };
 	size_t siflag          = sizeof(iflag);
 
@@ -2316,9 +2115,9 @@ dog_configure_toml(void)
 	dog_os_type = dog_procure_os();
 
 	if (dir_exists("qawno") && dir_exists("components"))
-		samp_server_stat = 0;
+		samp_server_stat = true;
 	else if (dir_exists("pawno") && path_access("server.cfg"))
-		samp_server_stat = 1;
+		samp_server_stat = false;
 	else {
 		;
 	}
@@ -2344,7 +2143,7 @@ dog_configure_toml(void)
 			pr_error(stdout, "Failed to create watchdogs.toml");
 			println(stdout, "   Permission?? - verify first.");
 			minimal_debugging();
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 
 		if (find_pawncc)
@@ -2364,275 +2163,287 @@ dog_configure_toml(void)
 		return (1);
 	}
 
+	memset(stock, 0, sizeof(stock));
+	
 	FILE	*this_proc_file = fopen("watchdogs.toml", "r");
-	dog_toml_parse = toml_parse_file(this_proc_file, command,
-	    sizeof(command));
+	dog_toml_parse = toml_parse_file(this_proc_file, stock,
+	    sizeof(stock));
 	if (this_proc_file)
 		fclose(this_proc_file);
 
 	if (!dog_toml_parse) {
 		pr_error(stdout, "failed to parse the watchdogs.toml...: %s",
-		    command);
+		    stock);
 		minimal_debugging();
 		unit_ret_main(NULL);
 	}
 
-	dog_toml_depends = toml_table_in(dog_toml_parse, TOML_TABLE_DEPENDENCIES);
-	if (dog_toml_depends) {
-		toml_gh_tokens = toml_string_in(dog_toml_depends,
-		    "github_tokens");
-		if (toml_gh_tokens.ok) {
-			if (dogconfig.dog_toml_github_tokens == NULL ||
-				strcmp(dogconfig.dog_toml_github_tokens, toml_gh_tokens.u.s) != 0) {
-				if (dogconfig.dog_toml_github_tokens)
-					{
-						dog_free(dogconfig.dog_toml_github_tokens);
-						dogconfig.dog_toml_github_tokens = NULL;
-					}
-				dogconfig.dog_toml_github_tokens =
-					strdup(toml_gh_tokens.u.s);
-			}
-			dog_free(toml_gh_tokens.u.s);
-		}
+	dog_toml_depends
+		= toml_table_in(dog_toml_parse, TOML_TABLE_DEPENDENCIES);
 
-		dog_toml_root_patterns = toml_array_in(dog_toml_depends,
-		    "root_patterns");
-		if (dog_toml_root_patterns) {
-			arr_sz = toml_array_nelem(dog_toml_root_patterns);
-			for (int i = 0; i < arr_sz; i++) {
-				toml_datum_t	 val;
+	if (!dog_toml_depends) { goto sk_depends; }
 
-				val = toml_string_at(dog_toml_root_patterns, i);
-				if (!val.ok)
-					continue;
-
-				if (!expect) {
-					expect = dog_realloc(NULL,
-					    strlen(val.u.s) + 1);
-					if (!expect) {
-						goto clean_;
-					}
-
-					snprintf(expect, strlen(val.u.s) + 1,
-					    "%s", val.u.s);
-				} else {
-					char	*tmp;
-					size_t	 old_len = strlen(expect);
-					size_t	 new_len = old_len +
-					    strlen(val.u.s) + 2;
-
-					tmp = dog_realloc(expect, new_len);
-					if (!tmp) {
-						goto clean_;
-					}
-
-					expect = tmp;
-					snprintf(expect + old_len,
-					    new_len - old_len, " %s",
-					    val.u.s);
-				}
-
-				if (dogconfig.dog_toml_root_patterns)
+	toml_gh_tokens
+		= toml_string_in(dog_toml_depends,
+		"github_tokens");
+	if (toml_gh_tokens.ok) {
+		if (dogconfig.dog_toml_github_tokens == NULL ||
+			strcmp(dogconfig.dog_toml_github_tokens, toml_gh_tokens.u.s) != 0)
+		{
+			if (dogconfig.dog_toml_github_tokens)
 				{
-					dog_free(dogconfig.dog_toml_root_patterns);
-					dogconfig.dog_toml_root_patterns = NULL;
+					free(dogconfig.dog_toml_github_tokens);
+					dogconfig.dog_toml_github_tokens = NULL;
 				}
-				dogconfig.dog_toml_root_patterns = expect;
-				expect = NULL;
-				if (val.u.s) {
-					free(val.u.s);
-					val.u.s = NULL;
+			dogconfig.dog_toml_github_tokens =
+				strdup(toml_gh_tokens.u.s);
+		}
+		dog_free(toml_gh_tokens.u.s);
+	}
+
+	dog_toml_root_patterns
+		= toml_array_in(dog_toml_depends,
+		"root_patterns");
+	if (dog_toml_root_patterns) {
+		arr_sz = toml_array_nelem(dog_toml_root_patterns);
+		for (int i = 0; i < arr_sz; i++) {
+			toml_datum_t	 val;
+
+			val = toml_string_at(dog_toml_root_patterns, i);
+			if (!val.ok)
+				continue;
+
+			if (!expect) {
+				expect = dog_realloc(NULL,
+					strlen(val.u.s) + 1);
+				if (!expect) {
+					goto clean_up;
 				}
-				goto out_;
+
+				snprintf(expect, strlen(val.u.s) + 1,
+					"%s", val.u.s);
+			} else {
+				char	*tmp;
+				size_t	 old_len = strlen(expect);
+				size_t	 new_len = old_len +
+					strlen(val.u.s) + 2;
+
+				tmp = dog_realloc(expect, new_len);
+				if (!tmp) {
+					goto clean_up;
+				}
+
+				expect = tmp;
+				snprintf(expect + old_len,
+					new_len - old_len, " %s",
+					val.u.s);
 			}
+
+			if (dogconfig.dog_toml_root_patterns)
+			{
+				free(dogconfig.dog_toml_root_patterns);
+				dogconfig.dog_toml_root_patterns = NULL;
+			}
+			dogconfig.dog_toml_root_patterns = expect;
+			expect = NULL;
+			if (val.u.s) {
+				free(val.u.s);
+				val.u.s = NULL;
+			}
+			goto sk_depends;
 		}
 	}
 
-clean_:
+clean_up:
 	if (expect) {
 	    free(expect);
 		expect = NULL;
 	}
 
-out_:
-	dog_toml_compiler = toml_table_in(dog_toml_parse, TOML_TABLE_COMPILER);
-	if (dog_toml_compiler) {
+sk_depends:
+	dog_toml_compiler
+		= toml_table_in(dog_toml_parse, TOML_TABLE_COMPILER);
+	if (!dog_toml_compiler) { goto sk_compiler; }
 
-		toml_array_t *toml_include_path;
-		toml_include_path = toml_array_in(dog_toml_compiler, "includes");
-		if (toml_include_path) {
-			int toml_array_size;
-			toml_array_size = toml_array_nelem(toml_include_path);
+	toml_array_t *toml_include_path;
+	toml_include_path
+		= toml_array_in(dog_toml_compiler, "includes");
+	if (toml_include_path) {
+		int          toml_array_size;
+		int          fmt_len;
+		toml_array_size
+			= toml_array_nelem(toml_include_path);
+		
+		for (int i = 0; i < toml_array_size; i++) {
+			toml_datum_t _toml_path_val;
+			_toml_path_val
+				= toml_string_at(toml_include_path, i);
+			if (!_toml_path_val.ok)
+				continue;
 			
-			for (int i = 0; i < toml_array_size; i++) {
-				toml_datum_t path_val;
-				path_val = toml_string_at(toml_include_path, i);
-				if (!path_val.ok)
-					continue;
-				
-				dog_strip_dot_fns(clean_path,
-								  sizeof(clean_path),
-								  path_val.u.s);
-				
-				if (clean_path[0] == '\0') {
-					dog_free(path_val.u.s);
-					continue;
-				}
-				
-				int formatted_len;
-				formatted_len = snprintf(formatted, sizeof(formatted), 
-										 "-i=%s ", clean_path);
-				
-				if (buffer_len +
-					formatted_len + 1
-					> buffer_size)
-				{
-					size_t new_size;
-					new_size = buffer_size ? buffer_size * 2 : 256;
-					while (new_size < buffer_len + formatted_len + 1)
-						new_size *= 2;
-					
-					new_buffer = realloc(buffer, new_size);
-					if (!new_buffer) {
-						pr_error(stdout,
-							"Failed to allocate memory for include paths");
-						dog_free(path_val.u.s);
-						free(buffer);
-						goto skip_;
-					}
-					buffer = new_buffer;
-					buffer_size = new_size;
-				}
-				
-				if (buffer_len > 0) {
-					buffer[buffer_len] = ' ';
-					buffer_len++;
-				}
-				
-				memcpy(buffer + buffer_len,
-					   formatted,
-					   formatted_len);
-				buffer_len += formatted_len;
-				buffer[buffer_len] = '\0';
-				
-				dog_free(path_val.u.s);
+			dog_strip_dot_fns(clp, sizeof(clp), _toml_path_val.u.s);
+			
+			if (clp[0] == '\0') {
+				dog_free(_toml_path_val.u.s);
+				continue;
 			}
 			
-			compiler_full_includes = buffer;
-		}
-
-		toml_array_t *option_arr;
-	skip_:
-		option_arr = toml_array_in(dog_toml_compiler,
-			"option");
-		if (option_arr) {
-			expect = NULL;
-
-			size_t toml_array_size;
-			toml_array_size = toml_array_nelem(option_arr);
-
-			for (size_t i = 0; i < toml_array_size; i++) {
-				toml_datum_t toml_option_value;
-				toml_option_value = toml_string_at(
-					option_arr, i);
-				if (!toml_option_value.ok)
-					continue;
-
-				if (strlen(toml_option_value.u.s) >= 2) {
-					snprintf(iflag,
-						siflag,
-						"%.2s",
-						toml_option_value.u.s);
-				} else {
-					strncpy(iflag,
-						toml_option_value.u.s,
-						siflag -
-						1);
-				}
-
-				if (strfind(toml_option_value.u.s,
-					"-d", true) || compiler_dog_flag_debug > 0)
-					compiler_have_debug_flag = true;
-
-				size_t old_len = expect ? strlen(expect) :
-					0;
-				size_t new_len = old_len +
-					strlen(toml_option_value.u.s) + 2;
-
-				char *tmp = dog_realloc(expect, new_len);
-				if (!tmp) {
-					dog_free(expect);
-					dog_free(toml_option_value.u.s);
-					expect = NULL;
-					break;
-				}
-
-				expect = tmp;
-
-				if (!old_len)
-					snprintf(expect, new_len, "%s",
-						toml_option_value.u.s);
-				else
-					snprintf(expect + old_len,
-						new_len - old_len, " %s",
-						toml_option_value.u.s);
-
-				if (toml_option_value.u.s)
-				{
-					free(toml_option_value.u.s);
-					toml_option_value.u.s = NULL;
-				}
-			}
-
-			if (expect) {
-				if (dogconfig.dog_toml_all_flags)
-					{
-						dog_free(dogconfig.dog_toml_all_flags);
-						dogconfig.dog_toml_all_flags = NULL;
-					}
-				dogconfig.dog_toml_all_flags = expect;
-				expect = NULL;
-			} else {
-				if (dogconfig.dog_toml_all_flags)
-					{
-						dog_free(dogconfig.dog_toml_all_flags);
-						dogconfig.dog_toml_all_flags = NULL;
-					}
-				dogconfig.dog_toml_all_flags = strdup("");
-				if (!dogconfig.dog_toml_all_flags) {
+			fmt_len
+				= snprintf(fmt, sizeof(fmt), 
+					"-i=%s ", clp);
+			
+			if (buf_len +
+				fmt_len + 1
+				> buf_size)
+			{
+				size_t new_size;
+				new_size = buf_size ? buf_size * 2 : 256;
+				while (new_size < buf_len + fmt_len + 1)
+					new_size *= 2;
+				
+				new_buf = realloc(buf, new_size);
+				if (!new_buf) {
 					pr_error(stdout,
-						"Memory allocation failed");
+						"Failed to allocate memory for include paths");
+					dog_free(_toml_path_val.u.s);
+					free(buf);
+					goto skip_;
 				}
+				buf = new_buf;
+				buf_size = new_size;
+			}
+			
+			if (buf_len > 0) {
+				buf[buf_len] = ' ';
+				buf_len++;
+			}
+			
+			memcpy(buf + buf_len,
+					fmt,
+					fmt_len);
+			buf_len += fmt_len;
+			buf[buf_len] = '\0';
+			
+			dog_free(_toml_path_val.u.s);
+		}
+		
+		compiler_full_includes = buf;
+	}
+
+	toml_array_t *option_arr;
+skip_:
+	option_arr
+		= toml_array_in(dog_toml_compiler,
+		"option");
+	if (option_arr) {
+		expect = NULL;
+
+		size_t toml_array_size;
+		toml_array_size
+			= toml_array_nelem(option_arr);
+
+		for (size_t i = 0; i < toml_array_size; i++) {
+			toml_datum_t toml_option_value;
+			toml_option_value = toml_string_at(
+				option_arr, i);
+			if (!toml_option_value.ok)
+				continue;
+
+			if (strlen(toml_option_value.u.s) >= 2) {
+				snprintf(iflag,
+					siflag,
+					"%.2s",
+					toml_option_value.u.s);
+			} else {
+				strncpy(iflag,
+					toml_option_value.u.s,
+					siflag -
+					1);
+			}
+
+			if (strfind(toml_option_value.u.s,
+				"-d", true) || compiler_dog_flag_debug > 0)
+				compiler_have_debug_flag = true;
+
+			size_t old_len = expect ? strlen(expect) :
+				0;
+			size_t new_len = old_len +
+				strlen(toml_option_value.u.s) + 2;
+
+			char *tmp = dog_realloc(expect, new_len);
+			if (!tmp) {
+				dog_free(expect);
+				dog_free(toml_option_value.u.s);
+				expect = NULL;
+				break;
+			}
+
+			expect = tmp;
+
+			if (!old_len)
+				snprintf(expect, new_len, "%s",
+					toml_option_value.u.s);
+			else
+				snprintf(expect + old_len,
+					new_len - old_len, " %s",
+					toml_option_value.u.s);
+
+			if (toml_option_value.u.s)
+			{
+				free(toml_option_value.u.s);
+				toml_option_value.u.s = NULL;
 			}
 		}
 
-		input_val = toml_string_in(dog_toml_compiler, "input");
-		if (input_val.ok) {
-			if (dogconfig.dog_toml_serv_input == NULL ||
-				strcmp(dogconfig.dog_toml_serv_input, input_val.u.s) != 0) {
-				if (dogconfig.dog_toml_serv_input)
-					{
-						dog_free(dogconfig.dog_toml_serv_input);
-						dogconfig.dog_toml_serv_input = NULL;
-					}
-				dogconfig.dog_toml_serv_input = strdup(input_val.u.s);
+		if (expect) {
+			if (dogconfig.dog_toml_all_flags)
+				{
+					dog_free(dogconfig.dog_toml_all_flags);
+					dogconfig.dog_toml_all_flags = NULL;
+				}
+			dogconfig.dog_toml_all_flags = expect;
+			expect = NULL;
+		} else {
+			if (dogconfig.dog_toml_all_flags)
+				{
+					free(dogconfig.dog_toml_all_flags);
+					dogconfig.dog_toml_all_flags = NULL;
+				}
+			dogconfig.dog_toml_all_flags = strdup("");
+			if (!dogconfig.dog_toml_all_flags) {
+				pr_error(stdout,
+					"Memory allocation failed");
 			}
-			dog_free(input_val.u.s);
-		}
-		output_val = toml_string_in(dog_toml_compiler, "output");
-		if (output_val.ok) {
-			if (dogconfig.dog_toml_serv_output == NULL ||
-				strcmp(dogconfig.dog_toml_serv_output, output_val.u.s) != 0) {
-				if (dogconfig.dog_toml_serv_output)
-					{
-						dog_free(dogconfig.dog_toml_serv_output);
-						dogconfig.dog_toml_serv_output = NULL;
-					}
-				dogconfig.dog_toml_serv_output = strdup(output_val.u.s);
-			}
-			dog_free(output_val.u.s);
 		}
 	}
+
+	input_val = toml_string_in(dog_toml_compiler, "input");
+	if (input_val.ok) {
+		if (dogconfig.dog_toml_serv_input == NULL ||
+			strcmp(dogconfig.dog_toml_serv_input, input_val.u.s) != 0) {
+			if (dogconfig.dog_toml_serv_input)
+				{
+					free(dogconfig.dog_toml_serv_input);
+					dogconfig.dog_toml_serv_input = NULL;
+				}
+			dogconfig.dog_toml_serv_input = strdup(input_val.u.s);
+		}
+		dog_free(input_val.u.s);
+	}
+	output_val = toml_string_in(dog_toml_compiler, "output");
+	if (output_val.ok) {
+		if (dogconfig.dog_toml_serv_output == NULL ||
+			strcmp(dogconfig.dog_toml_serv_output, output_val.u.s) != 0) {
+			if (dogconfig.dog_toml_serv_output)
+				{
+					free(dogconfig.dog_toml_serv_output);
+					dogconfig.dog_toml_serv_output = NULL;
+				}
+			dogconfig.dog_toml_serv_output = strdup(output_val.u.s);
+		}
+		dog_free(output_val.u.s);
+	}
+	sk_compiler:
 
 	if (dogconfig.dog_toml_packages == NULL ||
 		strcmp(dogconfig.dog_toml_packages, "none none none") != 0) {
@@ -2657,7 +2468,7 @@ out_:
 					free(dogconfig.dog_ptr_omp);
 					dogconfig.dog_ptr_omp = NULL;
 				}
-			if (samp_server_stat == 1) {
+			if (samp_server_stat == false) {
 				if (dogconfig.dog_is_samp == NULL ||
 					strcmp(dogconfig.dog_is_samp, CRC32_TRUE) != 0) {
 					dogconfig.dog_is_samp = CRC32_TRUE;
@@ -2666,7 +2477,7 @@ out_:
 					strcmp(dogconfig.dog_ptr_samp, bin_val.u.s) != 0) {
 					dogconfig.dog_ptr_samp = strdup(bin_val.u.s);
 				}
-			} else if (samp_server_stat == 0) {
+			} else if (samp_server_stat == true) {
 				if (dogconfig.dog_is_omp == NULL ||
 					strcmp(dogconfig.dog_is_omp, CRC32_TRUE) != 0) {
 					dogconfig.dog_is_omp = CRC32_TRUE;
@@ -2689,7 +2500,7 @@ out_:
 				strcmp(dogconfig.dog_toml_server_binary, bin_val.u.s) != 0) {
 				if (dogconfig.dog_toml_server_binary)
 					{
-						dog_free(dogconfig.dog_toml_server_binary);
+						free(dogconfig.dog_toml_server_binary);
 						dogconfig.dog_toml_server_binary = NULL;
 					}
 				dogconfig.dog_toml_server_binary = strdup(bin_val.u.s);
@@ -2702,7 +2513,7 @@ out_:
 				strcmp(dogconfig.dog_toml_server_config, conf_val.u.s) != 0) {
 				if (dogconfig.dog_toml_server_config)
 					{
-						dog_free(dogconfig.dog_toml_server_config);
+						free(dogconfig.dog_toml_server_config);
 						dogconfig.dog_toml_server_config = NULL;
 					}
 				dogconfig.dog_toml_server_config = strdup(conf_val.u.s);
@@ -2715,7 +2526,7 @@ out_:
 				strcmp(dogconfig.dog_toml_server_logs, logs_val.u.s) != 0) {
 				if (dogconfig.dog_toml_server_logs)
 					{
-						dog_free(dogconfig.dog_toml_server_logs);
+						free(dogconfig.dog_toml_server_logs);
 						dogconfig.dog_toml_server_logs = NULL;
 					}
 				dogconfig.dog_toml_server_logs = strdup(logs_val.u.s);
@@ -2738,9 +2549,62 @@ out_:
 			    CRC32_FALSE, field_name);
 			printf("   Support: https://github.com/gskeleton/watchdogs/issues\n");
 			fflush(stdout);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
+
+	dog_sef_path_revert();
+
+	if (strcmp(dogconfig.dog_toml_os_type, OS_SIGNAL_WINDOWS) == 0) {
+		_pawncc_ptr = "pawncc.exe";
+	} else if (strcmp(dogconfig.dog_toml_os_type, OS_SIGNAL_LINUX) == 0) {
+		_pawncc_ptr = "pawncc";
+	}
+
+	if (dir_exists("pawno") != 0 && dir_exists("qawno") != 0) {
+		ret_pawncc = dog_find_path("pawno", _pawncc_ptr,
+			NULL);
+		if (ret_pawncc) {
+			;
+		} else {
+			ret_pawncc = dog_find_path("qawno",
+				_pawncc_ptr, NULL);
+			if (ret_pawncc < 1) {
+				ret_pawncc = dog_find_path(".",
+					_pawncc_ptr, NULL);
+			}
+		}
+	} else if (dir_exists("pawno") != 0) {
+		ret_pawncc = dog_find_path("pawno", _pawncc_ptr,
+			NULL);
+		if (ret_pawncc) {
+			;
+		} else {
+			ret_pawncc = dog_find_path(".",
+				_pawncc_ptr, NULL);
+		}
+	} else if (dir_exists("qawno") != 0) {
+		ret_pawncc = dog_find_path("qawno", _pawncc_ptr,
+			NULL);
+		if (ret_pawncc) {
+			;
+		} else {
+			ret_pawncc = dog_find_path(".",
+				_pawncc_ptr, NULL);
+		}
+	} else {
+		ret_pawncc = dog_find_path(".", _pawncc_ptr,
+			NULL);
+	}
+
+	if (ret_pawncc)
+		{
+			dog_free(dogconfig.dog_pawncc_path);
+			snprintf(stock, sizeof(stock),
+				"%s", dogconfig.dog_sef_found_list[0]);
+			dogconfig.dog_pawncc_path = strdup(stock);
+			compiler_configure_libpath();
+		}
 
 	return (0);
 }

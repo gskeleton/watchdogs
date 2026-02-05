@@ -574,7 +574,7 @@ char *crypto_base64_encode(const unsigned char *input, int len)
       char *buffer;
       int i, j;
       uint32_t triple; /* Stores 3 bytes (24 bits) for encoding */
-      int buffer_len;
+      long int buffer_len;
 
       if (!input || len <= 0)
             return (NULL);

@@ -81,7 +81,7 @@ apt update && apt upgrade && apt install -y aria2 && aria2c -o install.sh https:
 
 ---
 
-## Windows Native
+## Windows dan POSIX untuk Windows
 
 > **Bina untuk Windows?** Gunakan **MSYS2** (disyorkan).
 

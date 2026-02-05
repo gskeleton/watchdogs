@@ -248,14 +248,14 @@ tracker_discrepancy(const char *base,
 	    *cnt < MAX_VARIATIONS &&
 	    base_len + 1 < MAX_USERNAME_LEN;
 	    i++) {
-		memcpy(temp, base, i);
+		memcpy(temp, base, (size_t)i);
 
 		temp[i] = base[i];
 		temp[i + 1] = base[i];
 
 		strlcpy(temp + i + 2,
 		    base + i + 1,
-		    sizeof(temp) - (i + 2));
+		    sizeof(temp) - (size_t)(i + 2));
 
 		strlcpy(discrepancy[(*cnt)++], temp, MAX_USERNAME_LEN);
 	}
@@ -266,15 +266,15 @@ tracker_discrepancy(const char *base,
 	    i++) {
 		size_t len = base_len;
 
-		if (len + i >= MAX_USERNAME_LEN)
+		if (len + (size_t)i >= MAX_USERNAME_LEN)
 			break;
 
 		memcpy(temp, base, len);
 
 		for (j = 0; j < i; j++)
-			temp[len + j] = base[base_len - 1];
+			temp[len + (size_t)j] = base[base_len - 1];
 
-		temp[len + i] = '\0';
+		temp[len + (size_t)i] = '\0';
 
 		strlcpy(discrepancy[(*cnt)++], temp, MAX_USERNAME_LEN);
 	}
@@ -534,7 +534,7 @@ dog_apply_pawncc(void)
 	     pawnc_dll_src[DOG_PATH_MAX] = { 0 },
 	     PAWNC_DLL_src[DOG_PATH_MAX] = { 0 };
 
-	int i;
+	size_t i;
 
 	dog_sef_path_revert();
 
@@ -701,26 +701,6 @@ apply_done:
 }
 
 static int
-prompt_apply_pawncc(void)
-{
-	installing_pawncc = true;
-
-	printf("\x1b[32m==> Apply pawncc?\x1b[0m\n");
-	char *confirm = readline("   answer (y/n): ");
-
-	fflush(stdout);
-
-	if (confirm[0] == '\0' || strfind(confirm, "Y", true)) {
-		dog_free(confirm);
-		return (1);
-	}
-
-	dog_free(confirm);
-
-	return (0);
-}
-
-static int
 debug_callback(CURL *handle __UNUSED__, curl_infotype type,
     char *data, size_t size, void *userptr __UNUSED__)
 {
@@ -789,56 +769,56 @@ dog_download_file(const char *url, const char *output_filename)
 	int retry_count = 0;
 	struct stat file_stat;
 
-	char clean_filename[DOG_PATH_MAX];
+	char clp_fname[DOG_PATH_MAX] = {0};
 	char *query_pos = strchr(output_filename, '?');
 	if (query_pos) {
 		int name_len = query_pos - output_filename;
-		if (name_len >= sizeof(clean_filename)) {
-			name_len = sizeof(clean_filename) - 1;
+		if (name_len >= sizeof(clp_fname)) {
+			name_len = sizeof(clp_fname) - 1;
 		}
-		strncpy(clean_filename, output_filename, name_len);
-		clean_filename[name_len] = '\0';
+		strncpy(clp_fname, output_filename, name_len);
+		clp_fname[name_len] = '\0';
 	} else {
-		strncpy(clean_filename, output_filename,
-		    sizeof(clean_filename) - 1);
-		clean_filename[sizeof(clean_filename) - 1] = '\0';
+		strncpy(clp_fname, output_filename,
+		    sizeof(clp_fname) - 1);
+		clp_fname[sizeof(clp_fname) - 1] = '\0';
 	}
 
-	char final_filename[DOG_PATH_MAX];
-	if (strstr(clean_filename, "://") || strstr(clean_filename, "http")) {
+	char fnl_fname[DOG_PATH_MAX];
+	if (strstr(clp_fname, "://") || strstr(clp_fname, "http")) {
 		const char *url_filename = strrchr(url, _PATH_CHR_SEP_POSIX);
 		if (url_filename) {
 			char *url_query_pos = strchr(url_filename, '?');
 			if (url_query_pos) {
 				int url_name_len = url_query_pos -
 				    url_filename;
-				if (url_name_len >= sizeof(final_filename)) {
-					url_name_len = sizeof(final_filename) -
+				if (url_name_len >= DOG_PATH_MAX) {
+					url_name_len = sizeof(fnl_fname) -
 					    1;
 				}
-				strncpy(final_filename, url_filename,
+				strncpy(fnl_fname, url_filename,
 				    url_name_len);
-				final_filename[url_name_len] = '\0';
+				fnl_fname[url_name_len] = '\0';
 				++url_filename;
 			} else {
-				strncpy(final_filename, url_filename,
-				    sizeof(final_filename) - 1);
-				final_filename[sizeof(final_filename) - 1] =
+				strncpy(fnl_fname, url_filename,
+				    sizeof(fnl_fname) - 1);
+				fnl_fname[sizeof(fnl_fname) - 1] =
 				    '\0';
 			}
 		} else {
-			snprintf(final_filename, sizeof(final_filename),
+			snprintf(fnl_fname, sizeof(fnl_fname),
 			    "downloaded_file");
 		}
 	} else {
-		strncpy(final_filename, clean_filename,
-		    sizeof(final_filename) - 1);
-		final_filename[sizeof(final_filename) - 1] = '\0';
+		strncpy(fnl_fname, clp_fname,
+		    sizeof(fnl_fname) - 1);
+		fnl_fname[sizeof(fnl_fname) - 1] = '\0';
 	}
 
-	parsing_filename(final_filename);
+	parsing_filename(fnl_fname);
 
-	pr_color(stdout, DOG_COL_GREEN, "* Try Downloading %s", final_filename);
+	pr_color(stdout, DOG_COL_GREEN, "* Try Downloading %s", fnl_fname);
 
 	while (retry_count < 5) {
 		curl = curl_easy_init();
@@ -911,6 +891,7 @@ dog_download_file(const char *url, const char *output_filename)
 		curl_verify_cacert_pem(curl);
 
 		fflush(stdout);
+
 		res = curl_easy_perform(curl);
 		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
 
@@ -920,12 +901,12 @@ dog_download_file(const char *url, const char *output_filename)
 		if (res == CURLE_OK &&
 		    response_code == DOG_CURL_RESPONSE_OK &&
 		    download_buffer.len > 0) {
-			FILE *fp = fopen(final_filename, "wb");
+			FILE *fp = fopen(fnl_fname, "wb");
 			if (!fp) {
 				pr_color(stdout, DOG_COL_RED,
 				    "* Failed to open file for writing: %s "
 				    "(errno: %d - %s)\n",
-				    final_filename, errno, strerror(errno));
+				    fnl_fname, errno, strerror(errno));
 				dog_free(download_buffer.data);
 				++retry_count;
 				continue;
@@ -939,27 +920,26 @@ dog_download_file(const char *url, const char *output_filename)
 				pr_color(stdout, DOG_COL_RED,
 				    "* Failed to write all data to file: %s "
 				    "(written: %zu, expected: %zu)\n",
-				    final_filename, written,
+				    fnl_fname, written,
 				    download_buffer.len);
 				dog_free(download_buffer.data);
-				unlink(final_filename);
+				unlink(fnl_fname);
 				++retry_count;
 				continue;
 			}
 
 			buf_free(&download_buffer);
 
-			if (stat(final_filename, &file_stat) == 0 &&
+			if (stat(fnl_fname, &file_stat) == 0 &&
 			    file_stat.st_size > 0) {
 				pr_color(stdout, DOG_COL_GREEN,
 				    " %% successful: %" PRIdMAX " bytes to %s\n",
 				    (intmax_t)file_stat.st_size,
-				    final_filename);
-				fflush(stdout);
+				    fnl_fname);
 
 				char size_filename[DOG_PATH_MAX];
 				snprintf(size_filename, sizeof(size_filename),
-				    "%s", final_filename);
+				    "%s", fnl_fname);
 
 				char *extension = NULL;
 				if ((extension = strstr(size_filename,
@@ -973,20 +953,20 @@ dog_download_file(const char *url, const char *output_filename)
 					*extension = '\0';
 				}
 
-				dog_extract_archive(final_filename,
+				dog_extract_archive(fnl_fname,
 				    size_filename);
 
 				if (installing_package) {
 					if (path_exists(
-                      final_filename) == 1) {
-                      destroy_arch_dir(final_filename);
+                      fnl_fname) == 1) {
+                      destroy_arch_dir(fnl_fname);
                   }
                 } else {
-					if (installing_pawncc && prompt_apply_pawncc() == 1) {
+					if (installing_pawncc) {
 						if (path_exists(
-						    final_filename) == 1) {
+						    fnl_fname) == 1) {
 							destroy_arch_dir(
-							    final_filename);
+							    fnl_fname);
 						}
 						pawncc_dir_source = strdup(
 							size_filename);
@@ -1008,7 +988,7 @@ dog_download_file(const char *url, const char *output_filename)
 
 	pr_color(stdout, DOG_COL_RED,
 	    " Failed to download %s from %s after %d retries\n",
-	    final_filename, url, retry_count);
+	    fnl_fname, url, retry_count);
 
 	return (1);
 }

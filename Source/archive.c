@@ -200,7 +200,7 @@ compress_to_archive(const char *archive_path,
 				ret = -1;
 				break;
 			}
-			if (written != len) {
+			if (written != (ssize_t)len) {
 				pr_error(stdout, "partial write for: %s",
 				    filename);
 				minimal_debugging();
@@ -731,15 +731,18 @@ destroy_arch_dir(const char *filename)
 	#endif
 }
 
-int
+bool
 is_archive_file(const char *filename)
 {
 	if (strend(filename, ".zip", true) ||
+	    strend(filename, ".xz", true) ||
+	    strend(filename, ".gz", true) ||
+	    strend(filename, ".bz2", true) ||
 	    strend(filename, ".tar", true) ||
 	    strend(filename, ".tar.gz", true)) {
-		return (1);
+		return (true);
 	}
-	return (0);
+	return (false);
 }
 
 void

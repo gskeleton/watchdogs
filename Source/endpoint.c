@@ -119,9 +119,9 @@ unit_sigint_handler(int sig __UNUSED__)
 void
 dog_stop_server_tasks(void)
 {
-        int ret = 0;
+        bool ret = false;
         ret = dog_kill_process(dogconfig.dog_toml_server_binary);
-        if (ret) {
+        if (ret == false) {
             /* retrying */
             dog_kill_process(dogconfig.dog_toml_server_binary);
         }
@@ -335,7 +335,7 @@ dog_exec_samp_server(char *g, const char *server_bin)
         g = sputs;
 
         char *s_server_bin = strdup(server_bin);
-        if (condition_check(s_server_bin) == 1) {
+        if (binary_condition_check(s_server_bin) == false) {
             dog_free(s_server_bin);
             return;
         }
@@ -413,13 +413,11 @@ dog_exec_samp_server(char *g, const char *server_bin)
     #else
         /* Unix/Linux: fork+exec with pipe redirection for output capture */
         pid_t process_id;
-        __set_default_access(server_bin);  /* Ensure binary is executable */
 
         snprintf(command, sizeof(command), "%s/%s", dog_procure_pwd(), server_bin);
 
         /* Create pipes for stdout and stderr redirection */
-        int stdout_pipe[2];
-        int stderr_pipe[2];
+        int stdout_pipe[2], stderr_pipe[2];
 
         if (pipe(stdout_pipe) == -1 || pipe(stderr_pipe) == -1) {
             perror("pipe");
@@ -776,7 +774,7 @@ dog_exec_omp_server(char *g, const char *server_bin)
         g = sputs;
 
         char *s_server_bin = strdup(server_bin);
-        if (condition_check(s_server_bin) == 1) {
+        if (binary_condition_check(s_server_bin) == false) {
             dog_free(s_server_bin);
             return;
         }
@@ -853,13 +851,10 @@ dog_exec_omp_server(char *g, const char *server_bin)
     #else
             pid_t process_id;
 
-            __set_default_access(server_bin);
-
             snprintf(command, sizeof(command), "%s/%s",
                 dog_procure_pwd(), server_bin);
 
-            int stdout_pipe[2];
-            int stderr_pipe[2];
+            int stdout_pipe[2], stderr_pipe[2];
 
             if (pipe(stdout_pipe) == -1 || pipe(stderr_pipe) == -1) {
                 perror("pipe");
@@ -983,7 +978,7 @@ dog_exec_omp_server(char *g, const char *server_bin)
  * dog_server_crash_check:
  *     Analyze server logs for errors, warnings, and crash patterns.
  *     Opens server log file, scans buffer by buffer for known error
- *     patterns, provides diagnostic information and auto-fix
+ *     patterns, provides diagnostic information and tree-fix
  *     suggestions, handles specific issues like RCON password, plugin
  *     conflicts.
  */
@@ -998,7 +993,7 @@ dog_server_crash_check(void)
         char  buf[DOG_MAX_PATH];  /* Line buffer for log reading */
 
         /* Open appropriate log file based on server environment */
-        if (fetch_server_env() == 1)  /* SA-MP */
+        if (fet_server_env() == false)  /* SA-MP */
             this_proc_file = fopen(dogconfig.dog_toml_server_logs, "rb");
         else  /* open.mp */
             this_proc_file = fopen(dogconfig.dog_toml_server_logs, "rb");
@@ -1082,8 +1077,8 @@ dog_server_crash_check(void)
                 pr_color(stdout, DOG_COL_BLUE, "%s", buf);
                 fflush(stdout);
 
-                /* Offer auto-fix: recompile script */
-                char *recompiled = readline("Recompiled script now? (Auto-fix)");
+                /* Offer tree-fix: recompile script */
+                char *recompiled = readline("Recompile now? ");
                 if (recompiled && (recompiled[0] == '\0' || !strcmp(recompiled, "Y") || !strcmp(recompiled, "y"))) {
                     dog_free(recompiled);
                     printf(DOG_COL_BCYAN "Please input the pawn file\n\t* (enter for %s - input E/e to exit):" DOG_COL_DEFAULT, dogconfig.dog_toml_serv_input);
@@ -1238,7 +1233,7 @@ dog_server_crash_check(void)
                                 fwrite(out, 1, size_l, stdout);
                                 fflush(stdout);
 
-                                printf("\x1b[32m==> downgrading sampvoice? 3.1 -> 3.0? (Auto-fix)\x1b[0m\n");
+                                printf("\x1b[32m==> downgrading sampvoice? 3.1 -> 3.0? \x1b[0m\n");
                                 fwrite(out, 1, size_l, stdout);
                                 fflush(stdout);
                                 char *downgrading = readline("   answer (y/n): ");
@@ -1312,7 +1307,7 @@ dog_server_crash_check(void)
             }
 
             /* Pattern 11: RCON password security warning (SA-MP specific) */
-            if (fetch_server_env() == 1) {
+            if (fet_server_env() == false) {
                 if (strfind(buf, "Your password must be changed from the default password", true)) {
                     ++server_rcon_pass;
                 }
@@ -1483,7 +1478,7 @@ dog_server_crash_check(void)
         }
 
     skip:
-        /* RCON password auto-fix for default password vulnerability */
+        /* RCON password tree-fix for default password vulnerability */
         if (server_rcon_pass) {
             n = snprintf(out, sizeof(out),
               "@ Rcon Pass Error found\n\t* Error: Your password must be changed from the default password..\n");
@@ -1491,8 +1486,8 @@ dog_server_crash_check(void)
             fwrite(out, 1, size_l, stdout);
             fflush(stdout);
 
-            /* Offer to auto-fix RCON password */
-            char *fixed_now = readline("Auto-fix? (Y/n): ");
+            /* Offer to tree-fix RCON password */
+            char *fixed_now = readline("Tree-fix? (Y/n): ");
 
             if (fixed_now && (fixed_now[0] == '\0' || !strcmp(fixed_now, "Y") || !strcmp(fixed_now, "y"))) {
               if (path_access("server.cfg")) {
@@ -1504,7 +1499,7 @@ dog_server_crash_check(void)
                   fseek(read_f, 0, SEEK_SET);
 
                   char *serv_f_cent = NULL;
-                  serv_f_cent = dog_malloc(server_fle_size + 1);
+                  serv_f_cent = dog_malloc(server_fle_size + (size_t)1);
                   if (!serv_f_cent) { goto skip_fixing; }
 
                   size_t br;
@@ -1518,7 +1513,7 @@ dog_server_crash_check(void)
 
                   uint32_t crc32_generate;
                   if (pos) {
-                    server_n_content = dog_malloc(server_fle_size + 10);
+                    server_n_content = dog_malloc(server_fle_size + (size_t)10);
                     if (!server_n_content) {
                         dog_free(serv_f_cent);
                         goto skip_fixing;
@@ -1595,7 +1590,7 @@ dog_server_crash_check(void)
         if (rate_problem_stat == 1 && server_crashdetect < 1) {
               n = snprintf(out, sizeof(out), "INFO: crash found! "
                      "and crashdetect not found.. "
-                     "install crashdetect now? (Auto-fix) ");
+                     "install crashdetect now? (Tree-fix) ");
               size_l = (n < 0) ? 0 : (size_t)n;
               fwrite(out, 1, size_l, stdout);
               fflush(stdout);

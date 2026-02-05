@@ -38,8 +38,8 @@ static const char *dog_find_warn_err(const char *line)
 
 static void compiler_detailed(const char *dog_output, int debug,
                               int warning_count, int error_count, const char *compiler_ver,
-                              int header_size, int code_size, int data_size,
-                              int stack_size, int total_size)
+                              long int header_size, long int code_size, long int data_size,
+                              long int stack_size, long int total_size)
 {
     char outbuf[DOG_MAX_PATH];
     int len;
@@ -70,36 +70,14 @@ static void compiler_detailed(const char *dog_output, int debug,
                        "Code (static mem)   : %dB  |  hash (djb2)  : %#lx\n"
                        "Data (static mem)   : %dB\nStack (automatic)   : %dB\n",
                        dog_output,
-                       header_size,
-                       total_size,
-                       code_size,
+                       (int)header_size,
+                       (int)total_size,
+                       (int)code_size,
                        hash,
-                       data_size,
-                       stack_size);
+                       (int)data_size,
+                       (int)stack_size);
         if (len > 0)
             printf("%.*s", len, outbuf);
-
-        dog_portable_stat_t st;
-        if (dog_portable_stat(dog_output, &st) == 0) {
-            len = snprintf(outbuf, sizeof(outbuf),
-                           "ino    : %llu   |  file   : %lluB\n"
-                           "dev    : %llu\n"
-                           "read   : %s   |  write  : %s\n"
-                           "execute: %s   |  mode   : %020o\n"
-                           "atime  : %llu\nmtime  : %llu\nctime  : %llu\n",
-                           (unsigned long long)st.st_ino,
-                           (unsigned long long)st.st_size,
-                           (unsigned long long)st.st_dev,
-                           (st.st_mode & S_IRUSR) ? "Y" : "N",
-                           (st.st_mode & S_IWUSR) ? "Y" : "N",
-                           (st.st_mode & S_IXUSR) ? "Y" : "N",
-                           st.st_mode,
-                           (unsigned long long)st.st_latime,
-                           (unsigned long long)st.st_lmtime,
-                           (unsigned long long)st.st_mctime);
-            if (len > 0)
-                printf("%.*s", len, outbuf);
-        }
     }
 
     printf("\n");
@@ -122,7 +100,7 @@ void cause_compiler_expl(const char *log_file, const char *dog_output, int debug
         return;
 
     long warning_count = 0, error_count = 0;
-    int header_size = 0, code_size = 0, data_size = 0, stack_size = 0, total_size = 0;
+    long int header_size = 0, code_size = 0, data_size = 0, stack_size = 0, total_size = 0;
     char compiler_line[DOG_MORE_MAX_PATH] = {0}, compiler_ver[64] = {0};
 
     while (fgets(compiler_line, sizeof(compiler_line), _log_file)) {
@@ -179,11 +157,9 @@ void cause_compiler_expl(const char *log_file, const char *dog_output, int debug
 
 #ifdef DOG_LINUX
             if (strfind(description, "file doesn't exist, insufficient permissions", true) == 1) {
-                pr_color(stdout, DOG_COL_CYAN, "^ %s" DOG_COL_YELLOW " See " DOG_COL_CYAN
-                                               ".watchdogs/help.txt | cat .watchdogs/help.txt\n",
-                         description);
                 if (path_exists(".watchdogs/help.txt") == 1)
                     remove(".watchdogs/help.txt");
+                bool ret = false;
                 FILE *help = fopen(".watchdogs/help.txt", "w");
                 if (help) {
                     fprintf(help, HELP_PICK1);
@@ -198,7 +174,14 @@ void cause_compiler_expl(const char *log_file, const char *dog_output, int debug
                     fprintf(help, HELP_PICK01);
                     fprintf(help, HELP_PICK02);
                     fclose(help);
+                    ret = true;
                 }
+                if (ret)
+                    pr_color(stdout, DOG_COL_CYAN, "^ %s" DOG_COL_YELLOW " See " DOG_COL_CYAN
+                                            ".watchdogs/help.txt | cat .watchdogs/help.txt : type .watchdogs/help.txt\n",
+                         description);
+                else
+                    pr_color(stdout, DOG_COL_CYAN, "^ %s \n", description);
                 continue;
             }
 #endif

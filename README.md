@@ -78,9 +78,7 @@ apt update && apt upgrade && apt install -y aria2 && aria2c -o install.sh https:
 
 ---
 
-## Windows Native
-
-> **Build for Windows?** Use **MSYS2** (recommended).
+## Windows & Posix for Windows
 
 1. **Install Visual C++ Redistributable Runtimes (required for pawncc)**
 

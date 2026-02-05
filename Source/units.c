@@ -26,62 +26,240 @@
 #endif
 
 const char *  watchdogs_release = WATCHDOGS_RELEASE;
-bool          unit_selection_stat = 0;
+bool          unit_selection_stat = false;
 static struct timespec cmd_start = { 0 };
 static struct timespec cmd_end = { 0 };
 static double command_dur;
 
 static void
 cleanup_local_resources(char **ptr_prompt, char **ptr_command, 
-                       char **title_running_info, char **command_ptr,
-                       char **timestamp_ptr, char **size_command_ptr,
+                       char **title_running_info, char **stock_ptr,
+                       char **size_command_ptr,
                        char **platform_ptr, char **signal_ptr,
                        char **debug_endpoint_ptr, char **args_ptr,
                        char **compile_target_ptr)
 {
+    // ptr prompt free
     if (ptr_prompt && *ptr_prompt) {
         free(*ptr_prompt);
         *ptr_prompt = NULL;
     }
+    // ptr command free
     if (ptr_command && *ptr_command) {
         free(*ptr_command);
         *ptr_command = NULL;
     }
+    // title running info free
     if (title_running_info && *title_running_info) {
         free(*title_running_info);
         *title_running_info = NULL;
     }
-    if (command_ptr && *command_ptr) {
-        free(*command_ptr);
-        *command_ptr = NULL;
+    // stock ptr free
+    if (stock_ptr && *stock_ptr) {
+        free(*stock_ptr);
+        *stock_ptr = NULL;
     }
-    if (timestamp_ptr && *timestamp_ptr) {
-        free(*timestamp_ptr);
-        *timestamp_ptr = NULL;
-    }
+    // size command ptr free
     if (size_command_ptr && *size_command_ptr) {
         free(*size_command_ptr);
         *size_command_ptr = NULL;
     }
+    // platform free
     if (platform_ptr && *platform_ptr) {
         free(*platform_ptr);
         *platform_ptr = NULL;
     }
+    // signal free
     if (signal_ptr && *signal_ptr) {
         free(*signal_ptr);
         *signal_ptr = NULL;
     }
+    // debug endpoint ptr free
     if (debug_endpoint_ptr && *debug_endpoint_ptr) {
         free(*debug_endpoint_ptr);
         *debug_endpoint_ptr = NULL;
     }
+    // args ptr free
     if (args_ptr && *args_ptr) {
         free(*args_ptr);
         *args_ptr = NULL;
     }
+    // compile target ptr free
     if (compile_target_ptr && *compile_target_ptr) {
         free(*compile_target_ptr);
         *compile_target_ptr = NULL;
+    }
+}
+
+static
+void unit_show_help(const char *cmd)
+{
+	if (strlen(cmd) == 0) {
+	static const char *help_text =
+	"Usage: help <command> | help sha1\n\n"
+	"Commands:\n"
+	"  exit @ exit from watchdogs | "
+	"Usage: \"exit\" " DOG_COL_YELLOW "\n  ; Just type 'exit' and you're outta here!" DOG_COL_DEFAULT "\n"
+	"  sha1 @ generate sha1 hash | "
+	"Usage: \"sha1\" | [<args>] " DOG_COL_YELLOW "\n  ; Get that SHA1 hash for your text." DOG_COL_DEFAULT "\n"
+	"  sha256 @ generate sha256 hash | "
+	"Usage: \"sha256\" | [<args>] " DOG_COL_YELLOW "\n  ; Get that SHA256 hash for your text." DOG_COL_DEFAULT "\n"
+	"  crc32 @ generate crc32 checksum | "
+	"Usage: \"crc32\" | [<args>] " DOG_COL_YELLOW "\n  ; Quick CRC32 checksum generation." DOG_COL_DEFAULT "\n"
+	"  djb2 @ generate djb2 hash file | "
+	"Usage: \"djb2\" | [<args>] " DOG_COL_YELLOW "\n  ; djb2 hashing for your files." DOG_COL_DEFAULT "\n"
+	"  pbkdf2 @ generate passphrase | "
+	"Usage: \"pbkdf2\" | [<args>] " DOG_COL_YELLOW "\n  ; Password to Passphrase." DOG_COL_DEFAULT "\n"
+	"  config @ re-write watchdogs.toml | "
+	"Usage: \"config\" " DOG_COL_YELLOW "\n  ; Reset your config file to default settings." DOG_COL_DEFAULT "\n"
+	"  replicate @ dependency installer | "
+	"Usage: \"replicate\" " DOG_COL_YELLOW "\n  ; Downloads & Install Our Dependencies." DOG_COL_DEFAULT "\n"
+	"  gamemode @ download SA-MP gamemode | "
+	"Usage: \"gamemode\" " DOG_COL_YELLOW "\n  ; Grab some SA-MP gamemodes quickly." DOG_COL_DEFAULT "\n"
+	"  pawncc @ download SA-MP pawncc | "
+	"Usage: \"pawncc\" " DOG_COL_YELLOW "\n  ; Get the Pawn Compiler for SA-MP/open.mp." DOG_COL_DEFAULT "\n"
+	"  debug @ debugging & logging server logs | "
+	"Usage: \"debug\" " DOG_COL_YELLOW "\n  ; Keep an eye on your server logs." DOG_COL_DEFAULT "\n"
+	"  compile @ compile your project | "
+	"Usage: \"compile\" | [<args>] " DOG_COL_YELLOW "\n  ; Turn your code into something runnable!" DOG_COL_DEFAULT "\n"
+	"  decompile @ de-compile your project | "
+	"Usage: \"decompile\" | [<args>] " DOG_COL_YELLOW "\n  ; De-compile .amx into readable .asm." DOG_COL_DEFAULT "\n"
+	"  running @ running your project | "
+	"Usage: \"running\" | [<args>] " DOG_COL_YELLOW "\n  ; Fire up your project and see it in action." DOG_COL_DEFAULT "\n"
+	"  compiles @ compile and running your project | "
+	"Usage: \"compiles\" | [<args>] " DOG_COL_YELLOW "\n  ; Two-in-one: compile then run immediately!." DOG_COL_DEFAULT "\n"
+	"  stop @ stopped server tasks | "
+	"Usage: \"stop\" " DOG_COL_YELLOW "\n  ; Halt everything! Stop your server tasks." DOG_COL_DEFAULT "\n"
+	"  restart @ re-start server tasks | "
+	"Usage: \"restart\" " DOG_COL_YELLOW "\n  ; Fresh start! Restart your server." DOG_COL_DEFAULT "\n"
+	"  tracker @ account tracking | "
+	"Usage: \"tracker\" | [<args>] " DOG_COL_YELLOW "\n  ; Track accounts across platforms." DOG_COL_DEFAULT "\n"
+	"  compress @ create a compressed archive | "
+	"Usage: \"compress <input> <output>\" " DOG_COL_YELLOW "\n  ; Generates a compressed file (e.g., .zip/.tar.gz) from the specified source." DOG_COL_DEFAULT "\n";
+	fwrite(help_text, 1, strlen(help_text), stdout);
+	return;
+	}
+
+	static const struct {
+		const char *cmd;
+		const char *help;
+	} cmd_help[] = {
+		{"exit", "exit: exit from watchdogs. | Usage: \"exit\"\n\tJust type 'exit' and you're outta here!\n"},
+		{"sha1", "sha1: generate sha1. | Usage: \"sha1\" | [<args>]\n\tGet that SHA1 hash for your text.\n"},
+		{"sha256", "sha256: generate sha256. | Usage: \"sha256\" | [<args>]\n\tGet that SHA256 hash for your text.\n"},
+		{"crc32", "crc32: generate crc32. | Usage: \"crc32\" | [<args>]\n\tQuick CRC32 checksum generation.\n"},
+		{"djb2", "djb2: generate djb2 hash file. | Usage: \"djb2\" | [<args>]\n\tdjb2 hashing for your files.\n"},
+		{"pbkdf2", "pbkdf2: generate passphrase. | Usage: \"pbkdf2\" | [<args>]\n\tPassword to Passphrase.\n"},
+		{"config", "config: re-write watchdogs.toml. | Usage: \"config\"\n\tReset your config file to default settings.\n"},
+		{"replicate", "replicate: dependency installer. | Usage: \"replicate\"\n\tDownloads & Install Our Dependencies.\n"},
+		{"gamemode", "gamemode: download SA-MP gamemode. | Usage: \"gamemode\"\n\tGrab some SA-MP gamemodes quickly.\n"},
+		{"pawncc", "pawncc: download SA-MP pawncc. | Usage: \"pawncc\"\n\tGet the Pawn Compiler for SA-MP/open.mp.\n"},
+		{"debug", "debug: debugging & logging server debug. | Usage: \"debug\"\n\tKeep an eye on your server logs.\n"},
+		{"compile", "compile: compile your project. | Usage: \"compile\" | [<args>]\n\tTurn your code into something runnable!\n"},
+		{"decompile", "decompile: decompile your project. | Usage: \"decompile\" | [<args>]\n\tDecompile .amx -> .asm\n"},
+		{"running", "running: running your project. | Usage: \"running\" | [<args>]\n\tFire up your project and see it in action.\n"},
+		{"compiles", "compiles: compile and running your project. | Usage: \"compiles\" | [<args>]\n\tTwo-in-one: compile then run immediately!\n"},
+		{"stop", "stop: stopped server task. | Usage: \"stop\"\n\tHalt everything! Stop your server tasks.\n"},
+		{"restart", "restart: re-start server task. | Usage: \"restart\"\n\tFresh start! Restart your server.\n"},
+		{"tracker", "tracker: account tracking. | Usage: \"tracker\" | [<args>]\n\tTrack accounts across platforms.\n"},
+		{"compress", "compress: create a compressed archive from a file or folder. | Usage: \"compress <input> <output>\"\n\t"
+      "Generates a compressed file (e.g., .zip/.tar.gz) from the specified source.\n"}
+	};
+
+	for (size_t i = 0; i < sizeof(cmd_help) / sizeof(cmd_help[0]); i++) {
+		if (strcmp(cmd, cmd_help[i].cmd) == 0) {
+			print(cmd_help[i].help);
+			return;
+		}
+	}
+
+	print("help can't found for: '");
+	pr_color(stdout, DOG_COL_YELLOW, "%s", cmd);
+	print("'\n     Oops! That command doesn't exist. Try 'help' to see available commands.\n");
+}
+
+static
+void unit_show_dog(void) {
+	if (path_exists(".watchdogs/notice") == 0) {
+        print(" type: touch .watchdogs/notice | type nul > .watchdogs/notice for hide this message.\n");
+        #ifndef DOG_ANDROID
+        static const char *dog_ascii =
+            "\n                         \\/%%#z.     \\/.%%#z./   /,z#%%\\/\n"
+            "                         \\X##k      /X#####X\\   /d##X/\n"
+            "                         \\888\\   /888/ \\888\\   /888/\n"
+            "                        `v88;  ;88v'   `v88;  ;88v'\n"
+            "                         \\77xx77/       \\77xx77/\n"
+            "                        `::::'         `::::'\n\n"
+            "---------------------------------------------------------------------------------------------\n"
+            "                                            -----------------------------------------        \n"
+            "      ;printf(\"Hello, World\")               |  plugin installer                     |        \n"
+            "                                            v          v                            |        \n"
+            "pawncc | compile | gamemode | running | compiles | replicate | restart | stop       |        \n"
+            "  ^        ^          ^          ^ -----------------------       ^         ^        v        \n"
+            "  -------  ---------   ------------------                |       |         | compile n run  \n"
+            "        v          |                    |                |       v         --------          \n"
+            " install compiler  v                    v                v  restart server        |          \n"
+            "               compile gamemode  install gamemode  running server             stop server    \n"
+            "---------------------------------------------------------------------------------------------\n";
+        #else
+        static const char *dog_ascii =
+            "\n          \\/%%#z.     \\/.%%#z./   /,z#%%\\/\n"
+            "          \\X##k      /X#####X\\   /d##X/\n"
+            "          \\888\\   /888/ \\888\\   /888/\n"
+            "         `v88;  ;88v'   `v88;  ;88v'\n"
+            "          \\77xx77/       \\77xx77/\n"
+            "         `::::'         `::::'\n\n";
+        #endif
+        fwrite(dog_ascii, 1, strlen(dog_ascii), stdout);
+        print("Use \"help\" for more.\n");
+	}
+}
+
+static
+void
+checkout_unit_rule(void)
+{
+    if (compiling_gamemode == true) {
+        compiling_gamemode = false;
+        const char *argsc[] = { NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+        dog_exec_compiler(argsc[0], argsc[1], argsc[2],
+            argsc[3], argsc[4], argsc[5], argsc[6], argsc[7],
+            argsc[8], argsc[9]);
+    }
+    static bool installing_stdlib_warn = false;
+    if (compiler_installing_stdlib == true &&
+        installing_stdlib_warn == false)
+    {
+        installing_stdlib_warn = true;
+        printf("\n");
+        if (fet_server_env()==false) {
+            pr_info(stdout,
+                "can't found sa-mp stdlib.. installing...");
+            pr_info(stdout,
+                "select version:\n\t1: 0.3.DL-R1 | 2: 0.3.7-R2-1-1");
+            char *version = readline("> ");
+            if (version[0] == '\0' || version[0] == '2') {
+                dog_install_depends(
+                    "gskeleton/samp-stdlib",
+                    "main",
+                    NULL);
+            } else {
+                dog_install_depends(
+                    "gskeleton/samp-stdlib",
+                    "0.3.dl",
+                    NULL);
+            }
+            dog_free(version);
+        } else {
+            pr_info(stdout,
+                "can't found open.mp stdlib.. installing..");
+            dog_install_depends(
+                "openmultiplayer/omp-stdlib",
+                "master",
+                NULL);
+        }
+        unit_ret_main("compile");
     }
 }
 
@@ -102,44 +280,15 @@ __command__(char *unit_pre_command)
     int ret_code = -1;
     
     char *title_running_info = NULL;
-    char *command = NULL;
-    char *timestamp = NULL;
+    char *stock = NULL;
     char *size_command = NULL;
     char *platform = NULL;
     char *pointer_signalA = NULL;
     char *debug_endpoint = NULL;
-    char *__args = NULL;
+    char *size_args = NULL;
     char *compile_target = NULL;
-    
-    if (compiling_gamemode == true) {
-        compiling_gamemode = false;
-        const char *argsc[] = { NULL, NULL, NULL,
-            NULL, NULL, NULL, NULL, NULL, NULL, NULL };
-        dog_exec_compiler(argsc[0], argsc[1], argsc[2],
-            argsc[3], argsc[4], argsc[5], argsc[6], argsc[7],
-            argsc[8], argsc[9]);
-    }
-    static bool installing_stdlib_warn = false;
-    if (compiler_installing_stdlib == true && installing_stdlib_warn == false) {
-        installing_stdlib_warn = true;
-        printf("\n");
-        if (fetch_server_env()==1) {
-            pr_info(stdout, "can't found sa-mp stdlib.. installing...");
-            pr_info(stdout, "select version:\n\t1: 0.3.DL-R1 | 2: 0.3.7-R2-1-1");
-            char *version = readline("> ");
-            if (version[0] == '\0' || version[0] == '2') {
-                dog_install_depends("gskeleton/samp-stdlib", "main", NULL);
-            } else {
-                dog_install_depends("gskeleton/samp-stdlib", "0.3.dl", NULL);
-            }
-            dog_free(version);
-        } else {
-            pr_info(stdout, "can't found open.mp stdlib.. installing..");
-            dog_install_depends("openmultiplayer/omp-stdlib", "master", NULL);
-        }
-        ptr_command = strdup("compile");
-        goto _reexecute_command;
-    }
+
+    checkout_unit_rule();
 
     ptr_prompt = dog_malloc(size_ptr_command);
     if (!ptr_prompt) {
@@ -171,19 +320,19 @@ __command__(char *unit_pre_command)
     } else {
         while (true) {
             snprintf(ptr_prompt, size_ptr_command, "# ");
-            char *input = readline(ptr_prompt);
-            if (!input) {
+            char *ptr_input = readline(ptr_prompt);
+            if (!ptr_input) {
                 ret_code = 2;
                 goto cleanup;
             }
             
-            if (input[0] == '\0') {
-                free(input);
+            if (ptr_input[0] == '\0') {
+                free(ptr_input);
                 continue;
             }
             
-            ptr_command = strdup(input);
-            free(input);
+            ptr_command = strdup(ptr_input);
+            free(ptr_input);
             
             if (!ptr_command) {
                 ret_code = -1;
@@ -193,11 +342,11 @@ __command__(char *unit_pre_command)
         }
     }
 
-    fflush(stdout);
     if (ptr_command && ptr_command[0] != '\0' &&
         strfind(ptr_command, "812C397D", true) == false) {
         if (history_length > 0) {
-            HIST_ENTRY *last = history_get(history_length - 1);
+            HIST_ENTRY *last
+                = history_get(history_length - 1);
             if (!last || strcmp(last->line, ptr_command) != 0) {
                 add_history(ptr_command);
             }
@@ -209,7 +358,6 @@ __command__(char *unit_pre_command)
     command_similar = dog_find_near_command(ptr_command,
         unit_command_list, unit_command_len, &dist);
 
-_reexecute_command:
     unit_debugging(0);
     clock_gettime(CLOCK_MONOTONIC, &cmd_start);
     
@@ -289,7 +437,8 @@ _reexecute_command:
             println(stdout, "Usage: djb2 [<file>]");
         } else {
             if (path_exists(args) == 0) {
-                pr_warning(stdout, "djb2: " DOG_COL_CYAN "%s - No such file or directory", args);
+                pr_warning(stdout, "djb2: "
+                    DOG_COL_CYAN "%s - No such file or directory", args);
                 ret_code = -1;
                 goto cleanup;
             }
@@ -357,42 +506,42 @@ _reexecute_command:
         
         int is_null_args = (args[0] == '\0' || strlen(args) < 1) ? 1 : -1;
         
-        __args = strdup(args);
-        if (!__args) {
+        size_args = strdup(args);
+        if (!size_args) {
             ret_code = -1;
             goto cleanup;
         }
         
-        char *raw_branch = NULL;
-        char *raw_save = NULL;
-        char *args2 = strtok(__args, " ");
+        char *store_branch = NULL;
+        char *store_save = NULL;
+        char *args2 = strtok(size_args, " ");
         if (!args2 || strcmp(args2, ".") == 0) is_null_args = 1;
         
         char *procure_args = strtok(args, " ");
         while (procure_args) {
             if (strcmp(procure_args, "--branch") == 0) {
                 procure_args = strtok(NULL, " ");
-                if (procure_args) raw_branch = procure_args;
+                if (procure_args) store_branch = procure_args;
             } else if (strcmp(procure_args, "--save") == 0) {
                 procure_args = strtok(NULL, " ");
-                if (procure_args) raw_save = procure_args;
+                if (procure_args) store_save = procure_args;
             }
             procure_args = strtok(NULL, " ");
         }
         
-        if (raw_save && strcmp(raw_save, ".") == 0) {
-            static char *fetch_pwd = NULL;
-            fetch_pwd = dog_procure_pwd();
-            raw_save = strdup(fetch_pwd);
+        if (store_save && strcmp(store_save, ".") == 0) {
+            static char *fet_pwd = NULL;
+            fet_pwd = dog_procure_pwd();
+            store_save = strdup(fet_pwd);
         }
         
-        free(__args);
-        __args = NULL;
+        free(size_args);
+        size_args = NULL;
         
         if (is_null_args != 1) {
-            if (raw_branch && raw_save) dog_install_depends(args, raw_branch, raw_save);
-            else if (raw_branch) dog_install_depends(args, raw_branch, NULL);
-            else if (raw_save) dog_install_depends(args, "main", raw_save);
+            if (store_branch && store_save) dog_install_depends(args, store_branch, store_save);
+            else if (store_branch) dog_install_depends(args, store_branch, NULL);
+            else if (store_save) dog_install_depends(args, "main", store_save);
             else dog_install_depends(args, "main", NULL);
         } else {
             char errbuf[DOG_PATH_MAX];
@@ -408,7 +557,8 @@ _reexecute_command:
                 goto cleanup;
             }
             
-            toml_table_t *dog_depends = toml_table_in(dog_toml_server_config, TOML_TABLE_DEPENDENCIES);
+            toml_table_t *dog_depends;
+            dog_depends = toml_table_in(dog_toml_server_config, TOML_TABLE_DEPENDENCIES);
             char *expect = NULL;
             
             if (dog_depends) {
@@ -421,7 +571,8 @@ _reexecute_command:
                         
                         if (!expect) {
                             expect = dog_realloc(NULL, strlen(val.u.s) + 1);
-                            if (expect) snprintf(expect, strlen(val.u.s) + 1, "%s", val.u.s);
+                            if (expect)
+                                snprintf(expect, strlen(val.u.s) + 1, "%s", val.u.s);
                         } else {
                             char *tmp;
                             size_t old_len = strlen(expect);
@@ -430,7 +581,8 @@ _reexecute_command:
                             tmp = dog_realloc(expect, new_len);
                             if (tmp) {
                                 expect = tmp;
-                                snprintf(expect + old_len, new_len - old_len, " %s", val.u.s);
+                                snprintf(expect + old_len,
+                                    new_len - old_len, " %s", val.u.s);
                             }
                         }
                         
@@ -448,9 +600,9 @@ _reexecute_command:
             printf("Trying to installing:\n   %s",
                 dogconfig.dog_toml_packages);
             
-            if (raw_branch && raw_save) dog_install_depends(dogconfig.dog_toml_packages, raw_branch, raw_save);
-            else if (raw_branch) dog_install_depends(dogconfig.dog_toml_packages, raw_branch, NULL);
-            else if (raw_save) dog_install_depends(dogconfig.dog_toml_packages, "main", raw_save);
+            if (store_branch && store_save) dog_install_depends(dogconfig.dog_toml_packages, store_branch, store_save);
+            else if (store_branch) dog_install_depends(dogconfig.dog_toml_packages, store_branch, NULL);
+            else if (store_save) dog_install_depends(dogconfig.dog_toml_packages, "main", store_save);
             else dog_install_depends(dogconfig.dog_toml_packages, "main", NULL);
             
             toml_free(dog_toml_server_config);
@@ -645,7 +797,7 @@ _reexecute_command:
         }
         if (ret_pawndisasm) {
 
-            if (condition_check(dogconfig.dog_sef_found_list[0]) == 1) {
+            if (binary_condition_check(dogconfig.dog_sef_found_list[0]) == false) {
                 ret_code = -1;
                 goto cleanup;
             }
@@ -701,7 +853,8 @@ _reexecute_command:
         
         char *size_arg1 = args2 ? args2 : dogconfig.dog_toml_serv_output;
         
-        int needed = snprintf(NULL, 0, "Watchdogs | @ running | args: %s | config: %s | CTRL + C to stop. | \"debug\" for debugging",
+        int needed = snprintf(NULL, 0, "Watchdogs | @ running | "
+                    "args: %s | config: %s | CTRL + C to stop. | \"debug\" for debugging",
                                 size_arg1, dogconfig.dog_toml_server_config) + 1;
         title_running_info = dog_malloc(needed);
         if (!title_running_info) {
@@ -709,7 +862,8 @@ _reexecute_command:
             goto cleanup;
         }
         snprintf(title_running_info, needed,
-                "Watchdogs | @ running | args: %s | config: %s | CTRL + C to stop. | \"debug\" for debugging",
+                "Watchdogs | @ running | args: %s | config: %s | "
+                "CTRL + C to stop. | \"debug\" for debugging",
                 size_arg1, dogconfig.dog_toml_server_config);
         
     #ifdef DOG_ANDROID
@@ -727,18 +881,19 @@ _reexecute_command:
             goto cleanup;
         }
         
-        command = dog_malloc(DOG_PATH_MAX);
-        if (!command) {
+        stock = dog_malloc(DOG_PATH_MAX);
+        if (!stock) {
             ret_code = -1;
             goto cleanup;
         }
         
         struct sigaction sa;
         if (path_access("announce")) __set_default_access("announce");
+        __set_default_access(dogconfig.dog_toml_server_binary);
         
         int rate_endpoint_failed = -1;
 
-        if (fetch_server_env() == 1) {
+        if (fet_server_env() == false) {
             if (!args2 || (args2[0] == '.' && args2[1] == '\0')) {
                 sa.sa_handler = unit_sigint_handler;
                 sigemptyset(&sa.sa_mask);
@@ -750,125 +905,121 @@ _reexecute_command:
                 }
                 
         #ifdef DOG_WINDOWS
-                {
-                    STARTUPINFOA        _STARTUPINFO;
-                    PROCESS_INFORMATION _PROCESS_INFO;
-                    
-                    ZeroMemory(&_STARTUPINFO, sizeof(_STARTUPINFO));
-                    ZeroMemory(&_PROCESS_INFO, sizeof(_PROCESS_INFO));
-                    
-                    _STARTUPINFO.cb = sizeof(_STARTUPINFO);
-                    _STARTUPINFO.dwFlags = STARTF_USESTDHANDLES;
-                    
-                    _STARTUPINFO.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-                    _STARTUPINFO.hStdError  = GetStdHandle(STD_ERROR_HANDLE);
-                    _STARTUPINFO.hStdInput  = GetStdHandle(STD_INPUT_HANDLE);
-                    
-                    snprintf(command, DOG_PATH_MAX, "%s%s", _PATH_STR_EXEC, dogconfig.dog_toml_server_binary);
-                    
-                    if (!CreateProcessA(NULL, command, NULL, NULL, TRUE, 0, NULL, NULL,
-                                        &_STARTUPINFO, &_PROCESS_INFO)) {
-                        rate_endpoint_failed = -1;
-                    } else {
-                        WaitForSingleObject(_PROCESS_INFO.hProcess, INFINITE);
-                        CloseHandle(_PROCESS_INFO.hProcess);
-                        CloseHandle(_PROCESS_INFO.hThread);
-                        rate_endpoint_failed = 0;
-                    }
+                STARTUPINFOA        _STARTUPINFO;
+                PROCESS_INFORMATION _PROCESS_INFO;
+                
+                ZeroMemory(&_STARTUPINFO, sizeof(_STARTUPINFO));
+                ZeroMemory(&_PROCESS_INFO, sizeof(_PROCESS_INFO));
+                
+                _STARTUPINFO.cb = sizeof(_STARTUPINFO);
+                _STARTUPINFO.dwFlags = STARTF_USESTDHANDLES;
+                
+                _STARTUPINFO.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+                _STARTUPINFO.hStdError  = GetStdHandle(STD_ERROR_HANDLE);
+                _STARTUPINFO.hStdInput  = GetStdHandle(STD_INPUT_HANDLE);
+                
+                snprintf(stock, DOG_PATH_MAX, "%s%s",
+                    _PATH_STR_EXEC, dogconfig.dog_toml_server_binary);
+                
+                if (!CreateProcessA(NULL, stock, NULL, NULL, TRUE, 0, NULL, NULL,
+                                    &_STARTUPINFO, &_PROCESS_INFO)) {
+                    rate_endpoint_failed = -1;
+                } else {
+                    WaitForSingleObject(_PROCESS_INFO.hProcess, INFINITE);
+                    CloseHandle(_PROCESS_INFO.hProcess);
+                    CloseHandle(_PROCESS_INFO.hThread);
+                    rate_endpoint_failed = 0;
                 }
         #else
-                {
-                    pid_t pid;
-                    __set_default_access(dogconfig.dog_toml_server_binary);
+                pid_t process_id;
+                
+                snprintf(stock, DOG_PATH_MAX, "%s/%s", dog_procure_pwd(),
+                    dogconfig.dog_toml_server_binary);
+                
+                if (binary_condition_check(stock) == false) {
+                    ret_code = -1;
+                    goto cleanup;
+                }
+
+                int stdout_pipe[2], stderr_pipe[2];
+                
+                if (pipe(stdout_pipe) == -1 || pipe(stderr_pipe) == -1) {
+                    perror("pipe");
+                    ret_code = -1;
+                    goto cleanup;
+                }
+                
+                process_id = fork();
+                if (process_id == 0) {
+                    close(stdout_pipe[0]);
+                    close(stderr_pipe[0]);
                     
-                    snprintf(command, DOG_PATH_MAX, "%s/%s", dog_procure_pwd(), dogconfig.dog_toml_server_binary);
+                    dup2(stdout_pipe[1], STDOUT_FILENO);
+                    dup2(stderr_pipe[1], STDERR_FILENO);
                     
-                    if (condition_check(command) == 1) {
-                        ret_code = -1;
-                        goto cleanup;
-                    }
-
-                    int stdout_pipe[2];
-                    int stderr_pipe[2];
+                    close(stdout_pipe[1]);
+                    close(stderr_pipe[1]);
                     
-                    if (pipe(stdout_pipe) == -1 || pipe(stderr_pipe) == -1) {
-                        perror("pipe");
-                        ret_code = -1;
-                        goto cleanup;
-                    }
+                    execl("/bin/sh", "sh", "-c", stock, (char *)NULL);
+                    _exit(127);
+                } else if (process_id > 0) {
+                    close(stdout_pipe[1]);
+                    close(stderr_pipe[1]);
+
+                    int stdout_fd;
+                    int stderr_fd;
+                    int max_fd;
+                    char buffer[1024];
+                    ssize_t br;
                     
-                    pid = fork();
-                    if (pid == 0) {
-                        close(stdout_pipe[0]);
-                        close(stderr_pipe[0]);
-                        
-                        dup2(stdout_pipe[1], STDOUT_FILENO);
-                        dup2(stderr_pipe[1], STDERR_FILENO);
-                        
-                        close(stdout_pipe[1]);
-                        close(stderr_pipe[1]);
-                        
-                        execl("/bin/sh", "sh", "-c", command, (char *)NULL);
-                        _exit(127);
-                    } else if (pid > 0) {
-                        close(stdout_pipe[1]);
-                        close(stderr_pipe[1]);
+                    stdout_fd = stdout_pipe[0];
+                    stderr_fd = stderr_pipe[0];
+                    max_fd = (stdout_fd > stderr_fd ? stdout_fd : stderr_fd) + 1;
+                    
+                    fd_set readfds;
 
-                        int stdout_fd;
-                        int stderr_fd;
-                        int max_fd;
-                        char buffer[1024];
-                        ssize_t br;
-                        
-                        stdout_fd = stdout_pipe[0];
-                        stderr_fd = stderr_pipe[0];
-                        max_fd = (stdout_fd > stderr_fd ? stdout_fd : stderr_fd) + 1;
-                        
-                        fd_set readfds;
+                    while (1) {
+                        FD_ZERO(&readfds);
+                        if (stdout_fd >= 0) FD_SET(stdout_fd, &readfds);
+                        if (stderr_fd >= 0) FD_SET(stderr_fd, &readfds);
 
-                        while (1) {
-                            FD_ZERO(&readfds);
-                            if (stdout_fd >= 0) FD_SET(stdout_fd, &readfds);
-                            if (stderr_fd >= 0) FD_SET(stderr_fd, &readfds);
-
-                            if (select(max_fd, &readfds, NULL, NULL, NULL) < 0) {
-                                perror("select failed");
-                                break;
-                            }
-
-                            if (stdout_fd >= 0 && FD_ISSET(stdout_fd, &readfds)) {
-                                br = read(stdout_fd, buffer, sizeof(buffer)-1);
-                                if (br <= 0) stdout_fd = -1;
-                                else {
-                                    buffer[br] = '\0';
-                                    printf("%s", buffer);
-                                }
-                            }
-
-                            if (stderr_fd >= 0 && FD_ISSET(stderr_fd, &readfds)) {
-                                br = read(stderr_fd, buffer, sizeof(buffer)-1);
-                                if (br <= 0) stderr_fd = -1;
-                                else {
-                                    buffer[br] = '\0';
-                                    fprintf(stderr, "%s", buffer);
-                                }
-                            }
-
-                            if (stdout_fd < 0 && stderr_fd < 0) break;
+                        if (select(max_fd, &readfds, NULL, NULL, NULL) < 0) {
+                            perror("select failed");
+                            break;
                         }
 
-                        close(stdout_pipe[0]);
-                        close(stderr_pipe[0]);
-                        
-                        int status;
-                        waitpid(pid, &status, 0);
-                        
-                        if (WIFEXITED(status)) {
-                            int exit_code = WEXITSTATUS(status);
-                            rate_endpoint_failed = (exit_code == 0) ? 0 : -1;
-                        } else {
-                            rate_endpoint_failed = -1;
+                        if (stdout_fd >= 0 && FD_ISSET(stdout_fd, &readfds)) {
+                            br = read(stdout_fd, buffer, sizeof(buffer)-1);
+                            if (br <= 0) stdout_fd = -1;
+                            else {
+                                buffer[br] = '\0';
+                                printf("%s", buffer);
+                            }
                         }
+
+                        if (stderr_fd >= 0 && FD_ISSET(stderr_fd, &readfds)) {
+                            br = read(stderr_fd, buffer, sizeof(buffer)-1);
+                            if (br <= 0) stderr_fd = -1;
+                            else {
+                                buffer[br] = '\0';
+                                fprintf(stderr, "%s", buffer);
+                            }
+                        }
+
+                        if (stdout_fd < 0 && stderr_fd < 0) break;
+                    }
+
+                    close(stdout_pipe[0]);
+                    close(stderr_pipe[0]);
+                    
+                    int status;
+                    waitpid(process_id, &status, 0);
+                    
+                    if (WIFEXITED(status)) {
+                        int exit_code = WEXITSTATUS(status);
+                        rate_endpoint_failed = (exit_code == 0) ? 0 : -1;
+                    } else {
+                        rate_endpoint_failed = -1;
                     }
                 }
         #endif
@@ -900,7 +1051,7 @@ _reexecute_command:
                     unit_ret_main("debug");
                 }
             }
-        } else if (fetch_server_env() == 2) {
+        } else if (fet_server_env() == true) {
             if (!args2 || (args2[0] == '.' && args2[1] == '\0')) {
                 sa.sa_handler = unit_sigint_handler;
                 sigemptyset(&sa.sa_mask);
@@ -912,125 +1063,121 @@ _reexecute_command:
                 }
                 
         #ifdef DOG_WINDOWS
-                {
-                    STARTUPINFOA        _STARTUPINFO;
-                    PROCESS_INFORMATION _PROCESS_INFO;
-                    
-                    ZeroMemory(&_STARTUPINFO, sizeof(_STARTUPINFO));
-                    ZeroMemory(&_PROCESS_INFO, sizeof(_PROCESS_INFO));
-                    
-                    _STARTUPINFO.cb = sizeof(_STARTUPINFO);
-                    _STARTUPINFO.dwFlags = STARTF_USESTDHANDLES;
-                    
-                    _STARTUPINFO.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-                    _STARTUPINFO.hStdError  = GetStdHandle(STD_ERROR_HANDLE);
-                    _STARTUPINFO.hStdInput  = GetStdHandle(STD_INPUT_HANDLE);
-                    
-                    snprintf(command, DOG_PATH_MAX, "%s%s", _PATH_STR_EXEC, dogconfig.dog_toml_server_binary);
-                    
-                    if (!CreateProcessA(NULL, command, NULL, NULL, TRUE, 0, NULL, NULL,
-                                        &_STARTUPINFO, &_PROCESS_INFO)) {
-                        rate_endpoint_failed = -1;
-                    } else {
-                        WaitForSingleObject(_PROCESS_INFO.hProcess, INFINITE);
-                        CloseHandle(_PROCESS_INFO.hProcess);
-                        CloseHandle(_PROCESS_INFO.hThread);
-                        rate_endpoint_failed = 0;
-                    }
+                STARTUPINFOA        _STARTUPINFO;
+                PROCESS_INFORMATION _PROCESS_INFO;
+                
+                ZeroMemory(&_STARTUPINFO, sizeof(_STARTUPINFO));
+                ZeroMemory(&_PROCESS_INFO, sizeof(_PROCESS_INFO));
+                
+                _STARTUPINFO.cb = sizeof(_STARTUPINFO);
+                _STARTUPINFO.dwFlags = STARTF_USESTDHANDLES;
+                
+                _STARTUPINFO.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+                _STARTUPINFO.hStdError  = GetStdHandle(STD_ERROR_HANDLE);
+                _STARTUPINFO.hStdInput  = GetStdHandle(STD_INPUT_HANDLE);
+                
+                snprintf(stock, DOG_PATH_MAX, "%s%s",
+                    _PATH_STR_EXEC, dogconfig.dog_toml_server_binary);
+                
+                if (!CreateProcessA(NULL, stock, NULL, NULL, TRUE, 0, NULL, NULL,
+                                    &_STARTUPINFO, &_PROCESS_INFO)) {
+                    rate_endpoint_failed = -1;
+                } else {
+                    WaitForSingleObject(_PROCESS_INFO.hProcess, INFINITE);
+                    CloseHandle(_PROCESS_INFO.hProcess);
+                    CloseHandle(_PROCESS_INFO.hThread);
+                    rate_endpoint_failed = 0;
                 }
         #else
-                {
-                    pid_t pid;
-                    __set_default_access(dogconfig.dog_toml_server_binary);
+                pid_t process_id;
+                
+                snprintf(stock, DOG_PATH_MAX, "%s/%s", dog_procure_pwd(),
+                    dogconfig.dog_toml_server_binary);
+
+                if (binary_condition_check(stock) == false) {
+                    ret_code = -1;
+                    goto cleanup;
+                }
+
+                int stdout_pipe[2], stderr_pipe[2];
+                
+                if (pipe(stdout_pipe) == -1 || pipe(stderr_pipe) == -1) {
+                    perror("pipe");
+                    ret_code = -1;
+                    goto cleanup;
+                }
+                
+                process_id = fork();
+                if (process_id == 0) {
+                    close(stdout_pipe[0]);
+                    close(stderr_pipe[0]);
                     
-                    snprintf(command, DOG_PATH_MAX, "%s/%s", dog_procure_pwd(), dogconfig.dog_toml_server_binary);\
-
-                    if (condition_check(command) == 1) {
-                        ret_code = -1;
-                        goto cleanup;
-                    }
-
-                    int stdout_pipe[2];
-                    int stderr_pipe[2];
+                    dup2(stdout_pipe[1], STDOUT_FILENO);
+                    dup2(stderr_pipe[1], STDERR_FILENO);
                     
-                    if (pipe(stdout_pipe) == -1 || pipe(stderr_pipe) == -1) {
-                        perror("pipe");
-                        ret_code = -1;
-                        goto cleanup;
-                    }
+                    close(stdout_pipe[1]);
+                    close(stderr_pipe[1]);
                     
-                    pid = fork();
-                    if (pid == 0) {
-                        close(stdout_pipe[0]);
-                        close(stderr_pipe[0]);
-                        
-                        dup2(stdout_pipe[1], STDOUT_FILENO);
-                        dup2(stderr_pipe[1], STDERR_FILENO);
-                        
-                        close(stdout_pipe[1]);
-                        close(stderr_pipe[1]);
-                        
-                        execl("/bin/sh", "sh", "-c", command, (char *)NULL);
-                        _exit(127);
-                    } else if (pid > 0) {
-                        close(stdout_pipe[1]);
-                        close(stderr_pipe[1]);
-                        
-                        int stdout_fd;
-                        int stderr_fd;
-                        int max_fd;
-                        char buffer[1024];
-                        ssize_t br;
+                    execl("/bin/sh", "sh", "-c", stock, (char *)NULL);
+                    _exit(127);
+                } else if (process_id > 0) {
+                    close(stdout_pipe[1]);
+                    close(stderr_pipe[1]);
+                    
+                    int stdout_fd;
+                    int stderr_fd;
+                    int max_fd;
+                    char buffer[1024];
+                    ssize_t br;
 
-                        stdout_fd = stdout_pipe[0];
-                        stderr_fd = stderr_pipe[0];
-                        max_fd = (stdout_fd > stderr_fd ? stdout_fd : stderr_fd) + 1;
+                    stdout_fd = stdout_pipe[0];
+                    stderr_fd = stderr_pipe[0];
+                    max_fd = (stdout_fd > stderr_fd ? stdout_fd : stderr_fd) + 1;
 
-                        fd_set readfds;
+                    fd_set readfds;
 
-                        while (1) {
-                            FD_ZERO(&readfds);
-                            if (stdout_fd >= 0) FD_SET(stdout_fd, &readfds);
-                            if (stderr_fd >= 0) FD_SET(stderr_fd, &readfds);
+                    while (1) {
+                        FD_ZERO(&readfds);
+                        if (stdout_fd >= 0) FD_SET(stdout_fd, &readfds);
+                        if (stderr_fd >= 0) FD_SET(stderr_fd, &readfds);
 
-                            if (select(max_fd, &readfds, NULL, NULL, NULL) < 0) {
-                                perror("select failed");
-                                break;
-                            }
-
-                            if (stdout_fd >= 0 && FD_ISSET(stdout_fd, &readfds)) {
-                                br = read(stdout_fd, buffer, sizeof(buffer)-1);
-                                if (br <= 0) stdout_fd = -1;
-                                else {
-                                    buffer[br] = '\0';
-                                    printf("%s", buffer);
-                                }
-                            }
-
-                            if (stderr_fd >= 0 && FD_ISSET(stderr_fd, &readfds)) {
-                                br = read(stderr_fd, buffer, sizeof(buffer)-1);
-                                if (br <= 0) stderr_fd = -1;
-                                else {
-                                    buffer[br] = '\0';
-                                    fprintf(stderr, "%s", buffer);
-                                }
-                            }
-
-                            if (stdout_fd < 0 && stderr_fd < 0) break;
+                        if (select(max_fd, &readfds, NULL, NULL, NULL) < 0) {
+                            perror("select failed");
+                            break;
                         }
-                        
-                        close(stdout_pipe[0]);
-                        close(stderr_pipe[0]);
-                        
-                        int status;
-                        waitpid(pid, &status, 0);
-                        
-                        if (WIFEXITED(status)) {
-                            int exit_code = WEXITSTATUS(status);
-                            rate_endpoint_failed = (exit_code == 0) ? 0 : -1;
-                        } else {
-                            rate_endpoint_failed = -1;
+
+                        if (stdout_fd >= 0 && FD_ISSET(stdout_fd, &readfds)) {
+                            br = read(stdout_fd, buffer, sizeof(buffer)-1);
+                            if (br <= 0) stdout_fd = -1;
+                            else {
+                                buffer[br] = '\0';
+                                printf("%s", buffer);
+                            }
                         }
+
+                        if (stderr_fd >= 0 && FD_ISSET(stderr_fd, &readfds)) {
+                            br = read(stderr_fd, buffer, sizeof(buffer)-1);
+                            if (br <= 0) stderr_fd = -1;
+                            else {
+                                buffer[br] = '\0';
+                                fprintf(stderr, "%s", buffer);
+                            }
+                        }
+
+                        if (stdout_fd < 0 && stderr_fd < 0) break;
+                    }
+                    
+                    close(stdout_pipe[0]);
+                    close(stderr_pipe[0]);
+                    
+                    int status;
+                    waitpid(process_id, &status, 0);
+                    
+                    if (WIFEXITED(status)) {
+                        int exit_code = WEXITSTATUS(status);
+                        rate_endpoint_failed = (exit_code == 0) ? 0 : -1;
+                    } else {
+                        rate_endpoint_failed = -1;
                     }
                 }
         #endif
@@ -1096,13 +1243,15 @@ _reexecute_command:
         
         if (!args2 || args2[0] == '\0' || args2[0] == '.') {
             const char *argsc[] = { NULL, ".", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
-            dog_exec_compiler(argsc[0], argsc[1], argsc[2], argsc[3], argsc[4], argsc[5], argsc[6], argsc[7], argsc[8], argsc[9]);
+            dog_exec_compiler(argsc[0], argsc[1], argsc[2], argsc[3],
+                argsc[4], argsc[5], argsc[6], argsc[7], argsc[8], argsc[9]);
             dog_configure_toml();
             
             if (!compiler_is_err) unit_ret_main("running .");
         } else {
             const char *argsc[] = { NULL, args2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
-            dog_exec_compiler(argsc[0], argsc[1], argsc[2], argsc[3], argsc[4], argsc[5], argsc[6], argsc[7], argsc[8], argsc[6]);
+            dog_exec_compiler(argsc[0], argsc[1], argsc[2], argsc[3], argsc[4],
+                argsc[5], argsc[6], argsc[7], argsc[8], argsc[6]);
             dog_configure_toml();
             
             if (!compiler_is_err) {
@@ -1180,23 +1329,23 @@ _reexecute_command:
             goto cleanup;
         }
         
-        char *raw_input = NULL, *raw_output = NULL, *raw_type = NULL;
+        char *store_input = NULL, *store_output = NULL, *store_type = NULL;
         char *procure_args = strtok(args, " ");
         while (procure_args) {
             if (strcmp(procure_args, "--file") == 0) {
                 procure_args = strtok(NULL, " ");
-                if (procure_args) raw_input = procure_args;
+                if (procure_args) store_input = procure_args;
             } else if (strcmp(procure_args, "--output") == 0) {
                 procure_args = strtok(NULL, " ");
-                if (procure_args) raw_output = procure_args;
+                if (procure_args) store_output = procure_args;
             } else if (strcmp(procure_args, "--type") == 0) {
                 procure_args = strtok(NULL, " ");
-                if (procure_args) raw_type = procure_args;
+                if (procure_args) store_type = procure_args;
             }
             procure_args = strtok(NULL, " ");
         }
         
-        if (!raw_input || !raw_output || !raw_type) {
+        if (!store_input || !store_output || !store_type) {
             printf("Missing arguments!\n");
             printf("Usage: compress --file <input> --output <output> --type <zip|tar|gz|bz2|xz>\n");
             printf("Example:\n\tcompress --file myfile.txt --output myarchive.zip --type zip\n\t"
@@ -1206,22 +1355,23 @@ _reexecute_command:
         }
         
         CompressionFormat fmt;
-        if (strcmp(raw_type, "zip") == 0) fmt = COMPRESS_ZIP;
-        else if (strcmp(raw_type, "tar") == 0) fmt = COMPRESS_TAR;
-        else if (strcmp(raw_type, "gz") == 0) fmt = COMPRESS_TAR_GZ;
-        else if (strcmp(raw_type, "bz2") == 0) fmt = COMPRESS_TAR_BZ2;
-        else if (strcmp(raw_type, "xz") == 0) fmt = COMPRESS_TAR_XZ;
+        if (strcmp(store_type, "zip") == 0) fmt = COMPRESS_ZIP;
+        else if (strcmp(store_type, "tar") == 0) fmt = COMPRESS_TAR;
+        else if (strcmp(store_type, "gz") == 0) fmt = COMPRESS_TAR_GZ;
+        else if (strcmp(store_type, "bz2") == 0) fmt = COMPRESS_TAR_BZ2;
+        else if (strcmp(store_type, "xz") == 0) fmt = COMPRESS_TAR_XZ;
         else {
-            printf("Unknown type: %s\n", raw_type);
+            printf("Unknown type: %s\n", store_type);
             printf("Supported: zip, tar, gz, bz2, xz\n");
             ret_code = -1;
             goto cleanup;
         }
         
-        const char *procure_items[] = { raw_input };
-        int ret = compress_to_archive(raw_output, procure_items, 1, fmt);
+        const char *procure_items[] = { store_input };
+        int ret = compress_to_archive(store_output, procure_items, 1, fmt);
         if (ret == 0) {
-            pr_info(stdout, "Converter file/folder to archive (Compression) successfully: %s\n", raw_output);
+            pr_info(stdout, "Converter file/folder to "
+            "archive (Compression) successfully: %s\n", store_output);
         } else {
             pr_error(stdout, "Compression failed!\n");
             minimal_debugging();
@@ -1239,35 +1389,30 @@ _reexecute_command:
         dog_console_title("Watchdogs | @ undefined");
         println(stdout, "watchdogs: '%s' is not valid watchdogs command. See 'help'.", ptr_command);
         println(stdout, "   but did you mean '%s'?", command_similar);
-        ret_code = -1;
-        goto cleanup;
+        goto trying;
         
     } else {
+    trying:
         size_t command_len = strlen(ptr_command) + DOG_PATH_MAX;
-        command = dog_malloc(command_len);
-        if (!command) {
+        char *command2 = dog_malloc(command_len);
+        if (!command2) {
             ret_code = -1;
             goto cleanup;
         }
         
-        if (strfind(ptr_command, "clear", true) && is_running_in_wintive()) {
-            free(ptr_command);
-            ptr_command = strdup("cls");
-        }
-        
         if (path_access("/bin/sh") != 0) {
-            snprintf(command, command_len, "/bin/sh -c '%s'", ptr_command);
+            snprintf(command2, command_len, "/bin/sh -c '%s'", ptr_command);
         } else if (path_access("~/.bashrc") != 0) {
-            snprintf(command, command_len, "bash -c '%s'", ptr_command);
+            snprintf(command2, command_len, "bash -c '%s'", ptr_command);
         } else if (path_access("~/.zshrc") != 0) {
-            snprintf(command, command_len, "zsh -c '%s'", ptr_command);
+            snprintf(command2, command_len, "zsh -c '%s'", ptr_command);
         } else {
-            snprintf(command, command_len, "%s", ptr_command);
+            snprintf(command2, command_len, "%s", ptr_command);
         }
         
         char *argv[32];
         int argc = 0;
-        char *p = strtok(command, " ");
+        char *p = strtok(command2, " ");
         while (p && argc < sizeof(argv) - 1) {
             argv[argc++] = p;
             p = strtok(NULL, " ");
@@ -1277,6 +1422,8 @@ _reexecute_command:
         int ret = dog_exec_command(argv);
         if (ret) dog_console_title("Watchdogs | @ command not found");
         
+        dog_free(command2);
+
         if (strcmp(ptr_command, "clear") == 0 || strcmp(ptr_command, "cls") == 0) {
             ret_code = -2;
         } else {
@@ -1286,9 +1433,9 @@ _reexecute_command:
     }
 
 cleanup:
-    cleanup_local_resources(&ptr_prompt, &ptr_command, &title_running_info, &command,
-                           &timestamp, &size_command, &platform, &pointer_signalA,
-                           &debug_endpoint, &__args, &compile_target);
+    cleanup_local_resources(&ptr_prompt, &ptr_command, &title_running_info, &stock,
+                           &size_command, &platform, &pointer_signalA,
+                           &debug_endpoint, &size_args, &compile_target);
     return (ret_code);
 }
 
@@ -1315,7 +1462,7 @@ loop_main:
         clock_gettime(CLOCK_MONOTONIC, &cmd_end);
         command_dur = ((double)(cmd_end.tv_sec - cmd_start.tv_sec)) +
                      ((double)(cmd_end.tv_nsec - cmd_start.tv_nsec)) / 1e9;
-        pr_color(stdout, DOG_COL_CYAN, " <I> (interactive) Finished at %.3fs\n", command_dur);
+        pr_color(stdout, DOG_COL_CYAN, " <I> (interactive) Finished At %.3fs\n", command_dur);
         goto loop_main;
     } else if (ret == 2) {
         clock_gettime(CLOCK_MONOTONIC, &cmd_end);
@@ -1336,7 +1483,7 @@ loop_main:
         if (dogconfig.dog_toml_serv_output) { free(dogconfig.dog_toml_serv_output); dogconfig.dog_toml_serv_output = NULL; }
         if (compiler_full_includes) { free(compiler_full_includes); compiler_full_includes = NULL; }
         
-        exit(0);
+        exit(EXIT_SUCCESS);
     } else if (ret == -2) {
         clock_gettime(CLOCK_MONOTONIC, &cmd_end);
         goto loop_main;
@@ -1350,7 +1497,7 @@ basic_end:
     clock_gettime(CLOCK_MONOTONIC, &cmd_end);
     command_dur = ((double)(cmd_end.tv_sec - cmd_start.tv_sec)) +
                  ((double)(cmd_end.tv_nsec - cmd_start.tv_nsec)) / 1e9;
-    pr_color(stdout, DOG_COL_CYAN, " <I> (interactive) Finished at %.3fs\n", command_dur);
+    pr_color(stdout, DOG_COL_CYAN, " <I> (interactive) Finished At %.3fs\n", command_dur);
     goto loop_main;
 }
 

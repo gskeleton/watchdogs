@@ -81,7 +81,7 @@ apt update && apt upgrade && apt install -y aria2 && aria2c -o install.sh https:
 
 ---
 
-## Windows Native
+## Windows at POSIX para sa Windows
 
 > **Mag-build para sa Windows?** Gamitin ang **MSYS2** (inirerekomenda).
 

@@ -113,6 +113,7 @@ void _unit_debugger(int hard_debug,
                 "compiler version: %d | "
                 "architecture: %s | "
                 "os_type: %s (CRC32) | "
+                "pawncc path: %s | "
                 "pointer_samp: %s | "
                 "pointer_openmp: %s | "
                 "f_samp: %s (CRC32) | "
@@ -143,11 +144,11 @@ void _unit_debugger(int hard_debug,
             #else
                     "Unknown",
             #endif
-                    dogconfig.dog_os_type, dogconfig.dog_ptr_samp,
+                    dogconfig.dog_os_type, dogconfig.dog_pawncc_path, dogconfig.dog_ptr_samp,
                     dogconfig.dog_ptr_omp, dogconfig.dog_is_samp, dogconfig.dog_is_omp,
                     dogconfig.dog_toml_serv_input, dogconfig.dog_toml_serv_output,
                     dogconfig.dog_toml_server_binary, dogconfig.dog_toml_server_config, dogconfig.dog_toml_server_logs,
-                    dogconfig.dog_toml_github_tokens, dogconfig.dog_toml_all_flags, dogconfig.dog_toml_packages);
+                    dog_masked_text(5, dogconfig.dog_toml_github_tokens), dogconfig.dog_toml_all_flags, dogconfig.dog_toml_packages);
                     
             /* Additional system information for detailed debugging */
             printf("STDC: %d\n", __STDC__);                     /* C standard compliance */
@@ -214,6 +215,7 @@ void _unit_debugger(int hard_debug,
                 "compiler version: %d | "
                 "architecture: %s | "
                 "os_type: %s (CRC32) | "
+                "pawncc path: %s | "
                 "pointer_samp: %s | "
                 "pointer_openmp: %s | "
                 "f_samp: %s (CRC32) | "
@@ -242,11 +244,11 @@ void _unit_debugger(int hard_debug,
             #else
                     "Unknown",
             #endif
-                    dogconfig.dog_os_type, dogconfig.dog_ptr_samp,
+                    dogconfig.dog_os_type, dogconfig.dog_pawncc_path, dogconfig.dog_ptr_samp,
                     dogconfig.dog_ptr_omp, dogconfig.dog_is_samp, dogconfig.dog_is_omp,
                     dogconfig.dog_toml_serv_input, dogconfig.dog_toml_serv_output,
                     dogconfig.dog_toml_server_binary, dogconfig.dog_toml_server_config, dogconfig.dog_toml_server_logs,
-                    dogconfig.dog_toml_github_tokens);
+                    dog_masked_text(5, dogconfig.dog_toml_github_tokens));
         }
 
         /* Ensure all output is flushed to the console immediately */
