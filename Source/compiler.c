@@ -386,6 +386,8 @@ int dog_exec_compiler_process(char *pawncc_path,
         return (-2);
     }
 
+    print(DOG_COL_YELLOW "-----------------------------\n" DOG_COL_DEFAULT);
+
 	int         result_configure = 0;
 	int         i = 0;
 	char       *unix_pointer_token = NULL;
@@ -1554,6 +1556,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 
 			if (!compiler_is_err)
 				print("** Completed Tasks.\n");
+			print(DOG_COL_YELLOW "-----------------------------\n" DOG_COL_DEFAULT);
 
 			pr_color(stdout, DOG_COL_CYAN,
 				" <C> (compile-time) Complete At %.3fs (%.0f ms)\n",
@@ -1930,6 +1933,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 
 				if (!compiler_is_err)
 					print("** Completed Tasks.\n");
+    			print(DOG_COL_YELLOW "-----------------------------\n" DOG_COL_DEFAULT);
 
 				pr_color(stdout, DOG_COL_CYAN,
 					" <C> (compile-time) Complete At %.3fs (%.0f ms)\n",

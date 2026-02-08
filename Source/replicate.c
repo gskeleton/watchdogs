@@ -1047,9 +1047,9 @@ package_add_include(const char *modes, char *package_name,
 			line_end = ct_modes + fle_size;
 
 		len = line_end - pos;
-		if (len >= 256)
-			len = 255;
-		char	 line[256];
+		if (len >= 0x100) // 0x100 = 256
+			len = 0xFF; // 0xFF = 255
+		char	 line[0x100]; // 0x100 = 256
 		strncpy(line, pos, len);
 		line[len] = '\0';
 
@@ -1073,9 +1073,9 @@ package_add_include(const char *modes, char *package_name,
 			line_end = ct_modes + fle_size;
 
 		len = line_end - line_start;
-		if (len >= 256)
-			len = 255;
-		char	 line[256];
+		if (len >= 0x100) // 0x100 = 256
+			len = 0xFF; // 0xFF = 255
+		char	 line[0x100]; // 0x100 = 256
 		strncpy(line, line_start, len);
 		line[len] = '\0';
 

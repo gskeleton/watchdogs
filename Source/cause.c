@@ -59,7 +59,7 @@ static void compiler_detailed(const char *dog_output, int debug,
     if (len > 0)
         printf("%.*s", len, outbuf);
 
-    printf("-----------------------------\n");
+    print("-----------------------------\n");
 
     if (path_exists(dog_output) && debug && error_count < 1 && header_size >= 1 && total_size >= 1) {
         __set_default_access(dog_output);
@@ -80,7 +80,7 @@ static void compiler_detailed(const char *dog_output, int debug,
             printf("%.*s", len, outbuf);
     }
 
-    printf("\n");
+    print("\n");
 
     len = snprintf(outbuf, sizeof(outbuf),
                    "** Pawn Compiler %s - Copyright (c) 1997-2006, ITB CompuPhase\n",

@@ -227,11 +227,11 @@ checkout_unit_rule(void)
             argsc[3], argsc[4], argsc[5], argsc[6], argsc[7],
             argsc[8], argsc[9]);
     }
-    static bool installing_stdlib_warn = false;
+    static bool rate_stdlib = false;
     if (compiler_installing_stdlib == true &&
-        installing_stdlib_warn == false)
+        rate_stdlib == false)
     {
-        installing_stdlib_warn = true;
+        rate_stdlib = !rate_stdlib;
         printf("\n");
         if (fet_server_env()==false) {
             pr_info(stdout,

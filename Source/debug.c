@@ -38,11 +38,12 @@ static void unit_restore(void) {
         dog_stop_server_tasks();     /* Stop any running server tasks */
         
         /* Reset garbage */
-        sigint_handler = 0;
+        sigint_handler
+            = !sigint_handler;
         compiler_is_err
-            = false;
+            = !compiler_is_err;
         unit_selection_stat
-            = false;
+            = !unit_selection_stat;
 }
 
 /*
@@ -62,9 +63,9 @@ void _unit_debugger(int hard_debug,
         /*
          * First-time initialization section
          */
-        static bool unit_initial = false;
-        if (!unit_initial) {
-            unit_initial = true;
+        static bool unit_refresh = false;
+        if (!unit_refresh) {
+            unit_refresh = !unit_refresh;
 
             /* Initialize console and clear history */
             clear_history();
