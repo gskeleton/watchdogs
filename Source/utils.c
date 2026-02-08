@@ -2605,6 +2605,12 @@ skip_:
 			dogconfig.dog_pawncc_path = strdup(stock);
 			compiler_configure_libpath();
 		}
+	else {
+			dog_free(dogconfig.dog_pawncc_path);
+			snprintf(stock, sizeof(stock),
+				"%s", "not_found");
+			dogconfig.dog_pawncc_path = strdup(stock);
+		}
 
 	return (0);
 }

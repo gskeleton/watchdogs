@@ -193,14 +193,13 @@ void compiler_stage_trying(const char *stage, int ms) {
 		printf("\r%s....", stage);
 		fflush(stdout);
 	}
-	if (strcmp(stage, "AMX Output File??..") == 0) {
+	if (strcmp(stage, ".. user's script") == 0) {
 		printf("\r\033[2K");
         fflush(stdout);
 		static const char *amx_stage_lines[] = {
-			"  o Preparing\n"
-			"  o Preprocessing\n"
-			"  o Parsing & Analyze\n"
-			"  o Code Gen & Output Gen\n"
+			"  o implicit include file\n"
+			"  o user include file(s)\n"
+			"  o user's script\n"
       		DOG_COL_DEFAULT
 			"** Preparing all tasks..\n",
 			NULL
@@ -269,23 +268,13 @@ void dog_serv_init(char *input_path, char *pawncc_path) {
 	}
 
     print(      "** Thinking all tasks..\n");
-    compiler_stage_trying(
-			"Processing Process??..",                         30);
-    compiler_stage_trying(
-			"Compiling??..",                                  30);
-    compiler_stage_trying(
-			"Preprocessing??..",                              30);
-    compiler_stage_trying(
-			"Parsing??..",                                    30);
-    compiler_stage_trying(
-			"Analyze??..",                                    30);
-    compiler_stage_trying(
-			"AMX Code Generation??..",                        30);
-    compiler_stage_trying(
-			"AMX Output File??..",                            30);
+	compiler_stage_trying(".. implicit include file", 100);
+	compiler_stage_trying(".. user include file(s)", 100);
+	compiler_stage_trying(".. user's script", 100);
 
     fflush(stdout);
 }
+
 #ifdef DOG_WINDOWS
 	// Thread function for fast compilation using _beginthreadex
 static unsigned __stdcall
@@ -951,7 +940,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 	};
 
 	/* Process command-line flags if compiler was found */
-	if (dogconfig.dog_pawncc_path[0] != '\0') {
+	if (strfind(dogconfig.dog_pawncc_path, "not_found", true) == false) {
 		/* Parse command-line arguments and set corresponding flags */
 		for (int i = 0;
 			 i < 8 &&
