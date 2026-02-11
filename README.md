@@ -1,4 +1,4 @@
-![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/image.png)
+# Watchdogs
 
 ## GNU/Linux
 
@@ -44,41 +44,26 @@ aria2c -o install.sh https://github.com/gskeleton/watchdogs/raw/refs/heads/main/
 ```yaml
 apt update && apt upgrade && apt install -y wget && wget -O install.sh https://github.com/gskeleton/watchdogs/raw/refs/heads/main/__termux.sh && chmod +x install.sh && ./install.sh
 ```
-![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/wget.png)
 
 * cURL
 
 ```yaml
 apt update && apt upgrade && apt install -y curl && curl -L -o install.sh https://github.com/gskeleton/watchdogs/raw/refs/heads/main/__termux.sh && chmod +x install.sh && ./install.sh
 ```
-![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/curl.png)
 
 * aria2
 
 ```yaml
 apt update && apt upgrade && apt install -y aria2 && aria2c -o install.sh https://github.com/gskeleton/watchdogs/raw/refs/heads/main/__termux.sh && chmod +x install.sh && ./install.sh
 ```
-![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/aria.png)
 
 > If there are other questions (e.g., Termux mirror selection `?` (-openssl.cnf (Y/I/N/O/D/Z [default=N] ?)-), choose the top one or **just press Enter**.
 
 ![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/mirror.png)
 
-4. **Indication that Watchdogs was successfully installed:**
-
-![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/indicate.png)
-
-> **Use the command `pawncc` to set up the compiler:**
-
-![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/pawncc.png)
-
-> If you see the `>` **simply press Enter** unless a specific answer is requested (e.g., apply pawncc = yes).
-
-> For compilation steps, learn: [here](#compilation-commands--with-parent-directory-in-termux)
-
 ---
 
-## Windows & Posix for Windows
+## Windows (MSYS2 Build) for Windows
 
 1. **Install Visual C++ Redistributable Runtimes (required for pawncc)**
 
@@ -92,47 +77,6 @@ apt update && apt upgrade && apt install -y aria2 && aria2c -o install.sh https:
 ```yaml
 powershell -Command "Invoke-WebRequest 'https://raw.githubusercontent.com/gskeleton/watchdogs/refs/heads/main/__windows.cmd' -OutFile 'install.cmd'; .\install.cmd"
 ```
-
----
-
-## Make Command Reference
-
-```yaml
-make                # Install library and build
-make linux          # Build for Linux
-make windows        # Build for Windows
-make termux         # Build for Termux
-make clean          # Clean build results
-make debug          # Build with debug mode (Linux)
-make debug-termux   # Build with debug mode (Termux)
-make windows-debug  # Build with debug mode (Windows)
-```
-
----
-
-## GNU Debugger (GDB)
-
-```yaml
-# Step 1 - Run the debugger (GDB) with the program
-# Choose the executable according to platform:
-gdb ./watchdogs.debug        # For Linux
-gdb ./watchdogs.debug.tmux   # For Termux (Android)
-gdb ./watchdogs.debug.win    # For Windows (if using GDB)
-
-# Step 2 - Run the program inside GDB
-# Program is run under debugger control
-run                           # type 'run' then Enter
-
-# Step 3 - Handling crashes or interruptions
-# If the program crashes (e.g., segmentation fault) or is manually stopped (Ctrl+C),
-# GDB will stop execution and display a prompt.
-
-# Step 4 - Check program status with backtrace
-# Backtrace displays the sequence of function calls at the time of the crash.
-bt           # Basic backtrace (function names)
-bt full      # Full backtrace (functions, variables, arguments)
-```
-
 ---
 
 ## Executing with Args
@@ -160,32 +104,11 @@ watchdogs
 
 ---
 
-## How does Pawn works?
+## Compilation Commands
 
-![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/pawn.png)
-
-## Compilation
-
-You do not need a specific installation of Watchdogs in the GameMode folder or in the ~/Downloads area. You just need to ensure the folder containing the watchdogs binary such as watchdogs or watchdogs.tmux is within a folder in Downloads, and your project folder is also within a folder in Downloads. (*THIS DOES NOT APPLY TO watchdogs.win)
-
-```yml
-# Example structure:
-Downloads
-├── dog
-│   ├── watchdogs
-└── myproj
-    └── gamemodes
-        └── proj.p
-      # ^ then you can run the watchdogs located in the dog/ folder
-      # ^ and you only need to compile it with the parent symbol as follows
-      # ^ compile ../myproj/gamemodes/proj.p
-      # ^ this location is just an example.
-```
-
-## Compilation Commands – Parent in Termux
-
+> **Termux/Parent mode (only for linux/termux):**
 ```yaml
-compile ../storage/downloads/_GAMEMODE_FOLDER_NAME_/gamemodes/_PAWN_FILE_NAME_.pwn
+compile ../storage/shared/Download/_GAMEMODE_FOLDER_NAME_/gamemodes/_PAWN_FILE_NAME_.pwn
 ```
 
 **Example:**
@@ -193,19 +116,13 @@ I have a gamemode folder named `parent` in Downloads, and the main file `pain.pw
 Then the path used is:
 
 ```yaml
-compile ../storage/downloads/parent/pain.pwn
+compile ../storage/shared/Download/parent/pain.pwn
 ```
 
----
-
-## Compilation Commands – General
-
-> Basic Compile
+> **Basic Compile:**
 ```yaml
 compile
 ```
-
-![watchdogs](https://raw.githubusercontent.com/gskeleton/dogdog/refs/heads/main/compile.png)
 
 > **Compile `server.pwn`:**
 
@@ -226,88 +143,35 @@ compile path/to/server.pwn
 
 ```yaml
 compile ../path/to/project/server.pwn
-# automatic: -i/path/to/path/pawno -i/path/to/path/qawno -i/path/to/path/gamemodes
+# auto-path: -i/path/to/path/pawno -i/path/to/path/qawno -i/path/to/path/gamemodes
 ```
 
 ---
 
-## Server Management
+## Server Runner
 
-* **Algorithm**
-
-```
---------------------     --------------------------                -
-|                  |     |                        |                -
-|       ARGS       | --> |        FILTERING       |                -
-|                  |     |                        |                -
---------------------     --------------------------                -
-                                     |
-                                     v
----------------------    --------------------------                -
-|                   |    |                        |                -
-|  LOGGING OUTPUT   |    |   EXIST FILE VALIDATE  |                -
-|                   |    |                        |                -
----------------------    --------------------------                -
-         ^                           |
-         |                           v
---------------------     --------------------------                -
-|                  |     |                        |                -
-|  RUNNING BINARY  | <-- |     EDITING CONFIG     |                -
-|                  |     |    if args is exist    |                -
---------------------     --------------------------                -
-```
-
-**Run the server with the default gamemode:**
+**Run the server:**
 
 ```yaml
-running .
-running.
+running
 ```
 
-**Run the server with a specific gamemode:**
-
-```yaml
-running server
-```
-
-**Compile and run simultaneously:**
+**Compile and run:**
 
 ```yaml
 compiles .
 compiles.
 ```
 
-**Compile and run with a specific path:**
+**Compile with a specific path and run:**
 
 ```yaml
-compiles server
+compiles server.pwn
 ```
 
 ---
 
-## Dependency Management
-
-```
---------------------     --------------------------                -
-|                  |     |                        |                -
-|     BASE URL     | --> |      URL CHECKING      |                -
-|                  |     |                        |                -
---------------------     --------------------------                -
-                                    |
-                                    v
----------------------    --------------------------                -
-|                   |    |                        |                -
-|     APPLYING      |    |  PATTERNS - FILTERING  |                -
-|                   |    |                        |                -
----------------------    --------------------------                -
-         ^                          |
-         |                          v
---------------------     --------------------------                -
-|                  |     |                        |                -
-|  FILES CHECKING  | <-- |       INSTALLING       |                -
-|                  |     |                        |                -
---------------------     --------------------------                -
-```
+## Dependency Installer
 
 **Install dependency from `watchdogs.toml`:**
 

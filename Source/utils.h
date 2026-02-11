@@ -1,9 +1,3 @@
-/*-
- * Copyright (c) 2026 Watchdogs Team and contributors
- * All rights reserved. under The 2-Clause BSD License
- * See COPYING or https://opensource.org/license/bsd-2-clause
- */
-
 # ifndef UTILS_H
 # define UTILS_H
 
@@ -103,7 +97,7 @@
 # define SETENV(wx,wy,wz) setenv(wx,wy)
 # define lstat(wx, wy) stat(wx, wy)
 # define S_ISLNK(wx) ((wx & S_IFMT) == S_IFLNK)
-# define _set_full_access(wx) \
+# define __set_default_access(wx) \
   ({ \
   const char *_p = (wx); \
   mode_t _m =  S_IRUSR | S_IWUSR | S_IXUSR | \
@@ -119,10 +113,8 @@
 # else
 # define MKDIR(wx) mkdir(wx, 0755)
 # define SETENV(wx,wy,wz) setenv(wx,wy,wz)
-# define _set_full_access(wx) chmod(wx, 0777)
+# define __set_default_access(wx) chmod(wx, 0777)
 # endif
-
-# define __set_default_access(wx) _set_full_access(wx)
 
 # define bool _Bool
 # define true 1
@@ -156,7 +148,7 @@
 # define OS_SIGNAL_LINUX   "linux"
 # define OS_SIGNAL_UNKNOWN CRC32_UNKNOWN
 
-# define DOG_PATH_MAX  (260 + 127 + 1)
+# define DOG_PATH_MAX  (260 + 128)
 # define DOG_MAX_PATH  (4096)
 # define DOG_MORE_MAX_PATH  (8192)
 

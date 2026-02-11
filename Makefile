@@ -14,10 +14,11 @@ SRCS = \
 	Source/utils.c \
 	Source/replicate.c \
 	Source/cause.c \
+	Source/extra/process.c \
 	Source/compiler.c \
 	Source/archive.c \
 	Source/library.c \
-	Source/endpoint.c \
+	Source/extra/server.c \
 	Source/crypto.c \
 	External/tomlc/toml.c \
 	External/cJSON/cJSON.c
@@ -156,7 +157,7 @@ debug: OUTPUT = watchdogs.debug
 debug:
 	echo "==> Compiling.."; $(CC) $(CFLAGS) \
 	-ggdb3 -Og \
-  -Wall -Wunused -Wunused-variable -Wunused-parameter -Wunused-function -Wextra -Wpedantic \
+  -Wall -Wunused -Wunused-variable -Wunused-parameter -Wunused-function -Wextra \
   -Wconversion -Wsign-conversion -Wfloat-conversion \
   -Wshadow -Wundef \
   -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations \
@@ -173,7 +174,7 @@ termux-debug: OUTPUT = watchdogs.debug.tmux
 termux-debug:
 	echo "==> Compiling.."; $(CC) $(CFLAGS) \
 	-ggdb3 -Og \
-  -Wall -Wunused -Wunused-variable -Wunused-parameter -Wunused-function -Wextra -Wpedantic \
+  -Wall -Wunused -Wunused-variable -Wunused-parameter -Wunused-function -Wextra \
   -Wconversion -Wsign-conversion -Wfloat-conversion \
   -Wshadow -Wundef \
   -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations \
@@ -190,7 +191,7 @@ windows-debug: OUTPUT = watchdogs.debug.win
 windows-debug:
 	echo "==> Compiling.."; $(CC) -lshell32 -D_POSIX_C_SOURCE=200809L $(CFLAGS) \
 	-ggdb3 -Og \
-  -Wall -Wunused -Wunused-variable -Wunused-parameter -Wunused-function -Wextra -Wpedantic \
+  -Wall -Wunused -Wunused-variable -Wunused-parameter -Wunused-function -Wextra \
   -Wconversion -Wsign-conversion -Wfloat-conversion \
   -Wshadow -Wundef \
   -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations \

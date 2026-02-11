@@ -1,3 +1,4 @@
+/// Simple Hello World
 #if ! defined printf
 native
 	printf(const format[],

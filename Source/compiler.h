@@ -1,17 +1,9 @@
-/*-
- * Copyright (c) 2026 Watchdogs Team and contributors
- * All rights reserved. under The 2-Clause BSD License
- * See COPYING or https://opensource.org/license/bsd-2-clause
- */
-
 #ifndef COMPILER_H
 #define COMPILER_H
 
 #include "utils.h"
 
-#ifndef DOG_WINDOWS
-extern char **environ;
-#endif
+#define ANDROID_DOWNLOADS "../storage/shared/Download"
 
 typedef struct {
     char *container_output                     ;
@@ -59,11 +51,18 @@ typedef struct {
 
 #endif
 
+extern struct
+timespec pre_start,post_end;
 extern bool compiler_is_err;
 extern bool compiler_installing_stdlib;
 extern char *compiler_full_includes;
-extern bool compiler_have_debug_flag;
+extern bool compiler_debug_flag_is_exists;
 extern bool compiler_dog_flag_debug;
+extern bool compiler_input_debug;
+extern bool compiler_dog_flag_clean;
+extern bool compiler_dog_flag_fast;
+extern bool process_file_success;
+extern char compiler_path_include_buf[];
 
 int
 dog_exec_compiler(const char *arg,

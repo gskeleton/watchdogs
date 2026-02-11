@@ -1,44 +1,35 @@
-/*-
- * Copyright (c) 2026 Watchdogs Team and contributors
- * All rights reserved. under The 2-Clause BSD License
- * See COPYING or https://opensource.org/license/bsd-2-clause
- */
-
 #include  "utils.h"
 #include  "units.h"
 #include  "library.h"
 #include  "debug.h"
 #include  "crypto.h"
 #include  "cause.h"
+#include  "extra/process.h"
 #include  "compiler.h"
 
-/*
- * Compiler option flags mapping table.
- * Maps bit flags to their corresponding command-line option strings
- * and lengths for the pawncc compiler.
- */
+// Maps bit flags to their corresponding command-line option strings
 const CompilerOption object_opt[] = {
-	{ BIT_FLAG_DEBUG,     " -d:2 ", 5 },
-	{ BIT_FLAG_ASSEMBLER, " -a "  , 4 },
-	{ BIT_FLAG_COMPAT,    " -Z:+ ", 5 },
-	{ BIT_FLAG_PROLIX,    " -v:2 ", 5 },
-	{ BIT_FLAG_COMPACT,   " -C:+ ", 5 },
-	{ BIT_FLAG_TIME,      " -d:3 ", 5 },
-	{ 0, NULL, 0 }
+{ BIT_FLAG_DEBUG,     " -d:2 ", 5 },
+{ BIT_FLAG_ASSEMBLER, " -a "  , 4 },
+{ BIT_FLAG_COMPAT,    " -Z:+ ", 5 },
+{ BIT_FLAG_PROLIX,    " -v:2 ", 5 },
+{ BIT_FLAG_COMPACT,   " -C:+ ", 5 },
+{ BIT_FLAG_TIME,      " -d:3 ", 5 },
+{ 0, NULL, 0 }
 };
 
 /*
  * Command-line flag mapping table.
  * Maps long and short option names to their corresponding flag variables.
  */
-static bool    		compiler_dog_flag_detailed = false;	/* Detailed output flag */
-bool           		compiler_have_debug_flag = false;	/* Debug flag presence indicator */
-static bool    		compiler_dog_flag_clean = false;	/* Clean compilation flag */
-static bool    		compiler_dog_flag_asm = false;	/* Assembler output flag */
-static bool    		compiler_dog_flag_compat = false;	/* Compatibility mode flag */
-static bool    		compiler_dog_flag_prolix = false;	/* Verbose output flag */
-static bool    		compiler_dog_flag_compact = false;	/* Compact output flag */
-static bool    		compiler_dog_flag_fast = false;	/* Fast compilation flag */
+static bool compiler_dog_flag_detailed = false;	// Detailed output
+bool compiler_dog_flag_clean = false; // Clean compilation
+static bool compiler_dog_flag_asm = false; // Assembler output
+static bool compiler_dog_flag_compat = false; // Compatibility mode
+static bool compiler_dog_flag_prolix = false; // Verbose output
+static bool compiler_dog_flag_compact = false; // Compact output
+bool compiler_dog_flag_fast = false;	// Fast compilation
+bool compiler_debug_flag_is_exists = false; // Debug flag presence indicator
 
 #define _detailed "--detailed"
 #define _watchdogs "--watchdogs"
@@ -56,7 +47,7 @@ static OptionMap compiler_all_flag_map[] = {
     {_watchdogs,      "-w",
     	&compiler_dog_flag_detailed},
     {_debug,          "-d",
-    	&compiler_have_debug_flag},
+    	&compiler_debug_flag_is_exists},
     {_clean,          "-n",
     	&compiler_dog_flag_clean},
     {_assembler,      "-a",
@@ -72,47 +63,55 @@ static OptionMap compiler_all_flag_map[] = {
     {NULL, NULL, NULL}
 };
 
-/*
+// compiler_show_tip
+// show available options
+static
+void compiler_show_tip(void) {
+    static const char *tip_options =
+    DOG_COL_BCYAN " o [--watchdogs/--detailed/-w] * Enable detailed watchdog output\n"
+    DOG_COL_BCYAN " o [--debug/-d]                * Enable debugger options\n"
+    DOG_COL_BCYAN " o [--prolix/-p]               * Enable verbose compilation\n"
+    DOG_COL_BCYAN " o [--assembler/-a]            * Show assembler output\n"
+    DOG_COL_BCYAN " o [--compact/-m]              * Use compact encoding\n"
+    DOG_COL_BCYAN " o [--compat/-c]               * Active cross path separator\n"
+    DOG_COL_BCYAN " o [--fast/-f]                 * Enable faster compilation mode\n"
+    DOG_COL_BCYAN " o [--clean/-n]                * Enable safe mode or clean mode\n";
+    fwrite(tip_options, 1, strlen(tip_options), stdout);
+    print_restore_color();
+    return;
+}
+
+ /*
  * Timing structures for measuring compilation duration.
  * pre_start and post_end record the start and end times
  * of the compilation process.
  */
-static struct
+struct
 timespec pre_start = { 0 },
 post_end           = { 0 };
-static double  compiler_calculate_time;	/* Calculated compilation time in seconds */
-static         io_compilers
-			    dog_compiler_sys;		/* Compiler I/O context structure */
-static FILE   *this_proc_file = NULL;	/* File handle for compiler log */
-bool           compiler_installing_stdlib = NULL;	/* Flag indicating stdlib installation status */
+static double  escape_time;	/* Calculated compilation time in seconds */
+static         io_compilers  dog_compiler_sys; /* Compiler I/O context structure */
+static FILE   *this_proc_file = NULL; /* File handle for compiler log */
+bool           compiler_installing_stdlib = NULL; /* Flag indicating stdlib installation status */
 bool           compiler_is_err = false;	/* Global error state flag */
 static int     compiler_retry_stat = 0;	/* Retry attempt counter */
-bool           compiler_input_debug = false;	/* Enable debug output for compiler input */
+bool           compiler_input_debug = false; /* Enable debug output for compiler input */
 static bool    compiler_time_issue = false;	/* Flag for long-running compilations */
 bool           compiler_dog_flag_debug = false;	/* Debug mode flag */
-static bool    compiler_empty_dog_flag = false;	/* No flags specified flag */
-static bool    compiler_unix_file_fail = false;	/* Unix file operation failure flag */
-char          *compiler_full_includes = NULL;	/* Full include path string */
-static char    compiler_temp[DOG_PATH_MAX + 28] = { 0 };	/* Temporary path buffer */
+static bool    compiler_target_ready = false; /* compiler target initialize */
+char          *compiler_full_includes = NULL; /* Full include path string */
+static char    compiler_temp[DOG_PATH_MAX + 28] = { 0 }; /* Temporary path buffer */
 static char    compiler_buf[DOG_MAX_PATH] = { 0 };	/* General purpose buffer */
-static char    compiler_mb[128] = { 0 };	/* Small message buffer */
-static char    compiler_parsing[DOG_PATH_MAX] = { 0 };	/* Path parsing buffer */
-static char    compiler_path_include_buf[DOG_PATH_MAX] = { 0 };	/* Include path buffer */
-static char    compiler_input[DOG_MAX_PATH] = { 0 };	/* Compiler command input buffer */
-static char    compiler_dog_flag_list[456] = { 0 };	/* Flag list string buffer */
-static char   *compiler_serv_path = NULL;	/* Project path pointer */
+static char    compiler_mb[128] = { 0 }; /* Small message buffer */
+static char    compiler_parsing[DOG_PATH_MAX] = { 0 }; /* Path parsing buffer */
+char           compiler_path_include_buf[DOG_PATH_MAX] = { 0 };	/* Include path buffer */
+static char    flag_stock[456] = { 0 };	/* Flag list string buffer */
+static char   *server_path = NULL; /* Project path pointer */
+static char   *compiler_back_slash = NULL; /* Backslash position pointer */
 static char   *compiler_size_last_slash = NULL;	/* Last path separator position */
-static char   *compiler_back_slash = NULL;	/* Backslash position pointer */
-static char   *size_include_extra = NULL;	/* Extra include size pointer */
-static char   *procure_string_pos = NULL;	/* String position pointer */
-static char   *compiler_project = NULL;	/* Project name pointer */
-static char   *compiler_unix_token = NULL;	/* Unix token pointer for strtok */
-static char   *dog_compiler_unix_args[DOG_MAX_PATH] = { NULL };	/* Argument array for exec */
-#ifdef DOG_WINDOWS
-static         PROCESS_INFORMATION _PROCESS_INFO;	/* Windows process information */
-static         STARTUPINFO         _STARTUPINFO;	/* Windows startup information */
-static         SECURITY_ATTRIBUTES _ATTRIBUTES;	/* Windows security attributes */
-#endif
+static char   *size_include_extra = NULL; /* Extra include size pointer */
+static char   *procure_string_pos = NULL; /* String position pointer */
+bool           process_file_success = false;	/* Unix file operation failure flag */
 
 /*
  * compiler_refresh_data
@@ -139,15 +138,13 @@ compiler_refresh_data ( void )  {
 	compiler_dog_flag_clean = false, compiler_dog_flag_asm = false,
 	compiler_dog_flag_compat = false, compiler_dog_flag_prolix = false,
 	compiler_dog_flag_compact = false, compiler_time_issue = false,
-	compiler_empty_dog_flag = false, compiler_unix_file_fail = false,
-	compiler_retry_stat = 0;
+	process_file_success = false,
+	compiler_retry_stat = 0, compiler_target_ready = false;
 
 	/* pointer reset */
 	this_proc_file = NULL, compiler_size_last_slash = NULL,
 	compiler_back_slash = NULL, size_include_extra = NULL,
-	procure_string_pos = NULL,
-	compiler_project = NULL,
-	compiler_unix_token = NULL;
+	procure_string_pos = NULL;
 
 	/* memory reset */
 	memset(&dog_compiler_sys, 0, sizeof(io_compilers));
@@ -157,731 +154,51 @@ compiler_refresh_data ( void )  {
 	memset(compiler_path_include_buf, 0,
 	    sizeof(compiler_path_include_buf));
 	memset(compiler_buf, 0, sizeof(compiler_buf));
-	memset(compiler_input, 0, sizeof(compiler_input));
-	memset(compiler_dog_flag_list, 0,
-	    sizeof(compiler_dog_flag_list));
-	memset(dog_compiler_unix_args, 0,
-	    sizeof(dog_compiler_unix_args));
+	memset(flag_stock, 0,
+	    sizeof(flag_stock));
 }
 
-static const int TV_SEC = 1000;
-static const int TV_NSEC = 1000000;
+void _compiler_bitmask_start(void) {
+	unsigned int __set_bit = 0;
 
-static
-long compiler_get_milisec() {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return
-    	ts.tv_sec * TV_SEC +
-    	ts.tv_nsec / TV_NSEC;
-}
+	if (compiler_dog_flag_debug)
+		/* bit 0 = 1 (  0x01  ) */
+		__set_bit |= BIT_FLAG_DEBUG;
 
-/*
- * compiler_stage_trying
- * Display a compilation stage message for a specified duration.
- * The function prints a stage name with dots and optionally displays
- * a detailed compilation progress tree when the final stage is reached.
- *
- * Parameters:
- *   stage: The name of the compilation stage to display
- *   ms: Duration in milliseconds to display the stage message
- */
-static
-void compiler_stage_trying(const char *stage, int ms) {
-	long start = compiler_get_milisec();
-	while (compiler_get_milisec() - start < ms) {
-		printf("\r%s....", stage);
-		fflush(stdout);
-	}
-	if (strcmp(stage, ".. user's script") == 0) {
-		printf("\r\033[2K");
-        fflush(stdout);
-		static const char *amx_stage_lines[] = {
-			"  o implicit include file\n"
-			"  o user include file(s)\n"
-			"  o user's script\n"
-      		DOG_COL_DEFAULT
-			"** Preparing all tasks..\n",
-			NULL
-		};
+	if (compiler_dog_flag_asm)
+		/* bit 1 = 1 (  0x03  ) */
+		__set_bit |= BIT_FLAG_ASSEMBLER;
 
-    	print(DOG_COL_BCYAN);
-		for (int i = 0; amx_stage_lines[i]; ++i) {
-			print(amx_stage_lines[i]);
-		}
-    	print(DOG_COL_DEFAULT);
-	}
-}
+	if (compiler_dog_flag_compat)
+		/* bit 2 = 1 (  0x07  ) */
+		__set_bit |= BIT_FLAG_COMPAT;
 
-/**
- * compiler_show_tip
- * show tip available options */
-static
-void compiler_show_tip(void) {
-    static const char *tip_options =
-    DOG_COL_BCYAN " o [--watchdogs/--detailed/-w] * Enable detailed watchdog output\n"
-    DOG_COL_BCYAN " o [--debug/-d]                * Enable debugger options\n"
-    DOG_COL_BCYAN " o [--prolix/-p]               * Enable verbose compilation\n"
-    DOG_COL_BCYAN " o [--assembler/-a]            * Show assembler output\n"
-    DOG_COL_BCYAN " o [--compact/-m]              * Use compact encoding\n"
-    DOG_COL_BCYAN " o [--compat/-c]               * Active cross path separator\n"
-    DOG_COL_BCYAN " o [--fast/-f]                 * Enable faster compilation mode\n"
-    DOG_COL_BCYAN " o [--clean/-n]                * Enable safe mode or clean mode\n";
-    fwrite(tip_options, 1, strlen(tip_options), stdout);
-    print_restore_color();
-    return;
-}
+	if (compiler_dog_flag_prolix)
+		/* bit 3 = 1 (  0x0F  ) */
+		__set_bit |= BIT_FLAG_PROLIX;
 
-/*
- * dog_serv_init
- * Initialize the project compilation environment. This function
- * configures library paths, sets up default access paths for
- * gamemodes, pawno, and qawno directories, and displays compilation
- * stage progress messages.
- *
- * Parameters:
- *   input_path: Path to the input source file
- *   pawncc_path: Path to the pawncc compiler executable
- */
-static
-void dog_serv_init(char *input_path, char *pawncc_path) {
+	if (compiler_dog_flag_compact)
+		/* bit 4 = 1 (  0x1F  ) */
+		__set_bit |= BIT_FLAG_COMPACT;
 
-	static bool rate_init_proc = false;
-	if (rate_init_proc == false) {
-		if ( path_exists("gamemodes") == 1 )
-			__set_default_access("gamemodes");
-		if ( path_exists("pawno") == 1 )
-		{
-			__set_default_access("pawno");
-			if (path_exists("pawno/include"))
-				__set_default_access("pawno/include");
-		}
-		if ( path_exists("qawno") == 1 )
-		{
-			__set_default_access("qawno");
-			if (path_exists("qawno/include"))
-				__set_default_access("qawno/include");
-		}
-		__set_default_access( pawncc_path );
-		__set_default_access( input_path );
-		rate_init_proc = true;
+	if (compiler_dog_flag_fast)
+		/* bit 5 = 1 (  0x20  ) */
+		__set_bit |= BIT_FLAG_TIME;
+
+	/* Build flag string from enabled options */
+	char *p = flag_stock;
+	p += strlen(p);
+
+	for (int i = 0; object_opt[i].option; i++) {
+		if (!(__set_bit & object_opt[i].flag))
+			continue;
+
+		memcpy(p, object_opt[i].option,
+			object_opt[i].len);
+		p += object_opt[i].len;
 	}
 
-    print(      "** Thinking all tasks..\n");
-	compiler_stage_trying(".. implicit include file", 100);
-	compiler_stage_trying(".. user include file(s)", 100);
-	compiler_stage_trying(".. user's script", 100);
-
-    fflush(stdout);
-}
-
-#ifdef DOG_WINDOWS
-	// Thread function for fast compilation using _beginthreadex
-static unsigned __stdcall
-compiler_thread_func(void *arg) {
-	compiler_thread_data_t *data = (compiler_thread_data_t *)arg;
-	BOOL win32_process_success;
-
-	/* Create Windows process for compiler execution */
-	win32_process_success = CreateProcessA(
-		NULL, data->compiler_input,
-		NULL, NULL,
-		TRUE,
-		CREATE_NO_WINDOW |
-		ABOVE_NORMAL_PRIORITY_CLASS |
-		CREATE_BREAKAWAY_FROM_JOB,
-		NULL, NULL,
-		data->startup_info, data->process_info);
-
-	if (data->hFile != INVALID_HANDLE_VALUE) {
-		SetHandleInformation(data->hFile,
-			HANDLE_FLAG_INHERIT, 0);
-	}
-
-	if (win32_process_success == TRUE) {
-		SetThreadPriority(
-			data->process_info->hThread,
-			THREAD_PRIORITY_ABOVE_NORMAL);
-
-		DWORD_PTR procMask, sysMask;
-		GetProcessAffinityMask(
-			GetCurrentProcess(),
-			&procMask, &sysMask);
-		SetProcessAffinityMask(
-			data->process_info->hProcess,
-			procMask & ~1);
-
-		clock_gettime(CLOCK_MONOTONIC,
-			data->pre_start);
-		DWORD waitResult =
-			WaitForSingleObject(
-			data->process_info->hProcess,
-			0x3E8000);
-		if (waitResult == WAIT_TIMEOUT) {
-			TerminateProcess(
-				data->process_info->hProcess, 1);
-			WaitForSingleObject(
-				data->process_info->hProcess,
-				5000);
-		}
-		clock_gettime(CLOCK_MONOTONIC,
-			data->post_end);
-
-		DWORD proc_exit_code;
-		/* Retrieve process exit code for error reporting */
-		GetExitCodeProcess(
-			data->process_info->hProcess,
-			&proc_exit_code);
-#if defined(_DBG_PRINT)
-		pr_info(stdout,
-			"windows process exit with code: %lu",
-			proc_exit_code);
-		if (
-			proc_exit_code ==
-			3221225781)
-		{
-			pr_info(stdout,
-				data->windows_redist_err);
-			printf("%s", data->windows_redist_err2);
-			fflush(stdout);
-		}
-#endif
-		CloseHandle(data->process_info->hThread);
-		CloseHandle(data->process_info->hProcess);
-
-		if (data->startup_info->hStdOutput != NULL &&
-			data->startup_info->hStdOutput != data->hFile)
-			CloseHandle(
-				data->startup_info->hStdOutput);
-		if (data->startup_info->hStdError != NULL &&
-			data->startup_info->hStdError != data->hFile)
-			CloseHandle(
-				data->startup_info->hStdError);
-	} else {
-		DWORD err = GetLastError();
-		pr_error(stdout,
-			"CreateProcess failed! (%lu)",
-			err);
-		if (strfind(strerror(err), "The system cannot find the file specified", true))
-			pr_error(stdout, "^ The compiler executable does not exist.");
-		if (strfind(strerror(err), "Access is denied", true))
-			pr_error(stdout, "^ You do not have permission to execute the compiler executable.");
-		if (strfind(strerror(err), "The directory name is invalid", true))
-			pr_error(stdout, "^ The compiler executable is not a directory.");
-		if (strfind(strerror(err), "The system cannot find the path specified", true))
-			pr_error(stdout, "^ The compiler executable does not exist.");
-		minimal_debugging();
-	}
-
-	return (0);
-}
-#endif
-
-static
-int dog_exec_compiler_process(char *pawncc_path,
-							  char *input_path,
-							  char *output_path) {
-
-    if (binary_condition_check(pawncc_path) == false) {
-        return (-2);
-    }
-
-	int         result_configure = 0;
-	int         i = 0;
-	char       *unix_pointer_token = NULL;
-	const char *windows_redist_err = /* 0 */"Have you made sure to install "
-					/* 1 */			  "the Visual CPP (C++) "
-					/* 2 */				"Redist All-in-One?";
-	const char *windows_redist_err2 = /* 0 */ "   - install first: "
-	/* 1 */								"https://www.techpowerup.com/"
-	/* 2 */								"download/"
-	/* 3 */								"visual-c-redistributable-"
-	/* 4 */								"runtime-package-all-in-one"
-	/* 5 */								"/"
-	/* 7 newline */				        "\n";
-
-	if (compiler_full_includes == NULL)
-		compiler_full_includes =
-      strdup("-ipawno/include -iqawno/include -igamemodes");
-
-	dog_serv_init(pawncc_path, input_path);
-	
-	/* Build compiler command line string */
-	result_configure = snprintf(compiler_input,
-		sizeof(compiler_input), "%s %s -o%s %s %s %s",
-		/// ./.\path/path/pawncc a.pwn -oa.amx -d:3 -i=pawno/include
-		pawncc_path, // pawncc
-		input_path, // input
-		output_path, // output
-		dogconfig.dog_toml_all_flags, // flag
-		compiler_full_includes, // includes
-		compiler_path_include_buf); // includes
-
-	/* Initialize log file path based on platform */
-	#ifdef DOG_WINDOWS
-	#define COMPILER_LOG ".watchdogs\\compiler.log"
-	#else
-	#define COMPILER_LOG ".watchdogs/compiler.log"
-	#endif
-
-	#ifdef DOG_WINDOWS
-		ZeroMemory(&_STARTUPINFO,
-			sizeof(_STARTUPINFO));
-		_STARTUPINFO.cb = sizeof(_STARTUPINFO);
-
-		ZeroMemory(&_ATTRIBUTES, sizeof(_ATTRIBUTES));
-		_ATTRIBUTES.nLength = sizeof(_ATTRIBUTES);
-		_ATTRIBUTES.bInheritHandle = TRUE;
-		_ATTRIBUTES.lpSecurityDescriptor = NULL;
-
-		ZeroMemory(&_PROCESS_INFO,
-			sizeof(_PROCESS_INFO));
-
-		HANDLE hFile = CreateFileA(
-			COMPILER_LOG,
-			GENERIC_WRITE,
-			FILE_SHARE_READ,
-			&_ATTRIBUTES,
-			CREATE_ALWAYS,
-			FILE_ATTRIBUTE_NORMAL |
-			FILE_FLAG_SEQUENTIAL_SCAN |
-			FILE_ATTRIBUTE_TEMPORARY,
-			NULL);
-
-		_STARTUPINFO.dwFlags = STARTF_USESTDHANDLES |
-			STARTF_USESHOWWINDOW;
-		_STARTUPINFO.wShowWindow = SW_HIDE;
-
-		if (hFile != INVALID_HANDLE_VALUE) {
-			_STARTUPINFO.hStdOutput = hFile;
-			_STARTUPINFO.hStdError = hFile;
-		}
-		_STARTUPINFO.hStdInput = GetStdHandle(
-			STD_INPUT_HANDLE);
-
-		if (compiler_input_debug == true) {
-		#ifdef DOG_ANDROID
-			println(stdout, "** %s", compiler_input);
-		#else
-			dog_console_title(compiler_input);
-			println(stdout, "** %s", compiler_input);
-		#endif
-		}
-
-		if (result_configure < 0 ||
-			result_configure >= sizeof(compiler_input)) {
-			pr_error(stdout,
-				"ret_compiler too long!");
-			minimal_debugging();
-			return (-2);
-		}
-
-		/* Create Windows process for compiler execution */
-		if (compiler_dog_flag_fast == true) {
-			/* Use _beginthreadex for fast compilation */
-			compiler_thread_data_t thread_data;
-			HANDLE thread_handle;
-			unsigned thread_id;
-
-			thread_data.compiler_input        = compiler_input;
-			thread_data.startup_info          = &_STARTUPINFO;
-			thread_data.process_info          = &_PROCESS_INFO;
-			thread_data.hFile                 = hFile;
-			thread_data.pre_start             = &pre_start;
-			thread_data.post_end              = &post_end;
-			thread_data.windows_redist_err    = windows_redist_err;
-			thread_data.windows_redist_err2   = windows_redist_err2;
-
-			thread_handle = (HANDLE)_beginthreadex(
-				NULL,
-				0,
-				compiler_thread_func,
-				&thread_data,
-				0,
-				&thread_id);
-
-			if (thread_handle == NULL) {
-				pr_error(stdout,
-					"_beginthreadex failed!");
-				minimal_debugging();
-			} else {
-				/* Wait for thread to complete */
-				WaitForSingleObject(thread_handle, INFINITE);
-				CloseHandle(thread_handle);
-			}
-		} else {
-			/* Standard CreateProcess approach */
-			BOOL win32_process_success;
-			win32_process_success = CreateProcessA(
-				NULL, compiler_input,
-				NULL, NULL,
-				TRUE,
-				CREATE_NO_WINDOW |
-				ABOVE_NORMAL_PRIORITY_CLASS |
-				CREATE_BREAKAWAY_FROM_JOB,
-				NULL, NULL,
-				&_STARTUPINFO, &_PROCESS_INFO);
-
-			DWORD err = GetLastError();
-
-			if (hFile != INVALID_HANDLE_VALUE) {
-				SetHandleInformation(hFile,
-					HANDLE_FLAG_INHERIT, 0);
-			}
-
-			if (win32_process_success == TRUE) {
-				SetThreadPriority(
-					_PROCESS_INFO.hThread,
-					THREAD_PRIORITY_ABOVE_NORMAL);
-
-				DWORD_PTR procMask, sysMask;
-				GetProcessAffinityMask(
-					GetCurrentProcess(),
-					&procMask, &sysMask);
-				SetProcessAffinityMask(
-					_PROCESS_INFO.hProcess,
-					procMask & ~1);
-
-				clock_gettime(CLOCK_MONOTONIC,
-					&pre_start);
-				DWORD waitResult =
-					WaitForSingleObject(
-					_PROCESS_INFO.hProcess,
-					0x3E8000);
-				if (waitResult == WAIT_TIMEOUT) {
-					TerminateProcess(
-						_PROCESS_INFO.hProcess, 1);
-					WaitForSingleObject(
-						_PROCESS_INFO.hProcess,
-						5000);
-				}
-				clock_gettime(CLOCK_MONOTONIC,
-					&post_end);
-
-				DWORD proc_exit_code;
-				/* Retrieve process exit code for error reporting */
-				GetExitCodeProcess(
-					_PROCESS_INFO.hProcess,
-					&proc_exit_code);
-#if defined(_DBG_PRINT)
-				pr_info(stdout,
-					"windows process exit with code: %lu",
-					proc_exit_code);
-				if (
-					proc_exit_code ==
-					3221225781)
-				{
-					pr_info(stdout,
-						windows_redist_err);
-					printf("%s", windows_redist_err2);
-					fflush(stdout);
-				}
-#endif
-				CloseHandle(_PROCESS_INFO.hThread);
-				CloseHandle(_PROCESS_INFO.hProcess);
-
-				if (_STARTUPINFO.hStdOutput != NULL &&
-					_STARTUPINFO.hStdOutput != hFile)
-					CloseHandle(
-						_STARTUPINFO.hStdOutput);
-				if (_STARTUPINFO.hStdError != NULL &&
-					_STARTUPINFO.hStdError != hFile)
-					CloseHandle(
-						_STARTUPINFO.hStdError);
-			} else {
-				pr_error(stdout,
-					"CreateProcess failed! (%lu)",
-					err);
-				if (strfind(strerror(err), "The system cannot find the file specified", true))
-					pr_error(stdout, "^ The compiler executable does not exist.");
-				if (strfind(strerror(err), "Access is denied", true))
-					pr_error(stdout, "^ You do not have permission to execute the compiler executable.");
-				if (strfind(strerror(err), "The directory name is invalid", true))
-					pr_error(stdout, "^ The compiler executable is not a directory.");
-				if (strfind(strerror(err), "The system cannot find the path specified", true))
-					pr_error(stdout, "^ The compiler executable does not exist.");
-				minimal_debugging();
-			}
-		}
-		if (hFile != INVALID_HANDLE_VALUE) {
-			CloseHandle(hFile);
-		}
-	#else
-		if (result_configure < 0 ||
-			result_configure >= sizeof(compiler_input)) {
-			pr_error(stdout,
-				"ret_compiler too long!");
-			minimal_debugging();
-			return (-2);
-		}
-
-		if (compiler_input_debug == true) {
-		#ifdef DOG_ANDROID
-			println(stdout, "@ %s", compiler_input);
-		#else
-			dog_console_title(compiler_input);
-			if (strlen(compiler_input) > 120)
-				println(stdout, "@ %s", compiler_input);
-		#endif
-		}
-
-		/* Tokenize command line into argument array for exec */
-		compiler_unix_token = strtok_r(
-			compiler_input, " ", &unix_pointer_token);
-		while (compiler_unix_token != NULL &&
-			i < (sizeof(dog_compiler_unix_args) + 128)) {
-			dog_compiler_unix_args[i++] =
-				compiler_unix_token;
-			compiler_unix_token = strtok_r(NULL,
-				" ", &unix_pointer_token);
-		}
-		dog_compiler_unix_args[i] = NULL;
-
-		#ifdef DOG_ANDROID
-		/* Android-specific process creation using fork/vfork */
-			static bool child_method = false;
-			if (compiler_dog_flag_fast == 1) {
-				child_method = true;
-			}
-			pid_t compiler_process_id;
-			if (child_method == false) {
-				compiler_process_id = fork();
-			} else {
-				compiler_process_id = vfork();
-			}
-			if (compiler_process_id == 0) {
-				int logging_file = open(
-					COMPILER_LOG,
-					O_WRONLY | O_CREAT | O_TRUNC, 0644);
-				if (logging_file != -1) {
-					dup2(logging_file, STDOUT_FILENO);
-					dup2(logging_file, STDERR_FILENO);
-					close(logging_file);
-				} else {
-					compiler_unix_file_fail = true;
-				}
-				execv(dog_compiler_unix_args[0], dog_compiler_unix_args);
-				fprintf(stderr, "execv failed: %s\n", strerror(errno));
-				_exit(127);
-			} else if (compiler_process_id > 0) {
-				int process_status;
-				int process_timeout_occurred = 0;
-				clock_gettime(CLOCK_MONOTONIC, &pre_start);
-				/* Poll for process completion with timeout (4096 iterations) */
-				for (int k = 0; k < 0x1000; k++) {
-					int proc_result = waitpid(
-						compiler_process_id,
-						&process_status,
-						WNOHANG);
-					if (proc_result == 0) {
-						usleep(100000);	/* 100ms sleep between polls */
-					} else if (proc_result == compiler_process_id) {
-						break;
-					} else {
-						pr_error(stdout, "waitpid error");
-						minimal_debugging();
-						break;
-					}
-					/* Terminate process if timeout exceeded */
-					if (k == 0x1000 - 1) {
-						kill(compiler_process_id, SIGTERM);
-						sleep(2);
-						kill(compiler_process_id, SIGKILL);
-						pr_error(stdout,
-							"process execution timeout! (%d seconds)",
-							0x1000);
-						minimal_debugging();
-						waitpid(
-							compiler_process_id,
-							&process_status,
-							0);
-						process_timeout_occurred = 1;
-					}
-				}
-				clock_gettime(CLOCK_MONOTONIC, &post_end);
-				if (!process_timeout_occurred) {
-					if (WIFEXITED(process_status)) {
-						int proc_exit_code =
-							WEXITSTATUS(process_status);
-						if (proc_exit_code != 0 &&
-						proc_exit_code != 1) {
-							pr_error(stdout,
-								"compiler process exited with code (%d)",
-								proc_exit_code);
-							minimal_debugging();
-						}
-					} else if (WIFSIGNALED(process_status)) {
-						pr_error(stdout,
-							"compiler process terminated by signal (%d)",
-							WTERMSIG(process_status));
-					}
-				}
-			} else {
-				pr_error(stdout,
-					"process creation failed: %s",
-					strerror(errno));
-				minimal_debugging();
-			}
-		#else
-			posix_spawn_file_actions_t process_file_actions;
-			/* Initialize file actions for output redirection */
-			posix_spawn_file_actions_init(
-				&process_file_actions);
-			int posix_logging_file = open(
-				COMPILER_LOG,
-				O_WRONLY | O_CREAT | O_TRUNC, 0644);
-			if (posix_logging_file != -1) {
-				/* Redirect stdout and stderr to log file */
-				posix_spawn_file_actions_adddup2(
-					&process_file_actions,
-					posix_logging_file,
-					STDOUT_FILENO);
-				posix_spawn_file_actions_adddup2(
-					&process_file_actions,
-					posix_logging_file,
-					STDERR_FILENO);
-				posix_spawn_file_actions_addclose(&process_file_actions,
-						posix_logging_file);
-			} else {
-				compiler_unix_file_fail = true;
-			}
-
-			/* Configure signal handling for spawned process */
-			posix_spawnattr_t spawn_attr;
-			posix_spawnattr_init(&spawn_attr);
-
-			/* Set signal mask to block SIGCHLD */
-			sigset_t sigmask;
-			sigemptyset(&sigmask);
-			sigaddset(&sigmask, SIGCHLD);
-
-			posix_spawnattr_setsigmask(&spawn_attr,
-				&sigmask);
-
-			/* Set default signal actions */
-			sigset_t sigdefault;
-			sigemptyset(&sigdefault);
-			sigaddset(&sigdefault, SIGPIPE);
-			sigaddset(&sigdefault, SIGINT);
-			sigaddset(&sigdefault, SIGTERM);
-
-			posix_spawnattr_setsigdefault(&spawn_attr,
-				&sigdefault);
-
-			/* Apply signal mask and default settings */
-			short flags = POSIX_SPAWN_SETSIGMASK |
-				POSIX_SPAWN_SETSIGDEF;
-
-			posix_spawnattr_setflags(&spawn_attr, flags);
-
-			pid_t compiler_process_id;
-			int process_spawn_result = posix_spawn(
-				&compiler_process_id,
-				dog_compiler_unix_args[0],
-				&process_file_actions,
-				&spawn_attr,
-				dog_compiler_unix_args,
-				environ);
-
-			if (posix_logging_file != -1) {
-				close(posix_logging_file);
-			}
-
-			posix_spawnattr_destroy(&spawn_attr);
-			posix_spawn_file_actions_destroy(
-				&process_file_actions);
-
-			if (process_spawn_result == 0) {
-				int process_status;
-				int process_timeout_occurred = 0;
-				clock_gettime(CLOCK_MONOTONIC,
-					&pre_start);
-				for (int k = 0; k < 0x1000; k++) {
-					int proc_result = -1;
-					proc_result = waitpid(
-						compiler_process_id,
-						&process_status, WNOHANG);
-					if (proc_result == 0)
-						usleep(50000);	/* 50ms sleep between polls */
-					else if (proc_result ==
-						compiler_process_id) {
-						break;
-					} else {
-						pr_error(stdout,
-							"waitpid error");
-						minimal_debugging();
-						break;
-					}
-					/* Terminate on timeout */
-					if (k == 0x1000 - 1) {
-						kill(compiler_process_id,
-							SIGTERM);
-						sleep(2);
-						kill(compiler_process_id,
-							SIGKILL);
-						pr_error(stdout,
-							"posix_spawn process execution timeout! (%d seconds)",
-							0x1000);
-						minimal_debugging();
-						waitpid(
-							compiler_process_id,
-							&process_status, 0);
-						process_timeout_occurred =
-							1;
-					}
-				}
-				clock_gettime(CLOCK_MONOTONIC, &post_end);
-				/* Check exit status if process completed normally */
-				if (!process_timeout_occurred) {
-					if (WIFEXITED(process_status)) {
-						int proc_exit_code = 0;
-						proc_exit_code =
-							WEXITSTATUS(
-							process_status);
-						if (proc_exit_code != 0 &&
-							proc_exit_code != 1) {
-							pr_error(stdout,
-								"compiler process exited with code (%d)",
-								proc_exit_code);
-							if (getenv("WSL_DISTRO_NAME") &&
-								strcmp(dogconfig.dog_toml_os_type,
-									OS_SIGNAL_WINDOWS) == 0 && proc_exit_code == 53)
-							{
-								pr_info(stdout,
-									windows_redist_err);
-								printf("%s", windows_redist_err2);
-								fflush(stdout);
-							}
-							minimal_debugging();
-						}
-					} else if (WIFSIGNALED(
-						process_status)) {
-						pr_error(stdout,
-							"compiler process terminated by signal (%d)",
-							WTERMSIG(
-							process_status));
-					}
-				}
-			} else {
-				pr_error(stdout,
-					"posix_spawn failed: %s",
-					strerror(process_spawn_result));
-				if (strfind(strerror(process_spawn_result), "Exec format error", true))
-					pr_error(stdout, "^ The compiler executable is not compatible with your system.");
-				if (strfind(strerror(process_spawn_result), "Permission denied", true))
-					pr_error(stdout, "^ You do not have permission to execute the compiler executable.");
-				if (strfind(strerror(process_spawn_result), "No such file or directory", true))
-					pr_error(stdout, "^ The compiler executable does not exist.");
-				if (strfind(strerror(process_spawn_result), "Not a directory", true))
-					pr_error(stdout, "^ The compiler executable is not a directory.");
-				if (strfind(strerror(process_spawn_result), "Is a directory", true))
-					pr_error(stdout, "^ The compiler executable is a directory.");
-				minimal_debugging();
-			}
-		#endif
-	#endif
-
-	return (0);
+	*p = '\0';
 }
 
 /*
@@ -891,14 +208,6 @@ int dog_exec_compiler_process(char *pawncc_path,
  * parsing command-line arguments, setting up compiler flags, handling
  * input file paths, executing the compilation, and processing results.
  * Supports both default project compilation and explicit file compilation.
- *
- * Parameters:
- *   args: Unused parameter (legacy)
- *   compile_args_val: Input file path or "." for default project
- *   second_arg through ten_arg: Additional command-line arguments
- *
- * Returns:
- *   1 on completion (success or failure), -2 on memory allocation failure
  */
 int
 dog_exec_compiler(const char *args, const char *compile_args_val,
@@ -915,8 +224,8 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 	const 	char  *posix_fzf_path[] = {
       		"download", /* download/folders/files */
 			"~/downloads", /* ~/downloads/folder/files */
-      		"storage/downloads", /* storage/downloads/folders/files */
-			"../storage/downloads", /* ../storage/downloads/folders/files */
+			/* ../storage/shared/Download/folders/files */
+			ANDROID_DOWNLOADS,
 			".", /* root/folder/files */
 			NULL};
   	// buf selection
@@ -934,49 +243,53 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 	/* Reset all compiler state */
 	compiler_refresh_data();
 
-	/* Build argument array from variadic parameters */
-	const char *argv_buf[] = {
-		second_arg,four_arg,five_arg,six_arg,seven_arg,eight_arg,nine_arg,ten_arg
-	};
+	/* Handle null to empty */
+	if (compile_args_val == NULL) {
+		compile_args_val = "";
+	}
+
+	/* Converting Path Separator */
+	char *new_compile_args_val = strdup(compile_args_val);
+	if (compile_args_val[0] != '\0') {
+		char *p;
+		
+		#ifdef DOG_LINUX
+		for (p = new_compile_args_val; *p; p++) {
+				if (*p == _PATH_CHR_SEP_WIN32)
+					*p = _PATH_CHR_SEP_POSIX;
+			}
+		#else
+		for (p = new_compile_args_val; *p; p++) {
+				if (*p == _PATH_CHR_SEP_POSIX)
+					*p = _PATH_CHR_SEP_WIN32;
+			}
+		#endif
+	}
 
 	/* Process command-line flags if compiler was found */
-	if (strfind(dogconfig.dog_pawncc_path, "not_found", true) == false) {
+	if (dogconfig.dog_pawncc_path[0] != '\0') {
+		/* Build argument array from variadic parameters */
+		const char *argv_buf[] = {
+			second_arg,four_arg,five_arg,six_arg,seven_arg,eight_arg,nine_arg,ten_arg
+		};
 		/* Parse command-line arguments and set corresponding flags */
-		for (int i = 0;
-			 i < 8 &&
-			 argv_buf[i] != NULL;
-			 ++i)
+		for (int i = 0; i < 8 && argv_buf[i] != NULL; ++i)
 		{
-			const char
-				*arg = argv_buf[i];
+			const char *options = argv_buf[i];
 
-			if (arg[0] != '-')
+			if (options[0] != '-')
 				continue;
 
-			for (OptionMap *opt =
-					compiler_all_flag_map;
-					opt->full_name;
-					++opt) {
-				if (strcmp(arg, opt->full_name) == 0 ||
-					strcmp(arg, opt->short_name) == 0) {
-					*(opt->flag_ptr)
-						= true;
+			OptionMap *opt;
+			for (opt = compiler_all_flag_map; opt->full_name; ++opt) {
+				if (strcmp(options, opt->full_name) == 0 ||
+					strcmp(options, opt->short_name) == 0)
+				{
+					*(opt->flag_ptr) = true;
 					break;
 				}
 			}
 		}
-
-		/* Check if no flags were specified */
-		if (!compiler_dog_flag_detailed &&
-			!compiler_dog_flag_debug &&
-			!compiler_dog_flag_clean &&
-			!compiler_dog_flag_asm &&
-			!compiler_dog_flag_compat &&
-			!compiler_dog_flag_prolix &&
-			!compiler_dog_flag_compact)
-			{
-				compiler_empty_dog_flag = true;
-			}
 
 		/* Handle clean flag: reset all compiler flags */
 			if (false != compiler_dog_flag_clean)
@@ -997,7 +310,9 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 
 		/* Retry logic for failed compilations with adjusted parameters */
 	_compiler_retry_stat:
-		if (1 == compiler_retry_stat) {
+		switch(compiler_retry_stat)
+		{
+		case 1:
 			compiler_dog_flag_compat = true, compiler_dog_flag_compact = true;
 			compiler_dog_flag_fast = true, compiler_dog_flag_detailed = true;
 			memset(compiler_buf, 0, sizeof(compiler_buf));
@@ -1010,14 +325,9 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 					dogconfig.dog_toml_all_flags = NULL;
 				}
 			dogconfig.dog_toml_all_flags = strdup(compiler_buf);
-		} else if (2 == compiler_retry_stat) {
+		case 2:
 			memset(compiler_buf, 0, sizeof(compiler_buf));
 			snprintf(compiler_buf, sizeof(compiler_buf),
-			/* #define MAX_PLAYERS (100)
-			*  #define MAX_VEHICLES (1000)
-			*  #define MAX_ACTORS (100)
-			*  #define MAX_OBJECTS (2000)
-			*/
 				"MAX_PLAYERS=100 MAX_VEHICLES=1000 MAX_ACTORS=100 MAX_OBJECTS=2000");
 			if (dogconfig.dog_toml_all_flags)
 				{
@@ -1028,16 +338,11 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 
 			goto apply_dbg;
 		}
-		if (compiler_time_issue) {
+		if (false != compiler_time_issue) {
 			compiler_dog_flag_compat = true, compiler_dog_flag_compact = true;
 			compiler_dog_flag_fast = true, compiler_dog_flag_detailed = true;
 			memset(compiler_buf, 0, sizeof(compiler_buf));
 			snprintf(compiler_buf, sizeof(compiler_buf),
-			/* #define MAX_PLAYERS (50)
-			*  #define MAX_VEHICLES (50)
-			*  #define MAX_ACTORS (50)
-			*  #define MAX_OBJECTS (1000)
-			*/
 				"%s MAX_PLAYERS=50 MAX_VEHICLES=50 MAX_ACTORS=50 MAX_OBJECTS=1000",
 				dogconfig.dog_toml_all_flags);
 			if (dogconfig.dog_toml_all_flags)
@@ -1049,64 +354,19 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 		}
 
 		/* Build bitmask of enabled compiler flags */
-		unsigned int __set_bit = 0;
-
-		if (compiler_dog_flag_debug)
-			/* bit 0 = 1 (  0x01  ) */
-			__set_bit |= BIT_FLAG_DEBUG;
-
-		if (compiler_dog_flag_asm)
-			/* bit 1 = 1 (  0x03  ) */
-			__set_bit |= BIT_FLAG_ASSEMBLER;
-
-		if (compiler_dog_flag_compat)
-			/* bit 2 = 1 (  0x07  ) */
-			__set_bit |= BIT_FLAG_COMPAT;
-
-		if (compiler_dog_flag_prolix)
-			/* bit 3 = 1 (  0x0F  ) */
-			__set_bit |= BIT_FLAG_PROLIX;
-
-		if (compiler_dog_flag_compact)
-			/* bit 4 = 1 (  0x1F  ) */
-			__set_bit |= BIT_FLAG_COMPACT;
-
-		if (compiler_dog_flag_fast)
-			/* bit 5 = 1 (  0x20  ) */
-			__set_bit |= BIT_FLAG_TIME;
-
-		/* Build flag string from enabled options */
-		char *p = compiler_dog_flag_list;
-		p += strlen(p);
-
-		for (int i = 0; object_opt[i].option; i++) {
-			if (!(__set_bit & object_opt[i].flag))
-				continue;
-
-			memcpy(p, object_opt[i].option,
-				object_opt[i].len);
-			p += object_opt[i].len;
-		}
-
-		*p = '\0';
+		_compiler_bitmask_start();
 
 	/* Merge flag list with existing compiler flags */
 	apply_dbg:
 		if (compiler_retry_stat == 2)
-			{
-				compiler_dog_flag_list[0] = '\0';
-			}
+			flag_stock[0] = '\0';
 		if (compiler_dog_flag_detailed)
-			{
-				compiler_input_debug = true;
-			}
-#if defined(_DBG_PRINT)
-		{
 			compiler_input_debug = true;
-		}
+#if defined(_DBG_PRINT)
+		compiler_input_debug = true;
 #endif
 		/* Append flag list to existing compiler flags */
-		if (strlen(compiler_dog_flag_list) > 0) {
+		if (strlen(flag_stock) > 0) {
 			size_t calcute_len_all_flags = 0;
 
 			if (dogconfig.dog_toml_all_flags) {
@@ -1117,7 +377,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 			}
 
 			size_t extra_len =
-				strlen(compiler_dog_flag_list);
+				strlen(flag_stock);
 			char *new_ptr = dog_realloc(
 				dogconfig.dog_toml_all_flags,
 				calcute_len_all_flags + extra_len + 1);
@@ -1130,124 +390,124 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 
 			dogconfig.dog_toml_all_flags = new_ptr;
 			strcat(dogconfig.dog_toml_all_flags,
-				compiler_dog_flag_list);
+				flag_stock);
 		}
 
 		/* Handle parent directory references in compile arguments */
-		if (strfind(compile_args_val, "../", true) !=
-			false) {
-			/*
-				../parent/folders/gamemodes/file.pwn
-				-> -i=../parent/folders/gamemodes
-				-> -i=../parent/folders/pawno/include
-				-> -i=../parent/folders/qawno/include
-			*/
-			size_t write_pos = 0, j;
-			bool rate_parent_dir = false;
-			for (j = 0; compile_args_val[j] != '\0';) {
-				if (!rate_parent_dir &&
-					strncmp(&compile_args_val[j],
-					"../", 3) == 0) {
-					j += 3;
-					while (compile_args_val[j] !=
-						'\0' &&
-						compile_args_val[j] != ' ' &&
-						compile_args_val[j] !=
-						'"') {
-						compiler_parsing[write_pos++] =
-							compile_args_val[j++];
-					}
-					size_t read_cur = 0, scan_idx;
-					for (scan_idx = 0;
-						scan_idx < write_pos;
-						scan_idx++) {
-						if (compiler_parsing[scan_idx] ==
-							_PATH_CHR_SEP_POSIX ||
-							compiler_parsing[scan_idx] ==
-							_PATH_CHR_SEP_WIN32) {
-							read_cur =
-								scan_idx + 1;
-						}
-					}
-					if (read_cur > 0) {
-						write_pos = read_cur;
-					}
-					rate_parent_dir = true;
+		for (;;) {
+			if (strfind(new_compile_args_val, "../", true) !=
+				false) {
+				char *tmp_args = strdup(new_compile_args_val);
+				if (!tmp_args)
 					break;
-				} else { ++j; }
-			}
+				size_t
+					write_pos = 0, j,
+					read_cur = 0, scan_idx;
+				bool
+					parent_ready = false;
+				for (j = 0; tmp_args[j] != '\0';) {
+					if (!parent_ready && !strncmp(&tmp_args[j], "../", 3)) {
+						j += 3;
+						while (tmp_args[j] != '\0' &&
+							   tmp_args[j] != ' ' &&
+							   tmp_args[j] != '"')
+						{
+							compiler_parsing[write_pos++]
+								= tmp_args[j++];
+						}
+						for (scan_idx = 0; scan_idx < write_pos; scan_idx++) {
+							if (compiler_parsing[scan_idx] ==
+								_PATH_CHR_SEP_POSIX ||
+								compiler_parsing[scan_idx] ==
+								_PATH_CHR_SEP_WIN32)
+							{
+								read_cur =
+									scan_idx + 1;
+							}
+						}
+						if (read_cur > 0) {
+							write_pos = read_cur;
+						}
+						parent_ready = !parent_ready;
+						break;
+					} else { ++j; }
+				}
 
-			if (rate_parent_dir && write_pos > 0) {
-				
-				memmove(compiler_parsing + 3,
-						compiler_parsing,
-						write_pos);
+				dog_free(tmp_args);
 
-				memcpy(compiler_parsing, "../", 3);
-				write_pos += 3;
+				if (!parent_ready && write_pos < 1) {
+					strcpy(compiler_parsing, "../");
+					goto parent_next;
+				}
+
+				const int push_integar = 3;
+				memmove(compiler_parsing + push_integar, compiler_parsing, write_pos);
+				memcpy(compiler_parsing, "../", push_integar);
+				write_pos += push_integar;
 				compiler_parsing[write_pos] = '\0';
 				
-				if (compiler_parsing[write_pos - 1] !=
-					_PATH_CHR_SEP_POSIX &&
-					compiler_parsing[write_pos - 1] !=
-					_PATH_CHR_SEP_WIN32)
+				if (compiler_parsing[write_pos - 1] != _PATH_CHR_SEP_POSIX &&
+					compiler_parsing[write_pos - 1] != _PATH_CHR_SEP_WIN32)
+					{ strcat(compiler_parsing, "/"); }
+
+			parent_next:
+				memset(compiler_temp, 0, sizeof(compiler_temp));
+				strcpy(compiler_temp, compiler_parsing);
+
+				if (strstr(compiler_temp, gamemodes_slash) ||
+					strstr(compiler_temp, gamemodes_back_slash))
 				{
-					strcat(compiler_parsing, "/");
+					char *p = strstr(compiler_temp,
+						gamemodes_slash);
+					if (!p)
+						p = strstr(compiler_temp,
+							gamemodes_back_slash);
+					if (p)
+						*p = '\0';
 				}
-			} else { strcpy(compiler_parsing, "../"); }
 
-			memset(compiler_temp, 0, sizeof(compiler_temp));
-			strcpy(compiler_temp, compiler_parsing);
+				char *rets = strdup(dogconfig.dog_toml_all_flags);
 
-			if (strstr(compiler_temp, gamemodes_slash) ||
-				strstr(compiler_temp, gamemodes_back_slash))
-			{
-				char *p = strstr(compiler_temp,
-					gamemodes_slash);
-				if (!p)
-					p = strstr(compiler_temp,
-						gamemodes_back_slash);
-				if (p)
-					*p = '\0';
-			}
+				memset(compiler_buf, 0, sizeof(compiler_buf));
 
-			char *rets = strdup(dogconfig.dog_toml_all_flags);
+				if (!strstr(rets, "gamemodes/") &&
+					!strstr(rets, "pawno/include/") &&
+					!strstr(rets, "qawno/include/"))
+				{
+					snprintf(compiler_buf, sizeof(compiler_buf),
+						"-i" "=\"%s\""
+						"-i" "=\"%s" "gamemodes/\" "
+						"-i" "=\"%s" "pawno/include/\" "
+						"-i" "=\"%s" "qawno/include/\" ",
+					compiler_temp, compiler_temp, compiler_temp, compiler_temp);
+				} else {
+					snprintf(compiler_buf, sizeof(compiler_buf),
+						"-i" "=\"%s\"",
+						compiler_temp);
+				}
 
-			memset(compiler_buf, 0, sizeof(compiler_buf));
+				if (rets) {
+					free(rets);
+					rets = NULL;
+				}
 
-			if (!strstr(rets, "gamemodes/") &&
-				!strstr(rets, "pawno/include/") &&
-				!strstr(rets, "qawno/include/"))
-			{
-				snprintf(compiler_buf, sizeof(compiler_buf),
-					"-i" "=%s "
-					"-i" "=%s" "gamemodes/ "
-					"-i" "=%s" "pawno/include/ "
-					"-i" "=%s" "qawno/include/ ",
-				compiler_temp, compiler_temp, compiler_temp, compiler_temp);
+				strncpy(compiler_path_include_buf, compiler_buf,
+					sizeof(compiler_path_include_buf) - 1);
+				compiler_path_include_buf[
+					sizeof(compiler_path_include_buf) - 1] = '\0';
 			} else {
-				snprintf(compiler_buf, sizeof(compiler_buf),
-					"-i" "=%s ",
-					compiler_temp);
+				snprintf(compiler_path_include_buf, sizeof(compiler_path_include_buf),
+					"-i=none");
 			}
-
-			if (rets) {
-				free(rets);
-				rets = NULL;
-			}
-
-			strncpy(compiler_path_include_buf, compiler_buf,
-				sizeof(compiler_path_include_buf) - 1);
-			compiler_path_include_buf[
-				sizeof(compiler_path_include_buf) - 1] = '\0';
-		} else {
-			snprintf(compiler_path_include_buf, sizeof(compiler_path_include_buf),
-				"-i=none");
+			break;
 		}
 
 		/* Show tip message if no flags were specified */
 		static bool rate_flag_notice = false;
-		if (!rate_flag_notice && compiler_empty_dog_flag) {
+		if (!compiler_dog_flag_detailed && !compiler_dog_flag_debug &&
+			!compiler_dog_flag_clean && !compiler_dog_flag_asm &&
+			!compiler_dog_flag_compat && !compiler_dog_flag_prolix &&
+			!compiler_dog_flag_compact && !rate_flag_notice) {
 			print("\n");
 			compiler_show_tip();
 			print("\n");
@@ -1265,61 +525,55 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 
 		printf(DOG_COL_DEFAULT);
 
-        if (compile_args_val == NULL) {
-			compile_args_val = "";
-		}
-
-		if (*compile_args_val == '\0' ||
-			(compile_args_val[0] == '.' &&
-			compile_args_val[1] == '\0')) {
+		if (*new_compile_args_val == '\0' ||
+			(new_compile_args_val[0] == '.' &&
+			new_compile_args_val[1] == '\0')) {
 			if (path_exists(dogconfig.dog_toml_serv_input) ==
-				0) {
-				pr_error(stdout, "%s not found!.",
-					dogconfig.dog_toml_serv_input);
-				goto compiler_end;
+				1) {
+				goto answer_done;
 			}
 			/* Prompt user for compilation target if not specified */
-			if (compile_args_val[0] != '.')
+			if (new_compile_args_val[0] != '.')
 			{
-				static bool one_try = false;
-				if (one_try == false) {
-					one_try = true;
-					pr_color(stdout, DOG_COL_YELLOW,
-						DOG_COL_BYELLOW
-						"** COMPILER TARGET\n");
+				if (compiler_target_ready == true)
+					goto answer_done;
+				compiler_target_ready = !compiler_target_ready;
+				pr_color(stdout, DOG_COL_YELLOW,
+					DOG_COL_BYELLOW
+					"** COMPILER TARGET\n");
+				static bool one_show = false;
+				if (!one_show) {
+					/* Creating list */
+					one_show = !one_show;
 					int tree_ret = -1;
 					{
 						char *tree[] = { "tree", ">", "/dev/null 2>&1", NULL };
 						tree_ret = dog_exec_command(tree);
 					}
 					if (!tree_ret) {
-						if (path_exists("../storage/downloads") == 1) {
+						if (path_exists(ANDROID_DOWNLOADS)) {
 							char *tree[] = {
-								"tree",
-								"-P",
-								"\"*.p\"",
-								"-P",
-								"\"*.pwn\"",
-								"../storage/downloads",
+								"tree", "-P",
+								"\"*.p\"", "-P",
+								"\"*.pawn\"", "-P",
+								"\"*.pwn\"", ANDROID_DOWNLOADS,
 								NULL
 							};
 							dog_exec_command(tree);
 						} else {
 							char *tree[] = {
-								"tree",
-								"-P",
-								"\"*.p\"",
-								"-P",
-								"\"*.pwn\"",
-								".",
+								"tree", "-P",
+								"\"*.p\"", "-P",
+								"\"*.pawn\"", "-P",
+								"\"*.pwn\"", ".",
 								NULL
 							};
 							dog_exec_command(tree);
 						}
 					} else {
 						#ifdef DOG_LINUX
-						if (path_exists("../storage/downloads") == 1) {
-							char *argv[] = { "ls", "../storage/downloads", "-R", NULL };
+						if (path_exists(ANDROID_DOWNLOADS) == 1) {
+							char *argv[] = { "ls", ANDROID_DOWNLOADS, "-R", NULL };
 							dog_exec_command(argv);
 						} else {
 							char *argv[] = { "ls", ".", "-R", NULL };
@@ -1330,163 +584,161 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 						dog_exec_command(argv);
 						#endif
 					}
-					printf("-------------------------------------\n");
-					printf(
-						"|- * You run the compiler command "
-						"without any args: compile\n"
-						"|- * Do you want to compile for "
-						DOG_COL_GREEN "%s " DOG_COL_DEFAULT
-						"(enter), \n"
-						"|- * or do you want to compile for something else?\n",
-						dogconfig.dog_toml_serv_input);
-					#ifndef DOG_LINUX
-						printf(
-							" * Input examples such as:\n"
-							"   bare.pwn | grandlarc.pwn | main.pwn | server.p\n"
-							"   ../storage/downloads/dog/gamemodes/main.pwn\n"
-							"   ../storage/downloads/osint/gamemodes/gm.pwn\n"
-						);
-						print_restore_color();
-						printf(DOG_COL_CYAN ">"
-							DOG_COL_DEFAULT);
-						fflush(stdout);
-						compiler_project = readline(" ");
-						if (compiler_project &&
-							strlen(compiler_project) > 0) {
-							dog_free(
-								dogconfig.dog_toml_serv_input);
-							dogconfig.dog_toml_serv_input =
-								strdup(compiler_project);
-							if (!dogconfig.dog_toml_serv_input) {
-								pr_error(stdout,
-									"Memory allocation failed");
-								dog_free(compiler_project);
-								goto compiler_end;
-							}
-						}
-						free(compiler_project);
-						compiler_project = NULL;
-					#else
-					char *argv[] = {
-						"command",
-						"-v",
-						"fzf",
-						">",
-						"/dev/null",
-						"2>&1",
-						NULL
-					};
-					// 2 = none/default
-					// 1 = false/fail
-					// 0 = true/ok
-					int fzf_ok = 2;
-
-					fzf_ok = dog_exec_command(argv);
-
-					if (fzf_ok == 0) {
-						printf(DOG_COL_CYAN ">"
-							DOG_COL_DEFAULT
-							" [Using fzf, press Ctrl+C for: "
-							DOG_COL_GREEN "%s" DOG_COL_DEFAULT "]\n",
-							dogconfig.dog_toml_serv_input);
-
-						strlcpy(posix_fzf_finder,
-							"find ",
-							sizeof(posix_fzf_finder));
-
-						int i;
-						for (i = 0; posix_fzf_path[i] != NULL; i++) {
-							if (path_exists(posix_fzf_path[i]) == 1) {
-								strlcat(posix_fzf_finder,
-									posix_fzf_path[i], sizeof(posix_fzf_finder));
-								strlcat(posix_fzf_finder,
-									" ", sizeof(posix_fzf_finder));
-							}
-						}
-
-						strlcat(posix_fzf_finder,
-							"-type "
-							"f "
-							"\\( -name \"*.pwn\" "
-							"-o -name \"*.p\" \\) "
-							"2>/dev/null",
-							sizeof(posix_fzf_finder));
-
-						memset(compiler_buf,
-							0, sizeof(compiler_buf));
-
-						snprintf(compiler_buf, sizeof(compiler_buf),
-							"%s | fzf "
-							"--height 40%% --reverse "
-							"--prompt 'Select file to compile: ' "
-							"--preview 'if [ -f {} ]; then "
-							"echo \"=== Preview ===\"; "
-							"head -n 20 {}; "
-							"echo \"=== Path ===\"; "
-							"realpath {}; fi'",
-							posix_fzf_finder);
-
-						this_proc_file = popen(compiler_buf, "r");
-						if (this_proc_file == NULL)
-							goto compiler_end;
-
-						if (fgets(compiler_buf,
-							sizeof(compiler_buf),
-							this_proc_file) == NULL)
-							goto fzf_end;
-
-						compiler_buf[strcspn(compiler_buf, "\n")] = '\0';
-						if (compiler_buf[0] == '\0')
-							goto fzf_end;
-
-						strlcpy(posix_fzf_select,
-							compiler_buf,
-							sizeof(posix_fzf_select));
-
-						dog_free(dogconfig.dog_toml_serv_input);
-
-						dogconfig.dog_toml_serv_input
-							= strdup(posix_fzf_select);
-						if (dogconfig.dog_toml_serv_input == NULL) {
-							pr_error(stdout,
-								"Memory allocation failed");
-							goto fzf_end;
-						}
-
-					fzf_end:
-						pclose(this_proc_file);
-					} else {
-						printf(
-							" * input examples such as:\n"
-							"   bare.pwn | grandlarc.pwn | main.pwn | server.p\n"
-							"   ../storage/downloads/dog/gamemodes/main.pwn\n"
-							"   ../storage/downloads/osint/gamemodes/gm.pwn\n"
-						);
-						print_restore_color();
-						printf(DOG_COL_CYAN ">"
-							DOG_COL_DEFAULT);
-						fflush(stdout);
-						compiler_project = readline(" ");
-						if (compiler_project &&
-							strlen(compiler_project) > 0) {
-							dog_free(
-								dogconfig.dog_toml_serv_input);
-							dogconfig.dog_toml_serv_input =
-								strdup(compiler_project);
-							if (!dogconfig.dog_toml_serv_input) {
-								pr_error(stdout,
-									"Memory allocation failed");
-								dog_free(compiler_project);
-								goto compiler_end;
-							}
-						}
-						free(compiler_project);
-						compiler_project = NULL;
-					}
-					#endif
 				}
+				print("-------------------------------------\n");
+				printf(
+					"|- * You run the compiler command "
+					"without any args: compile\n"
+					"|- * Do you want to compile for "
+					DOG_COL_GREEN "%s " DOG_COL_DEFAULT
+					"(enter), \n"
+					"|- * or do you want to compile for something else?\n",
+					dogconfig.dog_toml_serv_input);
+				#ifndef DOG_LINUX
+					goto manual_configure;
+				#else
+				char *argv[] = {
+					"command", "-v",
+					"fzf", ">",
+					"/dev/null", "2>&1",
+					NULL
+				};
+				int fzf_ok = 2;
+
+				fzf_ok = dog_exec_command(argv);
+
+				if (fzf_ok == 0) {
+					printf(DOG_COL_CYAN ">"
+						DOG_COL_DEFAULT
+						" [Using fzf, press Ctrl+C for: "
+						DOG_COL_GREEN "%s" DOG_COL_DEFAULT "]\n",
+						dogconfig.dog_toml_serv_input);
+
+					strlcpy(posix_fzf_finder,
+						"find -L ",
+						sizeof(posix_fzf_finder));
+
+					for (int f = 0; posix_fzf_path[f] != NULL; f++) {
+						if (path_exists(posix_fzf_path[f]) == 1) {
+							strlcat(posix_fzf_finder,
+								posix_fzf_path[f],
+								sizeof(posix_fzf_finder));
+							strlcat(posix_fzf_finder,
+								" ", sizeof(posix_fzf_finder));
+						}
+					}
+
+					strlcat(posix_fzf_finder,
+						"-type f "
+						"\\( -name \"*.pwn\" "
+						"-o -name \"*.p\" \\) "
+						"2>/dev/null",
+						sizeof(posix_fzf_finder));
+
+					memset(compiler_buf,
+						0, sizeof(compiler_buf));
+
+					snprintf(compiler_buf, sizeof(compiler_buf),
+						"%s | fzf "
+						"--height 40%% --reverse "
+						"--prompt 'Select file to compile: ' "
+						"--preview 'if [ -f {} ]; then "
+						"echo \"=== Preview ===\"; "
+						"head -n 20 {}; "
+						"echo \"=== Path ===\"; "
+						"realpath {}; fi'",
+						posix_fzf_finder);
+
+					this_proc_file = popen(compiler_buf, "r");
+					if (this_proc_file == NULL)
+						goto compiler_end;
+
+					if (fgets(compiler_buf,
+						sizeof(compiler_buf),
+						this_proc_file) == NULL)
+						goto fzf_end;
+
+					compiler_buf[strcspn(compiler_buf, "\n")] = '\0';
+					if (compiler_buf[0] == '\0')
+						goto fzf_end;
+
+					strlcpy(posix_fzf_select,
+						compiler_buf,
+						sizeof(posix_fzf_select));
+
+					dog_free(dogconfig.dog_toml_serv_input);
+
+					dogconfig.dog_toml_serv_input
+						= strdup(posix_fzf_select);
+					if (dogconfig.dog_toml_serv_input == NULL) {
+						pr_error(stdout,
+							"Memory allocation failed");
+						goto fzf_end;
+					}
+					
+				fzf_end:
+					pclose(this_proc_file);
+					goto answer_done;
+				} else {
+					goto manual_configure;
+				}
+				#endif
+			} else {
+				goto answer_done;
 			}
 
+		manual_configure:
+				print(
+				" * Input examples such as:\n"
+				"   bare.pwn | grandlarc.pwn | main.pwn | server.p\n"
+				"   ../storage/downloads/dog/gamemodes/main.pwn\n"
+				"   ../storage/downloads/osint/gamemodes/gm.pwn\n"
+				);
+				print_restore_color();
+				print(DOG_COL_CYAN ">"
+					DOG_COL_DEFAULT);
+				fflush(stdout);
+				char *compiler_target = NULL;
+				compiler_target = readline(" ");
+				if (compiler_target &&
+					strlen(compiler_target) > 0) {
+					dog_free(
+						dogconfig.dog_toml_serv_input);
+					dogconfig.dog_toml_serv_input =
+						strdup(compiler_target);
+					if (!dogconfig.dog_toml_serv_input) {
+						pr_error(stdout,
+							"Memory allocation failed");
+						dog_free(compiler_target);
+						goto compiler_end;
+					}
+				}
+				free(compiler_target);
+				compiler_target = NULL;
+		answer_done:
+			/* Copying path for output */
+			char *copy_input
+				= strdup(dogconfig.dog_toml_serv_input);
+			char *extension
+				= strrchr(copy_input, '.');
+			if (extension)
+				*extension = '\0';
+			char end_output[DOG_PATH_MAX];
+			snprintf(end_output, DOG_PATH_MAX,
+				"%s.amx", copy_input);
+			dogconfig.dog_toml_serv_output
+				= strdup(end_output);
+			dog_free(copy_input);
+
+			if (path_exists(dogconfig.dog_toml_serv_input) == 0) {
+				printf(
+					"Cannot locate input: " DOG_COL_CYAN
+					"%s" DOG_COL_DEFAULT
+					" - No such file or directory\n",
+					dogconfig.dog_toml_serv_input);
+				goto compiler_end;
+			}
+			
 			/* Execute compilation process */
 			int _process = dog_exec_compiler_process(
 					dogconfig.dog_pawncc_path,
@@ -1502,7 +754,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 				char *ca = NULL;
 				ca = dogconfig.dog_toml_serv_output;
 				bool cb = 0;
-				if (compiler_have_debug_flag)
+				if (compiler_debug_flag_is_exists)
 					cb = 1;
 				if (compiler_dog_flag_detailed) {
 					cause_compiler_expl(
@@ -1511,7 +763,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 					goto compiler_done;
 				}
 
-				if (compiler_unix_file_fail == false)
+				if (process_file_success == false)
 					dog_printfile(
 						".watchdogs/compiler.log");
 			}
@@ -1547,35 +799,37 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 			}
 
 			/* Calculate and display compilation time */
-			compiler_calculate_time = ((double)(post_end.tv_sec - pre_start.tv_sec)) +
+			escape_time = ((double)(post_end.tv_sec - pre_start.tv_sec)) +
 			                    	  ((double)(post_end.tv_nsec - pre_start.tv_nsec)) / 1e9;
 
 			print("\n");
 
 			if (!compiler_is_err)
 				print("** Completed Tasks.\n");
+			print(DOG_COL_YELLOW "-----------------------------\n" DOG_COL_DEFAULT);
 
 			pr_color(stdout, DOG_COL_CYAN,
 				" <C> (compile-time) Complete At %.3fs (%.0f ms)\n",
-				compiler_calculate_time,
-				compiler_calculate_time * 1000.0);
-			if (compiler_calculate_time > 300) {
+				escape_time,
+				escape_time * 1000.0);
+			if (escape_time > 300) {
 				goto _print_time;
 			}
 		} else {
 			/* Handle explicit file compilation (not default project) */
 
             /* Validate file extension */
-            if (strfind(compile_args_val, ".pwn", true) == false &&
-                strfind(compile_args_val, ".p", true) == false)
+            if (strfind(new_compile_args_val, ".pwn", true) == false &&
+                strfind(new_compile_args_val, ".pawn", true) == false &&
+                strfind(new_compile_args_val, ".p", true) == false)
             {
-                pr_warning(stdout, "The compiler only accepts '.p' or '.pwn' files.");
+                pr_warning(stdout, "The compiler only accepts '.p' '.pawn' and '.pwn' files.");
                 goto compiler_end;
             }
 
 			/* Parse input file path to extract directory and filename */
 			strncpy(ctx->compiler_size_temp,
-				compile_args_val,
+				new_compile_args_val,
 				sizeof(ctx->compiler_size_temp) -
 				1);
 			ctx->compiler_size_temp[
@@ -1801,7 +1055,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 
 			for (int i = 0; i < fet_sef_ent; i++) {
 				if (strfind(dogconfig.dog_sef_found_list[i],
-					compile_args_val, true) == true)
+					new_compile_args_val, true) == true)
 				{
 					memset(compiler_temp, 0, sizeof(compiler_temp));
 					memset(compiler_buf, 0, sizeof(compiler_buf));
@@ -1812,26 +1066,26 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 					
 					snprintf(compiler_buf, sizeof(compiler_buf),
 						"%s", compiler_temp);
-					if (compiler_serv_path)
+					if (server_path)
 						{
-							free(compiler_serv_path);
-							compiler_serv_path = NULL;
+							free(server_path);
+							server_path = NULL;
 						}
 						
-					compiler_serv_path = strdup(compiler_buf);
+					server_path = strdup(compiler_buf);
 				}
 			}
 
 #if defined(_DBG_PRINT)
-			if (compiler_serv_path != NULL)
-				pr_info(stdout, "compiler_serv_path: %s", compiler_serv_path);
+			if (server_path != NULL)
+				pr_info(stdout, "server_path: %s", server_path);
 #endif
 			/* Generate output filename and execute compilation */
-			if (path_exists(compiler_serv_path) == 1) {
+			if (path_exists(server_path) == 1) {
 
-				if (compiler_serv_path[0] != '\0') {
+				if (server_path[0] != '\0') {
 					memset(compiler_temp, 0, sizeof(compiler_temp));
-					strncpy(compiler_temp, compiler_serv_path,
+					strncpy(compiler_temp, server_path,
 						sizeof(compiler_temp) - 1);
 					compiler_temp[sizeof(compiler_temp) - 1] = '\0';
 				} else {
@@ -1854,14 +1108,14 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 				/* Execute compilation process */
 				int _process = dog_exec_compiler_process(
 						dogconfig.dog_pawncc_path,
-						compiler_serv_path,
+						server_path,
 						compiler_temp2);
 				if (_process != 0) {
 					goto compiler_end;
 				}
-				if (compiler_serv_path) {
-					free(compiler_serv_path);
-					compiler_serv_path = NULL;
+				if (server_path) {
+					free(server_path);
+					server_path = NULL;
 				}
 
 				if (path_exists(
@@ -1870,7 +1124,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 					char *ca = NULL;
 					ca = compiler_temp2;
 					bool cb = 0;
-					if (compiler_have_debug_flag)
+					if (compiler_debug_flag_is_exists)
 						cb = 1;
 					if (compiler_dog_flag_detailed) {
 						cause_compiler_expl(
@@ -1879,7 +1133,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 						goto compiler_done2;
 					}
 
-					if (compiler_unix_file_fail == false)
+					if (process_file_success == false)
 						dog_printfile(
 							".watchdogs/compiler.log");
 				}
@@ -1923,19 +1177,20 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 						compiler_temp2 = NULL;
 					}
 
-				compiler_calculate_time = ((double)(post_end.tv_sec - pre_start.tv_sec)) +
+				escape_time = ((double)(post_end.tv_sec - pre_start.tv_sec)) +
 				                     	  ((double)(post_end.tv_nsec - pre_start.tv_nsec)) / 1e9;
 
 				print("\n");
 
 				if (!compiler_is_err)
 					print("** Completed Tasks.\n");
+    			print(DOG_COL_YELLOW "-----------------------------\n" DOG_COL_DEFAULT);
 
 				pr_color(stdout, DOG_COL_CYAN,
 					" <C> (compile-time) Complete At %.3fs (%.0f ms)\n",
-					compiler_calculate_time,
-					compiler_calculate_time * 1000.0);
-				if (compiler_calculate_time > 300) {
+					escape_time,
+					escape_time * 1000.0);
+				if (escape_time > 300) {
 					goto _print_time;
 				}
 			} else {
@@ -1943,7 +1198,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 					"Cannot locate input: " DOG_COL_CYAN
 					"%s" DOG_COL_DEFAULT
 					" - No such file or directory\n",
-					compile_args_val);
+					new_compile_args_val);
 				goto compiler_end;
 			}
 		}
@@ -1963,7 +1218,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 
 		/* Scan log file for errors and standard library issues */
 		bool
-		  samp_stdlib_fail=false;
+		  stdlib_fail=false;
 
 		while (fgets(
 				compiler_mb,
@@ -1973,9 +1228,9 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 			/* Check for compilation errors and trigger retry if needed */
 			if (strfind(compiler_mb, "error",
 				true) != false) {
-					if (
-						compiler_retry_stat == 0)
+					switch(compiler_retry_stat)
 					{
+					case 0:
 						compiler_retry_stat = 1;
 						printf(DOG_COL_BCYAN
 							"** Compilation Process Exit with Failed. "
@@ -1984,10 +1239,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 							BKG_DEFAULT, compiler_retry_stat);
         				fflush(stdout);
 						goto _compiler_retry_stat;
-					}
-					if (
-						compiler_retry_stat == 1)
-					{
+					case 1:
 						compiler_retry_stat = 2;
 						printf(DOG_COL_BCYAN
 							"** Compilation Process Exit with Failed. "
@@ -2007,14 +1259,14 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 		        strfind(compiler_mb, "cannot read from file", true)
 		        == 1))
 		    {
-	        	samp_stdlib_fail = true;
+	        	stdlib_fail = !stdlib_fail;
 		    }
 			}
 
 		if (this_proc_file)
 			fclose(this_proc_file);
 
-		if (samp_stdlib_fail == true) {
+		if (stdlib_fail == true) {
 			compiler_installing_stdlib = true;
 		}
 
