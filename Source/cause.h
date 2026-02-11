@@ -1,25 +1,27 @@
-/*-
- * Copyright (c) 2026 Watchdogs Team and contributors
- * All rights reserved. under The 2-Clause BSD License
- * See COPYING or https://opensource.org/license/bsd-2-clause
- */
-
-#ifndef CAUSE
-#define CAUSE
+#ifndef CAUSE_H
+#define CAUSE_H
 
 typedef struct {
         char *cs_t;
         char *cs_i;
 } causeExplanation;
 
-#define HELP_PICK1 "You have checked that the file exists, but lowercase and uppercase letters are an issue in Linux?\n"
-#define HELP_PICK2 "* Linux filesystem is not free case-sensitive like Windows.\n"
-#define HELP_PICK3 "** You need to fix it with renaming any files and folders in gamemodes/ and changing #include name to lowercase only.\n"
-#define HELP_PICK4 "likely:\n   gamemodes\n   ├── main.pwn\n   └── TEST\n   └── test.inc\n"
-#define HELP_PICK5 "- #include \"TEST.inc\" -> #include \"test.inc\"\n\n"
-#define HELP_PICK6 "first: backup your \"gamemodes\" folder to \"swp_gamemodes\" and copy \"swp_gamemodes\" to \"gamemodes\"\n"
-#define HELP_PICK7 "shell (bash) operation:\n"
-#define HELP_PICK8 "linux native:\n"
+#define HELP_PICK1 \
+"You have checked that the file exists, but lowercase and uppercase letters are an issue in Linux?\n"
+#define HELP_PICK2 \
+"* Linux filesystem is not free case-sensitive like Windows.\n"
+#define HELP_PICK3 \
+"** You need to fix it with renaming any files and folders in gamemodes/ and changing #include name to lowercase only.\n"
+#define HELP_PICK4 \
+"as follows:\n   gamemodes\n   ├── main.pwn\n   └── TEST\n   └── test.inc\n"
+#define HELP_PICK5 \
+"- #include \"TEST.inc\" -> #include \"test.inc\"\n & renaming file TEST.inc -> test.inc\n"
+#define HELP_PICK6 \
+"first: backup your \"gamemodes\" folder to \"swp_gamemodes\" and copy \"swp_gamemodes\" to \"gamemodes\"\n"
+#define HELP_PICK7 \
+"shell (bash) operation:\n"
+#define HELP_PICK8 \
+"linux native:\n"
 #define HELP_PICK9 \
 "   bash -c ' \
 basepath=\"gamemodes\"; \
@@ -40,7 +42,8 @@ while IFS= read -r p; do \
   b=$(basename \"$p\" | tr \"A-Z\" \"a-z\"); \
   [ \"$p\" != \"$d/$b\" ] && mv -- \"$p\" \"$d/$b\"; \
 done'"
-#define HELP_PICK01 "termux (android - please change the 'GAMEMODE_FOLDER_NAME' to folder name of your gamemode in downloads/):\n"
+#define HELP_PICK01 \
+"termux (android - please change the 'GAMEMODE_FOLDER_NAME' to folder name of your gamemode in downloads/):\n"
 #define HELP_PICK02 \
 "   bash -c ' \
 basepath=\"../storage/downloads/GAMEMODE_FOLDER_NAME/gamemodes\"; \
@@ -149,6 +152,8 @@ done'"
 #define COMPILER_DT_PICK000071 "missing preprocessor argument"
 #define COMPILER_DT_PICK000072 "too many macro arguments"
 #define COMPILER_DT_PICK038 "extra characters on line"
+#define COMPILER_DT_PICK000099 "public function lacks forward declaration"
+#define COMPILER_DT_PICK0002123 "literal array/string passed to a non-const parameter"
 
 #define COMPILER_DT_SEL0000001 "A required syntactic element is missing from the parse tree. The parser expected one of: a semicolon ';', comma ',', closing parenthesis ')', bracket ']', or brace '}'. This typically indicates a malformed statement, improper expression termination, or incorrect nesting of control structures. Verify the statement's grammatical completeness according to Pawn's context-free grammar."
 #define COMPILER_DT_SEL0000002 "The `case` label syntactic production permits exactly one statement as its immediate successor. For multiple statements, you must encapsulate them within a compound statement delimited by braces `{ ... }`. This restriction stems from Pawn's simplified switch statement implementation which avoids implicit block creation."
@@ -237,7 +242,9 @@ done'"
 #define COMPILER_DT_SEL0000071 "Function-like macro invoked with insufficient arguments. Each parameter in macro definition must correspond to actual argument. Check macro invocation against its definition parameter count."
 #define COMPILER_DT_SEL0000072 "Function-like macro invoked with excess arguments beyond parameter list. Extra arguments are ignored but indicate likely error. Verify macro definition matches usage pattern."
 #define COMPILER_DT_SEL0000038 "Trailing tokens after preprocessor directive. Preprocessor directives must occupy complete logical line (except line continuation). Common with stray semicolons or comments on `#include` lines."
+#define COMPILER_DT_SEL0000421 "It looks like there’s a mismatch between the forward declaration and the public function, possibly a typo? For instance, it's written as OnplayerClickMap when it should be OnPlayerClickMap here."
+#define COMPILER_DT_SEL0000091 "Have you made sure you're using the latest SA-MP or open.mp stdlib? Get them here: https://github.com/pawn-lang/samp-stdlib : https://github.com/pawn-lang/pawn-stdlib"
 
-void cause_compiler_expl(const char *log_file,const char *dog_output,int debug);    
+void cause_compiler_expl(const char *log_file,const char *dog_output,int debug);
 
 #endif

@@ -1,9 +1,3 @@
-/*-
- * Copyright (c) 2026 Watchdogs Team and contributors
- * All rights reserved. under The 2-Clause BSD License
- * See COPYING or https://opensource.org/license/bsd-2-clause
- */
-
 #include  "utils.h"
 #include  "units.h"
 #include  "crypto.h"
@@ -59,7 +53,7 @@ static void compiler_detailed(const char *dog_output, int debug,
     if (len > 0)
         printf("%.*s", len, outbuf);
 
-    printf("-----------------------------\n");
+    print("-----------------------------\n");
 
     if (path_exists(dog_output) && debug && error_count < 1 && header_size >= 1 && total_size >= 1) {
         __set_default_access(dog_output);
@@ -80,7 +74,7 @@ static void compiler_detailed(const char *dog_output, int debug,
             printf("%.*s", len, outbuf);
     }
 
-    printf("\n");
+    print("\n");
 
     len = snprintf(outbuf, sizeof(outbuf),
                    "** Pawn Compiler %s - Copyright (c) 1997-2006, ITB CompuPhase\n",
@@ -227,19 +221,19 @@ causeExplanation ccs[] =
     COMPILER_DT_SEL0000014
 },
 
-/* 015 */  /* SEMANTIC ERROR */
+/* 015 */  /* ERROR */
 {
     COMPILER_DT_PICK000015,
     COMPILER_DT_SEL0000015
 },
 
-/* 016 */  /* SEMANTIC ERROR */
+/* 016 */  /* ERROR */
 {
     COMPILER_DT_PICK000016,
     COMPILER_DT_SEL0000016
 },
 
-/* 019 */  /* SEMANTIC ERROR */
+/* 019 */  /* ERROR */
 {
     COMPILER_DT_PICK000019,
     COMPILER_DT_SEL0000019
@@ -293,97 +287,97 @@ causeExplanation ccs[] =
     COMPILER_DT_SEL0000054
 },
 
-/* 004 */  /* SEMANTIC ERROR */
+/* 004 */  /* ERROR */
 {
     COMPILER_DT_PICK000004,
     COMPILER_DT_SEL0000004
 },
 
-/* 005 */  /* SEMANTIC ERROR */
+/* 005 */  /* ERROR */
 {
     COMPILER_DT_PICK000005,
     COMPILER_DT_SEL0000005
 },
 
-/* 006 */  /* SEMANTIC ERROR */
+/* 006 */  /* ERROR */
 {
     COMPILER_DT_PICK000006,
     COMPILER_DT_SEL0000006
 },
 
-/* 007 */  /* SEMANTIC ERROR */
+/* 007 */  /* ERROR */
 {
     COMPILER_DT_PICK000007,
     COMPILER_DT_SEL0000007
 },
 
-/* 008 */  /* SEMANTIC ERROR */
+/* 008 */  /* ERROR */
 {
     COMPILER_DT_PICK000008,
     COMPILER_DT_SEL0000008
 },
 
-/* 009 */  /* SEMANTIC ERROR */
+/* 009 */  /* ERROR */
 {
     COMPILER_DT_PICK000009,
     COMPILER_DT_SEL0000009
 },
 
-/* 017 */  /* SEMANTIC ERROR */
+/* 017 */  /* ERROR */
 {
     COMPILER_DT_PICK000017,
     COMPILER_DT_SEL0000017
 },
 
-/* 018 */  /* SEMANTIC ERROR */
+/* 018 */  /* ERROR */
 {
     COMPILER_DT_PICK000018,
     COMPILER_DT_SEL0000018
 },
 
-/* 022 */  /* SEMANTIC ERROR */
+/* 022 */  /* ERROR */
 {
     COMPILER_DT_PICK000022,
     COMPILER_DT_SEL0000022
 },
 
-/* 023 */  /* SEMANTIC ERROR */
+/* 023 */  /* ERROR */
 {
     COMPILER_DT_PICK000023,
     COMPILER_DT_SEL0000023
 },
 
-/* 024 */  /* SEMANTIC ERROR */
+/* 024 */  /* ERROR */
 {
     COMPILER_DT_PICK000024,
     COMPILER_DT_SEL0000024
 },
 
-/* 025 */  /* SEMANTIC ERROR */
+/* 025 */  /* ERROR */
 {
     COMPILER_DT_PICK000025,
     COMPILER_DT_SEL0000025
 },
 
-/* 027 */  /* SEMANTIC ERROR */
+/* 027 */  /* ERROR */
 {
     COMPILER_DT_PICK027,
     COMPILER_DT_SEL0000027_2
 },
 
-/* 029 */  /* SEMANTIC ERROR */
+/* 029 */  /* ERROR */
 {
     COMPILER_DT_PICK000029,
     COMPILER_DT_SEL0000029
 },
 
-/* 032 */  /* SEMANTIC ERROR */
+/* 032 */  /* ERROR */
 {
     COMPILER_DT_PICK000032,
     COMPILER_DT_SEL0000032
 },
 
-/* 045 */  /* SEMANTIC ERROR */
+/* 045 */  /* ERROR */
 {
     COMPILER_DT_PICK000045,
     COMPILER_DT_SEL0000045
@@ -401,13 +395,19 @@ causeExplanation ccs[] =
     COMPILER_DT_SEL0000204
 },
 
+/* 235 */  /* WARNING */
+{
+    COMPILER_DT_PICK000099,
+    COMPILER_DT_SEL0000421
+},
+
 /* 205 */  /* WARNING */
 {
     COMPILER_DT_PICK000205,
     COMPILER_DT_SEL0000205
 },
 
-/* 209 */  /* SEMANTIC ERROR */
+/* 209 */  /* ERROR */
 {
     COMPILER_DT_PICK000209,
     COMPILER_DT_SEL0000209
@@ -425,7 +425,7 @@ causeExplanation ccs[] =
     COMPILER_DT_SEL0000010
 },
 
-/* 213 */  /* SEMANTIC ERROR */
+/* 213 */  /* ERROR */
 {
     COMPILER_DT_PICK000213,
     COMPILER_DT_SEL0000213
@@ -449,115 +449,115 @@ causeExplanation ccs[] =
     COMPILER_DT_SEL0000234
 },
 
-/* 013 */  /* SEMANTIC ERROR */
+/* 013 */  /* ERROR */
 {
     COMPILER_DT_PICK000013,
     COMPILER_DT_SEL0000013
 },
 
-/* 021 */  /* SEMANTIC ERROR */
+/* 021 */  /* ERROR */
 {
     COMPILER_DT_PICK000021,
     COMPILER_DT_SEL0000021
 },
 
-/* 028 */  /* SEMANTIC ERROR */
+/* 028 */  /* ERROR */
 {
     COMPILER_DT_PICK028,
     COMPILER_DT_SEL0000028_2
 },
 
-/* 033 */  /* SEMANTIC ERROR */
+/* 033 */  /* ERROR */
 {
     COMPILER_DT_PICK000033,
     COMPILER_DT_SEL0000033
 },
 
-/* 034 */  /* SEMANTIC ERROR */
+/* 034 */  /* ERROR */
 {
     COMPILER_DT_PICK000034,
     COMPILER_DT_SEL0000034
 },
 
-/* 035 */  /* SEMANTIC ERROR */
+/* 035 */  /* ERROR */
 {
     COMPILER_DT_PICK000035,
     COMPILER_DT_SEL0000035
 },
 
-/* 037 */  /* SEMANTIC ERROR */
+/* 037 */  /* ERROR */
 {
     COMPILER_DT_PICK037,
     COMPILER_DT_SEL0000037_2
 },
 
-/* 039 */  /* SEMANTIC ERROR */
+/* 039 */  /* ERROR */
 {
     COMPILER_DT_PICK000039,
     COMPILER_DT_SEL0000039
 },
 
-/* 040 */  /* SEMANTIC ERROR */
+/* 040 */  /* ERROR */
 {
     COMPILER_DT_PICK000040,
     COMPILER_DT_SEL0000040
 },
 
-/* 041 */  /* SEMANTIC ERROR */
+/* 041 */  /* ERROR */
 {
     COMPILER_DT_PICK000041,
     COMPILER_DT_SEL0000041
 },
 
-/* 042 */  /* SEMANTIC ERROR */
+/* 042 */  /* ERROR */
 {
     COMPILER_DT_PICK000042,
     COMPILER_DT_SEL0000042
 },
 
-/* 043 */  /* SEMANTIC ERROR */
+/* 043 */  /* ERROR */
 {
     COMPILER_DT_PICK000043,
     COMPILER_DT_SEL0000043
 },
 
-/* 044 */  /* SEMANTIC ERROR */
+/* 044 */  /* ERROR */
 {
     COMPILER_DT_PICK000044,
     COMPILER_DT_SEL0000044
 },
 
-/* 046 */  /* SEMANTIC ERROR */
+/* 046 */  /* ERROR */
 {
     COMPILER_DT_PICK000046,
     COMPILER_DT_SEL0000046
 },
 
-/* 047 */  /* SEMANTIC ERROR */
+/* 047 */  /* ERROR */
 {
     COMPILER_DT_PICK000047,
     COMPILER_DT_SEL0000047
 },
 
-/* 048 */  /* SEMANTIC ERROR */
+/* 048 */  /* ERROR */
 {
     COMPILER_DT_PICK000048,
     COMPILER_DT_SEL0000048
 },
 
-/* 049 */  /* SEMANTIC ERROR */
+/* 049 */  /* ERROR */
 {
     COMPILER_DT_PICK000049,
     COMPILER_DT_SEL0000049
 },
 
-/* 050 */  /* SEMANTIC ERROR */
+/* 050 */  /* ERROR */
 {
     COMPILER_DT_PICK000050,
     COMPILER_DT_SEL0000050
 },
 
-/* 055 */  /* SEMANTIC ERROR */
+/* 055 */  /* ERROR */
 {
     COMPILER_DT_PICK000055,
     COMPILER_DT_SEL0000055
@@ -635,6 +635,12 @@ causeExplanation ccs[] =
     COMPILER_DT_SEL0000214
 },
 
+/* 239 */  /* WARNING */
+{
+    COMPILER_DT_PICK0002123,
+    COMPILER_DT_SEL0000091
+},
+
 /* 200 */  /* WARNING */
 {
     COMPILER_DT_PICK000200,
@@ -665,55 +671,55 @@ causeExplanation ccs[] =
     COMPILER_DT_SEL0000214_2
 },
 
-/* 060 */  /* PREPROCESSOR ERROR */
+/* 060 */  /* ERROR */
 {
     COMPILER_DT_PICK000060,
     COMPILER_DT_SEL0000060
 },
 
-/* 061 */  /* PREPROCESSOR ERROR */
+/* 061 */  /* ERROR */
 {
     COMPILER_DT_PICK000061,
     COMPILER_DT_SEL0000061
 },
 
-/* 062 */  /* PREPROCESSOR ERROR */
+/* 062 */  /* ERROR */
 {
     COMPILER_DT_PICK000062,
     COMPILER_DT_SEL0000062
 },
 
-/* 068 */  /* PREPROCESSOR ERROR */
+/* 068 */  /* ERROR */
 {
     COMPILER_DT_PICK000068,
     COMPILER_DT_SEL0000068
 },
 
-/* 069 */  /* PREPROCESSOR ERROR */
+/* 069 */  /* ERROR */
 {
     COMPILER_DT_PICK000069,
     COMPILER_DT_SEL0000069
 },
 
-/* 070 */  /* PREPROCESSOR ERROR */
+/* 070 */  /* ERROR */
 {
     COMPILER_DT_PICK000070,
     COMPILER_DT_SEL0000070
 },
 
-/* 071 */  /* PREPROCESSOR ERROR */
+/* 071 */  /* ERROR */
 {
     COMPILER_DT_PICK000071,
     COMPILER_DT_SEL0000071
 },
 
-/* 072 */  /* PREPROCESSOR ERROR */
+/* 072 */  /* ERROR */
 {
     COMPILER_DT_PICK000072,
     COMPILER_DT_SEL0000072
 },
 
-/* 038 */  /* PREPROCESSOR ERROR */
+/* 038 */  /* ERROR */
 {
     COMPILER_DT_PICK038,
     COMPILER_DT_SEL0000038

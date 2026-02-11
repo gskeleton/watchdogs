@@ -1,9 +1,3 @@
-/*-
- * Copyright (c) 2026 Watchdogs Team and contributors
- * All rights reserved. under The 2-Clause BSD License
- * See COPYING or https://opensource.org/license/bsd-2-clause
- */
-
 #include  "utils.h"
 #include  "units.h"
 #include  "archive.h"
@@ -28,7 +22,7 @@ library_options_list(const char *title, const char **items,
 
 	while (true) {
 		char	*input = NULL;
-		printf(DOG_COL_CYAN ">" DOG_COL_DEFAULT);
+		print(DOG_COL_CYAN ">" DOG_COL_DEFAULT);
 		input = readline(" ");
 		if (!input)
 			continue;
@@ -46,7 +40,7 @@ library_options_list(const char *title, const char **items,
 				}
 		}
 
-		printf("Invalid selection. Please try again.\n");
+		print("Invalid selection. Please try again.\n");
 		dog_free(input);
 	}
 }

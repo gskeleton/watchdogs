@@ -1,9 +1,3 @@
-/*-
- * Copyright (c) 2026 Watchdogs Team and contributors
- * All rights reserved. under The 2-Clause BSD License
- * See COPYING or https://opensource.org/license/bsd-2-clause
- */
-
 #include  "units.h"
 #include  "library.h"
 #include  "crypto.h"
@@ -483,13 +477,6 @@ int binary_condition_check(char *path) {
 	    return (false);
 	}
 
-	if (!(st.st_mode & S_IXUSR)) {
-	    pr_error(stderr, "File not executable");
-	    minimal_debugging();
-	    close(fd);
-	    return (false);
-	}
-
 	close(fd);
 
     return (true);
@@ -606,8 +593,7 @@ dog_exec_command(char *const av[])
                 c == '!' || c == '?' || c == '[' ||
                 c == ']' || c == '{' || c == '}') {
                     pr_warning(stdout,
-                    	"shell injection potent: %s", p);
-                	printf("  like: file.txt; rm name.txt - potent!..\n");
+                    	"shell injection potent: %s", p);\
             }
 
             if (c == '.' && p[1] == '.' && p[2] == '/') {
@@ -665,38 +651,6 @@ dog_exec_command(char *const av[])
             "dangerous rm command pattern detected!");
     }
 
-    if (strfind(cmd, "dd if=", true) ||
-        strfind(cmd, "mkfs", true) ||
-        strfind(cmd, "format", true) ||
-        strfind(cmd, "fdisk", true) ||
-        strfind(cmd, "parted", true) ||
-        strfind(cmd, "shutdown", true) ||
-        strfind(cmd, "reboot", true) ||
-        strfind(cmd, "halt", true) ||
-        strfind(cmd, "poweroff", true)) {
-        pr_warning(stdout,
-            "dangerous system command detected!");
-    }
-
-    if (strfind(cmd, "$(", true) ||
-        strfind(cmd, "${", true) ||
-        strfind(cmd, "`", true) ||
-        strfind(cmd, "||", true) ||
-        strfind(cmd, "&&", true) ||
-        strfind(cmd, ">>", true) ||
-        strfind(cmd, "<<", true)) {
-        pr_warning(stdout,
-            "command injection pattern detected!");
-    }
-
-    if (strfind(cmd, " &", true) ||
-        strfind(cmd, "& ", true) ||
-        strfind(cmd, " |", true) ||
-        strfind(cmd, "| ", true)) {
-        pr_warning(stdout,
-            "background execution or pipe detected!");
-    }
-
     if (strfind(cmd, ";", true) == true) {
         static bool swarn = false;
         char *nbuf;
@@ -709,11 +663,7 @@ dog_exec_command(char *const av[])
         if (swarn == false) {
             swarn = true;
             pr_warning(stdout,
-                "Semicolon ';' detected and replaced with '_'.\n"
-                "In POSIX shells, ';' is a command separator that allows execution\n"
-                "of multiple commands in a single line.\n"
-                "Allowing ';' can lead to unintended command chaining.\n"
-                "It is replaced here to prevent shell from interpreting it as syntax.");
+                "Semicolon ';' detected and replaced with '_'.\n");
         }
 
         for (sp = cmd; *sp != '\0'; sp++) {
@@ -735,7 +685,7 @@ dog_exec_command(char *const av[])
             nbuf = dog_malloc(nsz);
             if (nbuf == NULL) {
                 pr_warning(stdout,
-					"memory allocation failed for semicolon replacement!");
+					"memory allocation failed");
                 dog_free(cmd);
                 return (-1);
             }
@@ -793,22 +743,6 @@ dog_exec_command(char *const av[])
                 if (*p == ';')
                     *p = '_';
             }
-        }
-    }
-
-    if (strfind(cmd, "rm", true) == true) {
-        static bool rwarn = false;
-        if (rwarn == false) {
-            rwarn = true;
-            pr_warning(stdout,
-                "'rm' command detected!\n"
-                "The 'rm' utility permanently "
-				"deletes files using the kernel unlink() syscall.\n"
-                "There is NO recycle bin, NO undo, "
-				"and NO confirmation at kernel level.\n"
-                "Using flags like -r or -f can destroy "
-				"entire directories and system files.\n"
-                "Proceed only if you fully understand the consequences.");
         }
     }
 
@@ -1318,8 +1252,11 @@ dog_procure_ignore_dir(const char *entry_name, const char *ignore_dir)
 
 static void dog_ensure_found_path(const char *path)
 {
-	if (dogconfig.dog_sef_count < (sizeof(dogconfig.dog_sef_found_list) /
-	    sizeof(dogconfig.dog_sef_found_list[0]))) {
+	size_t    sef_found =
+		sizeof(dogconfig.dog_sef_found_list) /
+		sizeof(dogconfig.dog_sef_found_list[0]);
+	if (dogconfig.dog_sef_count < sef_found)
+	{
 		strncpy(dogconfig.dog_sef_found_list[dogconfig.dog_sef_count],
 		    path, MAX_SEF_PATH_SIZE);
 		dogconfig.dog_sef_found_list[dogconfig.dog_sef_count]
@@ -1668,8 +1605,18 @@ dog_sef_wmv(const char *c_src, const char *c_dest)
     if (!validate_src_dest(c_src, c_dest))
         return (1);
 
-    int super_mode = detect_super_mode();
+	int super_mode = 0;
 
+#ifdef DOG_ANDROID
+	goto super_mode_check_done;
+#endif
+	if (strfind(c_dest, "/usr/", true) == false)
+		{
+			goto super_mode_check_done;
+		}
+    super_mode = detect_super_mode();
+
+super_mode_check_done:
     int ret = _run_file_operation("mv", c_src, c_dest, super_mode);
 
     if (ret == 0) {
@@ -1693,8 +1640,18 @@ dog_sef_wcopy(const char *c_src, const char *c_dest)
     if (!validate_src_dest(c_src, c_dest))
         return (1);
 
-    int super_mode = detect_super_mode();
+	int super_mode = 0;
 
+#ifdef DOG_ANDROID
+	goto super_mode_check_done;
+#endif
+	if (strfind(c_dest, "/usr/", true) == false)
+		{
+			goto super_mode_check_done;
+		}
+    super_mode = detect_super_mode();
+
+super_mode_check_done:
     int ret = _run_file_operation("cp", c_src, c_dest, super_mode);
 
     if (ret == 0) {
@@ -1869,7 +1826,7 @@ dog_parse_toml_config(void)
 	if (general_table) {
 		toml_datum_t	 os_val = toml_string_in(general_table, "os");
 
-		if (os_val.ok) {
+		if (os_val.ok && os_val.u.s[0] != '\0') {
 			if (dogconfig.dog_toml_os_type == NULL ||
 				strcmp(dogconfig.dog_toml_os_type, os_val.u.s) != 0) {
 				if (dogconfig.dog_toml_os_type)
@@ -1973,8 +1930,12 @@ dog_generate_toml_content(FILE *file, const char *dog_os_type,
     fprintf(file, "[compiler]\n");
 
 	if (compatible && optimized_lt) {
-		fprintf(file,
-		    "   option = [\"-Z:+\", \"-d:2\", \"-O:2\", \"LOCALHOST=1\"] # compiler options\n");
+		if (samp_server_stat == true)
+			fprintf(file,
+				"   option = [\"-Z:+\", \"-d:2\", \"-O:2\", \"LOCALHOST=1\"] # compiler options\n");
+		else
+			fprintf(file,
+				"   option = [\"-Z:+\", \"-d:2\", \"-O:1\", \"LOCALHOST=1\"] # compiler options\n");
 	} else if (compatible) {
 		fprintf(file,
 		    "   option = [\"-Z:+\", \"-d:2\", \"LOCALHOST=1\"] # compiler options\n");
@@ -2010,8 +1971,7 @@ dog_generate_toml_content(FILE *file, const char *dog_os_type,
 	fprintf(file, "   github_tokens = \"DO_HERE\" # github tokens\n");
 	fprintf(file,
 	    "   root_patterns = [\"lib\", \"log\", \"root\", " \
-	    "\"amx\", \"static\", \"dynamic\", \"cfg\", \"config\", " \
-		"\"json\", \"msvcrt\", \"msvcr\", \"msvcp\", \"ucrtbase\"] # root pattern\n");
+	    "\"amx\", \"static\", \"dynamic\", \"cfg\"] # root pattern\n");
 	fprintf(file, "   packages = [\n"
 	    "      \"Y-Less/sscanf?newer\",\n"
 	    "      \"samp-incognito/samp-streamer-plugin?newer\"\n"
@@ -2073,8 +2033,12 @@ compiler_configure_libpath(void)
 		setenv("LD_LIBRARY_PATH", buf, 1);
 		done = 1;
 	} else {
-		pr_warning(stdout,
-		    "libpawnc.so not found in any target path..");
+		static bool n = false;
+		if (!n) {
+			n = !n;
+			pr_warning(stdout,
+				"libpawnc.so not found in any target path..");
+		}
 	}
 	#endif
 }
@@ -2105,7 +2069,7 @@ dog_configure_toml(void)
 	char iflag[3]          = { 0 };
 	size_t siflag          = sizeof(iflag);
 
-	compiler_have_debug_flag     = false;
+	compiler_debug_flag_is_exists     = false;
 	if (compiler_full_includes)
 		{
 			free(compiler_full_includes);
@@ -2118,8 +2082,38 @@ dog_configure_toml(void)
 		samp_server_stat = true;
 	else if (dir_exists("pawno") && path_access("server.cfg"))
 		samp_server_stat = false;
-	else {
-		;
+	
+	if (path_exists("gamemodes") == 0) {
+		int ret = MKDIR("gamemodes");
+		if (!ret) {
+			FILE *fp = fopen("gamemodes/.gitkeep", "w");
+			if (fp)
+				fclose(fp);
+		}
+	}
+	if (path_exists("npcmodes") == 0) {
+		int ret = MKDIR("npcmodes");
+		if (!ret) {
+			FILE *fp = fopen("npcmodes/.gitkeep", "w");
+			if (fp)
+				fclose(fp);
+		}
+	}
+	if (path_exists("filterscripts") == 0) {
+		int ret = MKDIR("filterscripts");
+		if (!ret) {
+			FILE *fp = fopen("filterscripts/.gitkeep", "w");
+			if (fp)
+				fclose(fp);
+		}
+	}
+	if (path_exists("scriptfiles") == 0) {
+		int ret = MKDIR("scriptfiles");
+		if (!ret) {
+			FILE *fp = fopen("scriptfiles/.gitkeep", "w");
+			if (fp)
+				fclose(fp);
+		}
 	}
 
 	find_pawncc = dog_find_compiler(dog_os_type);
@@ -2141,7 +2135,6 @@ dog_configure_toml(void)
 		toml_file = fopen("watchdogs.toml", "w");
 		if (!toml_file) {
 			pr_error(stdout, "Failed to create watchdogs.toml");
-			println(stdout, "   Permission?? - verify first.");
 			minimal_debugging();
 			exit(EXIT_FAILURE);
 		}
@@ -2181,7 +2174,7 @@ dog_configure_toml(void)
 	dog_toml_depends
 		= toml_table_in(dog_toml_parse, TOML_TABLE_DEPENDENCIES);
 
-	if (!dog_toml_depends) { goto sk_depends; }
+	if (!dog_toml_depends) { goto skip_depends; }
 
 	toml_gh_tokens
 		= toml_string_in(dog_toml_depends,
@@ -2250,7 +2243,7 @@ dog_configure_toml(void)
 				free(val.u.s);
 				val.u.s = NULL;
 			}
-			goto sk_depends;
+			goto skip_depends;
 		}
 	}
 
@@ -2260,11 +2253,16 @@ clean_up:
 		expect = NULL;
 	}
 
-sk_depends:
+skip_depends:
 	dog_toml_compiler
 		= toml_table_in(dog_toml_parse, TOML_TABLE_COMPILER);
-	if (!dog_toml_compiler) { goto sk_compiler; }
+	if (!dog_toml_compiler) { goto skip_compiler; }
 
+    /* Pawn Source
+	 * Include files between "..." or without quotes are read from the current
+     * directory, or from a list of "include directories". Include files
+     * between <...> are only read from the list of include directories.
+     */
 	toml_array_t *toml_include_path;
 	toml_include_path
 		= toml_array_in(dog_toml_compiler, "includes");
@@ -2363,7 +2361,7 @@ skip_:
 
 			if (strfind(toml_option_value.u.s,
 				"-d", true) || compiler_dog_flag_debug > 0)
-				compiler_have_debug_flag = true;
+				compiler_debug_flag_is_exists = true;
 
 			size_t old_len = expect ? strlen(expect) :
 				0;
@@ -2389,10 +2387,10 @@ skip_:
 					toml_option_value.u.s);
 
 			if (toml_option_value.u.s)
-			{
-				free(toml_option_value.u.s);
-				toml_option_value.u.s = NULL;
-			}
+				{
+					free(toml_option_value.u.s);
+					toml_option_value.u.s = NULL;
+				}
 		}
 
 		if (expect) {
@@ -2443,7 +2441,7 @@ skip_:
 		}
 		dog_free(output_val.u.s);
 	}
-	sk_compiler:
+	skip_compiler:
 
 	if (dogconfig.dog_toml_packages == NULL ||
 		strcmp(dogconfig.dog_toml_packages, "none none none") != 0) {
@@ -2545,14 +2543,46 @@ skip_:
 		if (field_value == NULL ||
 		    strcmp(field_value, CRC32_FALSE) == 0) {
 			pr_warning(stdout,
-			    "toml key null/crc32 false (%s) detected in key: %s * do not set to empty!.",
+			    "toml key null/crc32 false (%s) detected in key: %s * do not set to empty! (fix first).",
 			    CRC32_FALSE, field_name);
 			printf("   Support: https://github.com/gskeleton/watchdogs/issues\n");
 			fflush(stdout);
-			exit(EXIT_FAILURE);
+			#ifdef DOG_LINUX
+			if (strfind(field_name, "dog_toml_os_type", true) == true) {
+				dogconfig.dog_toml_os_type = strdup("linux");
+			}
+			#else
+			if (strfind(field_name, "dog_toml_os_type", true) == true) {
+				dogconfig.dog_toml_os_type = strdup("windows");
+			}
+			#endif
+			if (strfind(field_name, "dog_toml_server_binary", true) == true) {
+				dogconfig.dog_toml_server_binary = strdup("samp03svr");
+			}
+			if (strfind(field_name, "dog_toml_server_config", true) == true) {
+				dogconfig.dog_toml_server_config = strdup("server.cfg");
+			}
+			if (strfind(field_name, "dog_toml_server_logs", true) == true) {
+				dogconfig.dog_toml_server_logs = strdup("server_log.txt");
+			}
+			if (strfind(field_name, "dog_toml_all_flags", true) == true) {
+				dogconfig.dog_toml_all_flags = strdup("-Z+");
+			}
+			if (strfind(field_name, "dog_toml_root_patterns", true) == true) {
+				dogconfig.dog_toml_root_patterns = strdup("linux windows");
+			}
+			if (strfind(field_name, "dog_toml_packages", true) == true) {
+				dogconfig.dog_toml_packages = strdup("Y-Less/sscanf?newer");
+			}
+			if (strfind(field_name, "dog_toml_serv_input", true) == true) {
+				dogconfig.dog_toml_serv_input = strdup("none.pwn");
+			}
+			if (strfind(field_name, "dog_toml_serv_output", true) == true) {
+				dogconfig.dog_toml_serv_output = strdup("none.amx");
+			}
 		}
 	}
-
+		
 	dog_sef_path_revert();
 
 	if (strcmp(dogconfig.dog_toml_os_type, OS_SIGNAL_WINDOWS) == 0) {

@@ -438,10 +438,9 @@ jobs:
       shell: powershell
       run: |
         $env:Path = "C:\tools\msys64\ucrt64\bin;C:\tools\msys64\usr\bin;$env:Path"
-        mingw32-make windows-debug
-
+        mingw32-make windows
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
-        name: watchdogs-windows-debug
-        path: watchdogs.debug.win
+        name: watchdogs-windows
+        path: watchdogs.win
