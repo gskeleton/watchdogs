@@ -914,7 +914,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 
 			/* Calculate and display compilation time */
 			escape_time = ((double)(post_end.tv_sec - pre_start.tv_sec)) +
-			                    	  ((double)(post_end.tv_nsec - pre_start.tv_nsec)) / 1e9;
+                          ((double)(post_end.tv_nsec - pre_start.tv_nsec)) / 1e9;
 
 			print("\n");
 
@@ -1292,7 +1292,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 					}
 
 				escape_time = ((double)(post_end.tv_sec - pre_start.tv_sec)) +
-				                     	  ((double)(post_end.tv_nsec - pre_start.tv_nsec)) / 1e9;
+                              ((double)(post_end.tv_nsec - pre_start.tv_nsec)) / 1e9;
 
 				print("\n");
 
@@ -1427,6 +1427,7 @@ compiler_end:
 		dog_sef_path_revert();
 	}
     fflush(stdout);
+    dog_free(new_compile_args_val);
 	return (1);
 /* Handle long-running compilation with retry */
 _print_time:
