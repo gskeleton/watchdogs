@@ -541,50 +541,6 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 				pr_color(stdout, DOG_COL_YELLOW,
 					DOG_COL_BYELLOW
 					"** COMPILER TARGET\n");
-				static bool one_show = false;
-				if (!one_show) {
-					/* Creating list */
-					one_show = !one_show;
-					int tree_ret = -1;
-					{
-						char *tree[] = { "tree", ">", "/dev/null 2>&1", NULL };
-						tree_ret = dog_exec_command(tree);
-					}
-					if (!tree_ret) {
-						if (path_exists(ANDROID_DOWNLOADS)) {
-							char *tree[] = {
-								"tree", "-P",
-								"\"*.p\"", "-P",
-								"\"*.pawn\"", "-P",
-								"\"*.pwn\"", ANDROID_DOWNLOADS,
-								NULL
-							};
-							dog_exec_command(tree);
-						} else {
-							char *tree[] = {
-								"tree", "-P",
-								"\"*.p\"", "-P",
-								"\"*.pawn\"", "-P",
-								"\"*.pwn\"", ".",
-								NULL
-							};
-							dog_exec_command(tree);
-						}
-					} else {
-						#ifdef DOG_LINUX
-						if (path_exists(ANDROID_DOWNLOADS) == 1) {
-							char *argv[] = { "ls", ANDROID_DOWNLOADS, "-R", NULL };
-							dog_exec_command(argv);
-						} else {
-							char *argv[] = { "ls", ".", "-R", NULL };
-							dog_exec_command(argv);
-						}
-						#else
-						char *argv[] = { "dir", ".", "-s", NULL };
-						dog_exec_command(argv);
-						#endif
-					}
-				}
 				print("-------------------------------------\n");
 				printf(
 					"|- * You run the compiler command "
@@ -688,33 +644,77 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 			}
 
 		manual_configure:
-				print(
-				" * Input examples such as:\n"
-				"   bare.pwn | grandlarc.pwn | main.pwn | server.p\n"
-				"   ../storage/downloads/dog/gamemodes/main.pwn\n"
-				"   ../storage/downloads/osint/gamemodes/gm.pwn\n"
-				);
-				print_restore_color();
-				print(DOG_COL_CYAN ">"
-					DOG_COL_DEFAULT);
-				fflush(stdout);
-				char *compiler_target = NULL;
-				compiler_target = readline(" ");
-				if (compiler_target &&
-					strlen(compiler_target) > 0) {
-					dog_free(
-						dogconfig.dog_toml_serv_input);
-					dogconfig.dog_toml_serv_input =
-						strdup(compiler_target);
-					if (!dogconfig.dog_toml_serv_input) {
-						pr_error(stdout,
-							"Memory allocation failed");
-						dog_free(compiler_target);
-						goto compiler_end;
-					}
-				}
-				free(compiler_target);
-				compiler_target = NULL;
+            static bool one_show = false;
+            if (!one_show) {
+                /* Creating list */
+                one_show = !one_show;
+                int tree_ret = -1;
+                {
+                    char *tree[] = { "tree", ">", "/dev/null 2>&1", NULL };
+                    tree_ret = dog_exec_command(tree);
+                }
+                if (!tree_ret) {
+                    if (path_exists(ANDROID_DOWNLOADS)) {
+                        char *tree[] = {
+                            "tree", "-P",
+                            "\"*.p\"", "-P",
+                            "\"*.pawn\"", "-P",
+                            "\"*.pwn\"", ANDROID_DOWNLOADS,
+                            NULL
+                        };
+                        dog_exec_command(tree);
+                    } else {
+                        char *tree[] = {
+                            "tree", "-P",
+                            "\"*.p\"", "-P",
+                            "\"*.pawn\"", "-P",
+                            "\"*.pwn\"", ".",
+                            NULL
+                        };
+                        dog_exec_command(tree);
+                    }
+                } else {
+                    #ifdef DOG_LINUX
+                    if (path_exists(ANDROID_DOWNLOADS) == 1) {
+                        char *argv[] = { "ls", ANDROID_DOWNLOADS, "-R", NULL };
+                        dog_exec_command(argv);
+                    } else {
+                        char *argv[] = { "ls", ".", "-R", NULL };
+                        dog_exec_command(argv);
+                    }
+                    #else
+                    char *argv[] = { "dir", ".", "-s", NULL };
+                    dog_exec_command(argv);
+                    #endif
+                }
+            }
+            print(
+            " * Input examples such as:\n"
+            "   bare.pwn | grandlarc.pwn | main.pwn | server.p\n"
+            "   ../storage/downloads/dog/gamemodes/main.pwn\n"
+            "   ../storage/downloads/osint/gamemodes/gm.pwn\n"
+            );
+            print_restore_color();
+            print(DOG_COL_CYAN ">"
+                DOG_COL_DEFAULT);
+            fflush(stdout);
+            char *compiler_target = NULL;
+            compiler_target = readline(" ");
+            if (compiler_target &&
+                strlen(compiler_target) > 0) {
+                dog_free(
+                    dogconfig.dog_toml_serv_input);
+                dogconfig.dog_toml_serv_input =
+                    strdup(compiler_target);
+                if (!dogconfig.dog_toml_serv_input) {
+                    pr_error(stdout,
+                        "Memory allocation failed");
+                    dog_free(compiler_target);
+                    goto compiler_end;
+                }
+            }
+            free(compiler_target);
+            compiler_target = NULL;
 		answer_done:
 			/* Copying path for output */
 			char *copy_input
