@@ -2668,7 +2668,7 @@ skip_:
 			#elif !defined(DOG_ANDROID) && defined(DOG_LINUX)
 				dog_download_file(
 				"https://github.com/pawn-lang/compiler/releases/download/v3.10.7/pawnc-3.10.7-linux.tar.gz",
-				"pawncc-linux-37.zip"
+				"pawncc-linux-37.tar.gz"
 				);
 				return (0);
 			#endif
