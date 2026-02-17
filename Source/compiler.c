@@ -416,7 +416,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 
 		printf(DOG_COL_DEFAULT);
 
-        if (compile_args_val[0] == '\0')
+        if (new_compile_args_val[0] == '\0')
             goto skip_parent;
         
         /* Handle parent directory references in compile arguments */
@@ -434,8 +434,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
                 for (j = 0; tmp_args[j] != '\0';) {
                     if (!parent_ready && !strncmp(&tmp_args[j], "../", 3)) {
                         j += 3;
-                        while (tmp_args[j] != '\0' &&
-                               tmp_args[j] != ' ' &&
+                        while (tmp_args[j] != '\0' && tmp_args[j] != ' ' &&
                                tmp_args[j] != '"')
                         {
                             compiler_parsing[write_pos++]
@@ -761,8 +760,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
     				for (j = 0; tmp_args[j] != '\0';) {
     					if (!parent_ready && !strncmp(&tmp_args[j], "../", 3)) {
     						j += 3;
-    						while (tmp_args[j] != '\0' &&
-    							   tmp_args[j] != ' ' &&
+    						while (tmp_args[j] != '\0' && tmp_args[j] != ' ' &&
     							   tmp_args[j] != '"')
     						{
     							compiler_parsing[write_pos++]
@@ -790,7 +788,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
     
     				if (!parent_ready && write_pos < 1) {
     					strcpy(compiler_parsing, "../");
-    					goto parent_next;
+    					goto parent_next2;
     				}
     
     				const int push_integar = 3;
@@ -803,7 +801,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
     					compiler_parsing[write_pos - 1] != _PATH_CHR_SEP_WIN32)
     					{ strcat(compiler_parsing, "/"); }
     
-    			parent_next:
+    			parent_next2:
     				memset(compiler_temp, 0, sizeof(compiler_temp));
     				strcpy(compiler_temp, compiler_parsing);
     
