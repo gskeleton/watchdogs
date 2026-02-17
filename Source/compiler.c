@@ -531,10 +531,6 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 		if (*new_compile_args_val == '\0' ||
 			(new_compile_args_val[0] == '.' &&
 			new_compile_args_val[1] == '\0')) {
-			if (path_exists(dogconfig.dog_toml_serv_input) ==
-				1) {
-				goto answer_done;
-			}
 			/* Prompt user for compilation target if not specified */
 			if (new_compile_args_val[0] != '.')
 			{
