@@ -2,7 +2,7 @@
 #include  "units.h"
 #include  "archive.h"
 #include  "curl.h"
-#include  "debug.h"
+#include  "extra/debug.h"
 #include  "library.h"
 
 bool

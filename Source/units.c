@@ -10,7 +10,7 @@
 #include  "extra/server.h"
 #include  "compiler.h"
 #include  "replicate.h"
-#include  "debug.h"
+#include  "extra/debug.h"
 #include  "units.h"
 
 #if defined(__W_VERSION__)
@@ -26,17 +26,17 @@ static struct timespec cmd_end = { 0 };
 static double command_dur;
 
 static void
-cleanup_local_resources(char **ptr_prompt, char **ptr_command, 
-                       char **title_running_info, char **stock_ptr,
+cleanup_local_resources(char **ptr_command_prompt, char **ptr_command, 
+                       char **title_running_info,
                        char **size_command_ptr,
                        char **platform_ptr, char **signal_ptr,
                        char **debug_server_ptr, char **args_ptr,
                        char **compile_target_ptr)
 {
     // ptr prompt free
-    if (ptr_prompt && *ptr_prompt) {
-        free(*ptr_prompt);
-        *ptr_prompt = NULL;
+    if (ptr_command_prompt && *ptr_command_prompt) {
+        free(*ptr_command_prompt);
+        *ptr_command_prompt = NULL;
     }
     // ptr command free
     if (ptr_command && *ptr_command) {
@@ -47,11 +47,6 @@ cleanup_local_resources(char **ptr_prompt, char **ptr_command,
     if (title_running_info && *title_running_info) {
         free(*title_running_info);
         *title_running_info = NULL;
-    }
-    // stock ptr free
-    if (stock_ptr && *stock_ptr) {
-        free(*stock_ptr);
-        *stock_ptr = NULL;
     }
     // size command ptr free
     if (size_command_ptr && *size_command_ptr) {
@@ -104,6 +99,14 @@ void unit_show_help(const char *cmd)
 	"Usage: \"djb2\" | [<args>] " DOG_COL_YELLOW "\n  ; djb2 hashing for your files." DOG_COL_DEFAULT "\n"
 	"  pbkdf2 @ generate passphrase | "
 	"Usage: \"pbkdf2\" | [<args>] " DOG_COL_YELLOW "\n  ; Password to Passphrase." DOG_COL_DEFAULT "\n"
+    "  base64encode @ encode data to Base64 | "
+    "Usage: \"base64encode\" | [<file/text>] " DOG_COL_YELLOW "\n  ; Convert file or plain text into Base64 string." DOG_COL_DEFAULT "\n"
+    "  base64decode @ decode Base64 to text | "
+    "Usage: \"base64decode\" | [<base64 text>] " DOG_COL_YELLOW "\n  ; Convert Base64 string back to readable text." DOG_COL_DEFAULT "\n"
+    "  aesencrypt @ encrypt text using AES | "
+    "Usage: \"aesencrypt\" | [<text>] " DOG_COL_YELLOW "\n  ; AES encryption (16-byte block)." DOG_COL_DEFAULT "\n"
+    "  aesdecrypt @ decrypt text using AES | "
+    "Usage: \"aesdecrypt\" | [<text>] " DOG_COL_YELLOW "\n  ; AES decryption (16-byte block)." DOG_COL_DEFAULT "\n"
 	"  config @ re-write watchdogs.toml | "
 	"Usage: \"config\" " DOG_COL_YELLOW "\n  ; Reset your config file to default settings." DOG_COL_DEFAULT "\n"
 	"  replicate @ dependency installer | "
@@ -144,6 +147,10 @@ void unit_show_help(const char *cmd)
 		{"crc32", "crc32: generate crc32. | Usage: \"crc32\" | [<args>]\n\tQuick CRC32 checksum generation.\n"},
 		{"djb2", "djb2: generate djb2 hash file. | Usage: \"djb2\" | [<args>]\n\tdjb2 hashing for your files.\n"},
 		{"pbkdf2", "pbkdf2: generate passphrase. | Usage: \"pbkdf2\" | [<args>]\n\tPassword to Passphrase.\n"},
+        {"base64encode", "base64encode: encode data to Base64. | Usage: \"base64encode\" | [<file/text>]\n\tConvert file or plain text into Base64 string.\n"},
+        {"base64decode", "base64decode: decode Base64 string. | Usage: \"base64decode\" | [<base64 text>]\n\tConvert Base64 string back to readable text.\n"},
+        {"aesencrypt", "aesencrypt: encrypt text using AES. | Usage: \"aesencrypt\" | [<text>]\n\tAES block encryption (16-byte block).\n"},
+        {"aesdecrypt", "aesdecrypt: decrypt text using AES. | Usage: \"aesdecrypt\" | [<text>]\n\tAES block decryption (16-byte block).\n"},
 		{"config", "config: re-write watchdogs.toml. | Usage: \"config\"\n\tReset your config file to default settings.\n"},
 		{"replicate", "replicate: dependency installer. | Usage: \"replicate\"\n\tDownloads & Install Our Dependencies.\n"},
 		{"gamemode", "gamemode: download SA-MP gamemode. | Usage: \"gamemode\"\n\tGrab some SA-MP gamemodes quickly.\n"},
@@ -222,7 +229,7 @@ checkout_unit_rule(void)
             argsc[8], argsc[9]);
     }
     static bool rate_stdlib = false;
-    if (compiler_installing_stdlib == true &&
+    if (compiler_missing_stdlib == true &&
         rate_stdlib == false)
     {
         rate_stdlib = !rate_stdlib;
@@ -266,7 +273,7 @@ __command__(char *unit_pre_command)
     memset(&cmd_start, 0, sizeof(cmd_start));
     memset(&cmd_end, 0, sizeof(cmd_end));
 
-    char *ptr_prompt = NULL;
+    char *ptr_command_prompt = NULL;
     size_t size_ptr_command = DOG_MAX_PATH + DOG_PATH_MAX;
     char *ptr_command = NULL;
     const char *command_similar = NULL;
@@ -274,7 +281,6 @@ __command__(char *unit_pre_command)
     int ret_code = -1;
     
     char *title_running_info = NULL;
-    char *stock = NULL;
     char *size_command = NULL;
     char *platform = NULL;
     char *pointer_signalA = NULL;
@@ -284,8 +290,8 @@ __command__(char *unit_pre_command)
 
     checkout_unit_rule();
 
-    ptr_prompt = dog_malloc(size_ptr_command);
-    if (!ptr_prompt) {
+    ptr_command_prompt = dog_malloc(size_ptr_command);
+    if (!ptr_command_prompt) {
         ret_code = -1;
         goto cleanup;
     }
@@ -313,21 +319,21 @@ __command__(char *unit_pre_command)
         }
     } else {
         while (true) {
-            snprintf(ptr_prompt, size_ptr_command, "# ");
-            char *ptr_input = readline(ptr_prompt);
+            snprintf(ptr_command_prompt, size_ptr_command, "# ");
+            char *ptr_command_input = readline(ptr_command_prompt);
             fflush(stdout);
-            if (!ptr_input) {
+            if (!ptr_command_input) {
                 ret_code = 2;
                 goto cleanup;
             }
             
-            if (ptr_input[0] == '\0') {
-                free(ptr_input);
+            if (ptr_command_input[0] == '\0') {
+                free(ptr_command_input);
                 continue;
             }
             
-            ptr_command = strdup(ptr_input);
-            free(ptr_input);
+            ptr_command = strdup(ptr_command_input);
+            free(ptr_command_input);
             
             if (!ptr_command) {
                 ret_code = -1;
@@ -437,7 +443,6 @@ __command__(char *unit_pre_command)
                 ret_code = -1;
                 goto cleanup;
             }
-            
             unsigned long djb2_generate = crypto_djb2_hash_file(args);
             if (djb2_generate) {
                 printf("        Crypto Input : " DOG_COL_YELLOW "%s\n", args);
@@ -461,13 +466,7 @@ __command__(char *unit_pre_command)
 
             crypto_simple_rand_bytes(stored_salt, 16);
 
-            int ret = crypto_derive_key_pbkdf2(
-                  args,
-                  stored_salt,
-                  16,
-                  pbkdf_generate,
-                  32
-            );
+            int ret = crypto_derive_key_pbkdf2(args, stored_salt, 16, pbkdf_generate, 32);
 
             if (ret != 1) {
                 print("PBKDF2 Error\n");
@@ -477,6 +476,7 @@ __command__(char *unit_pre_command)
             printf("        Crypto Input : " DOG_COL_YELLOW "%s\n", args);
             char *hex_output = NULL;
             crypto_convert_to_hex(pbkdf_generate, 32, &hex_output);
+            print_restore_color();
             printf("Crypto Output (PBKDF2) : " DOG_COL_YELLOW "%s\n", hex_output);
             free(hex_output);
         }
@@ -484,6 +484,125 @@ __command__(char *unit_pre_command)
         ret_code = -1;
         goto cleanup;
         
+    } else if (strncmp(ptr_command, "base64encode", strlen("base64encode")) == 0) {
+        char *args = ptr_command + strlen("base64encode");
+        while (*args == ' ') ++args;
+        
+        if (*args == '\0') {
+            println(stdout, "Usage: base64encode [<file/text>]");
+        } else {
+            if (path_access(args) == 1) {
+                FILE *tmp_proc_file = fopen(args, "rb");
+                fseek(tmp_proc_file, 0, SEEK_END);
+                long size = ftell(tmp_proc_file);
+                rewind(tmp_proc_file);
+                unsigned char *buffer = dog_malloc(size);
+                fread(buffer, 1, size, tmp_proc_file);
+                fclose(tmp_proc_file);
+
+                char *encoded = crypto_base64_encode(buffer, size);
+
+                printf("        Crypto Input : " DOG_COL_YELLOW "%s\n", args);
+                print_restore_color();
+                printf("Crypto Output (base64) : " DOG_COL_YELLOW "%s\n", encoded);
+
+                free(buffer);
+                free(encoded);
+            } else {
+                char *encoded = crypto_base64_encode(
+                    (const unsigned char *)args,
+                    strlen(args)
+                );
+                if (encoded) {
+                    printf("        Crypto Input : " DOG_COL_YELLOW "%s\n", args);
+                    print_restore_color();
+                    printf("Crypto Output (base64) : " DOG_COL_YELLOW "%s\n", encoded);
+                }
+            }
+        }
+        ret_code = -1;
+        goto cleanup;
+        
+    } else if (strncmp(ptr_command, "base64decode", strlen("base64decode")) == 0) {
+        char *args = ptr_command + strlen("base64decode");
+        while (*args == ' ') ++args;
+
+        if (*args == '\0') {
+            println(stdout, "Usage: base64decode [<base64 text>]");
+        } else {
+            int decoded_len = 0;
+            unsigned char *decoded = crypto_base64_decode(args, &decoded_len);
+            if (!decoded) {
+                println(stdout, "Invalid Base64 input!");
+            } else {
+                printf("        Crypto Input : " DOG_COL_YELLOW "%s\n", args);
+                print_restore_color();
+                printf("Crypto Output (text) : " DOG_COL_YELLOW "%.*s\n",
+                    decoded_len, decoded);
+                free(decoded);
+            }
+        }
+
+        ret_code = -1;
+        goto cleanup;
+    } else if (strncmp(ptr_command, "aesencrypt", strlen("aesencrypt")) == 0) {
+        char *args = ptr_command + strlen("aesencrypt");
+        while (*args == ' ') ++args;
+
+        if (*args == '\0') {
+            println(stdout, "Usage: aesencrypt [<text>]");
+        } else {
+            AES_KEY key;
+            uint8_t in[AES_BLOCK_SIZE] = {0};
+            uint8_t out[AES_BLOCK_SIZE];
+            
+            size_t len = strlen(args);
+            if (len > AES_BLOCK_SIZE)
+                len = AES_BLOCK_SIZE;
+
+            memcpy(in, args, len);
+
+            crypto_aes_encrypt(in, out, &key);
+
+            printf("        Crypto Input : " DOG_COL_YELLOW "%s\n", args);
+            print_restore_color();
+            printf("Crypto Output (hex)  : " DOG_COL_YELLOW);
+
+            for (int i = 0; i < AES_BLOCK_SIZE; i++)
+                printf("%02X", out[i]);
+
+            printf("\n");
+        }
+
+        ret_code = -1;
+        goto cleanup;
+    } else if (strncmp(ptr_command, "aesdecrypt", strlen("aesdecrypt")) == 0) {
+        char *args = ptr_command + strlen("aesdecrypt");
+        while (*args == ' ') ++args;
+
+        if (*args == '\0') {
+            println(stdout, "Usage: aesdecrypt [<text>]");
+        } else {
+            AES_KEY key;
+            uint8_t in[AES_BLOCK_SIZE] = {0};
+            uint8_t out[AES_BLOCK_SIZE];
+
+            int bytes = hex_to_bytes(args, in, AES_BLOCK_SIZE);
+            if (bytes <= 0) {
+                println(stdout, "Invalid hex input.");
+                goto cleanup;
+            }
+
+            crypto_aes_decrypt(in, out, &key);
+
+            printf("        Crypto Input : " DOG_COL_YELLOW "%s\n", args);
+            print_restore_color();
+            printf("Crypto Output        : " DOG_COL_YELLOW "%.*s\n",
+                AES_BLOCK_SIZE, out);
+        }
+
+        ret_code = -1;
+        goto cleanup;
     } else if (strcmp(ptr_command, "config") == 0) {
         if (path_access("watchdogs.toml"))
             remove("watchdogs.toml");
@@ -541,9 +660,9 @@ __command__(char *unit_pre_command)
         } else {
             char errbuf[DOG_PATH_MAX];
             toml_table_t *dog_toml_server_config;
-            FILE *this_proc_file = fopen("watchdogs.toml", "r");
-            dog_toml_server_config = toml_parse_file(this_proc_file, errbuf, sizeof(errbuf));
-            if (this_proc_file) fclose(this_proc_file);
+            FILE *tmp_proc_file = fopen("watchdogs.toml", "r");
+            dog_toml_server_config = toml_parse_file(tmp_proc_file, errbuf, sizeof(errbuf));
+            if (tmp_proc_file) fclose(tmp_proc_file);
             
             if (!dog_toml_server_config) {
                 pr_error(stdout, "failed to parse the watchdogs.toml...: %s", errbuf);
@@ -592,7 +711,7 @@ __command__(char *unit_pre_command)
             dog_free(dogconfig.dog_toml_packages);
             dogconfig.dog_toml_packages = expect;
             
-            printf("Trying to installing:\n   %s",
+            printf("Trying to installing:\n   %s\n",
                 dogconfig.dog_toml_packages);
             
             if (store_branch && store_save) dog_install_depends(dogconfig.dog_toml_packages, store_branch, store_save);
@@ -878,12 +997,6 @@ __command__(char *unit_pre_command)
         dog_console_title(title_running_info);
     #endif
         
-        stock = dog_malloc(DOG_PATH_MAX);
-        if (!stock) {
-            ret_code = -1;
-            goto cleanup;
-        }
-        
         struct sigaction sa;
         if (path_access("announce") == 1)
             __set_default_access("announce");
@@ -914,12 +1027,12 @@ __command__(char *unit_pre_command)
             _STARTUPINFO.hStdError  = GetStdHandle(STD_ERROR_HANDLE);
             _STARTUPINFO.hStdInput  = GetStdHandle(STD_INPUT_HANDLE);
             
-            snprintf(stock, DOG_PATH_MAX, "%s%s",
+            snprintf(tmp_buf, DOG_PATH_MAX, "%s%s",
                 _PATH_STR_EXEC, dogconfig.dog_toml_server_binary);
             
-            if (!CreateProcessA(NULL, stock, NULL, NULL, TRUE, 0, NULL, NULL,
-                                &_STARTUPINFO, &_PROCESS_INFO)) {
-                ;
+            if (!CreateProcessA(NULL, tmp_buf, NULL, NULL, TRUE, 0, NULL, NULL, &_STARTUPINFO, &_PROCESS_INFO)) {
+                pr_error(stdout, "CreateProcessA failed!");
+                minimal_debugging();
             } else {
                 WaitForSingleObject(_PROCESS_INFO.hProcess, INFINITE);
                 CloseHandle(_PROCESS_INFO.hProcess);
@@ -928,10 +1041,11 @@ __command__(char *unit_pre_command)
         #else
             pid_t process_id;
             
-            snprintf(stock, DOG_PATH_MAX, "%s/%s", dog_procure_pwd(),
+            snprintf(tmp_buf, DOG_PATH_MAX, "%s%s%s",
+                dog_procure_pwd(), _PATH_STR_SEP_POSIX,
                 dogconfig.dog_toml_server_binary);
             
-            if (binary_condition_check(stock) == false) {
+            if (binary_condition_check(tmp_buf) == false) {
                 ret_code = -1;
                 goto cleanup;
             }
@@ -955,7 +1069,7 @@ __command__(char *unit_pre_command)
                 close(stdout_pipe[1]);
                 close(stderr_pipe[1]);
                 
-                execl("/bin/sh", "sh", "-c", stock, (char *)NULL);
+                execl("/bin/sh", "sh", "-c", tmp_buf, (char *)NULL);
                 _exit(127);
             } else if (process_id > 0) {
                 close(stdout_pipe[1]);
@@ -1048,14 +1162,14 @@ __command__(char *unit_pre_command)
                 argsc[4], argsc[5], argsc[6], argsc[7], argsc[8], argsc[9]);
             dog_configure_toml();
             
-            if (!compiler_is_err) unit_ret_main("running");
+            if (!compiler_is_error) unit_ret_main("running");
         } else {
             const char *argsc[] = { NULL, args2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
             dog_exec_compiler(argsc[0], argsc[1], argsc[2], argsc[3], argsc[4],
                 argsc[5], argsc[6], argsc[7], argsc[8], argsc[6]);
             dog_configure_toml();
             
-            if (!compiler_is_err) {
+            if (!compiler_is_error) {
                 unit_ret_main("running");
             }
         }
@@ -1229,7 +1343,7 @@ __command__(char *unit_pre_command)
     }
 
 cleanup:
-    cleanup_local_resources(&ptr_prompt, &ptr_command, &title_running_info, &stock,
+    cleanup_local_resources(&ptr_command_prompt, &ptr_command, &title_running_info,
                            &size_command, &platform, &pointer_signalA,
                            &debug_server, &size_args, &compile_target);
     return (ret_code);

@@ -1,5 +1,5 @@
 #include "../utils.h"
-#include "../debug.h"
+#include "debug.h"
 #include "../compiler.h"
 #include "process.h"
 
@@ -208,7 +208,7 @@ int dog_exec_compiler_process(char *pawncc_path,
         return (-2);
     }
 
-	if (false != compiler_dog_flag_clean) {
+	if (false != compiler_opt_clean) {
 		pr_info(stdout,
 			"Place #pragma option -Z+ at "
 			"the top of %s if needed or if "
@@ -252,7 +252,7 @@ int dog_exec_compiler_process(char *pawncc_path,
 		output_path, // output
 		dogconfig.dog_toml_all_flags, // flag
 		compiler_full_includes, // includes
-		compiler_path_include_buf); // includes
+		compiler_include_path); // includes
 
 	/* Initialize log file path based on platform */
 	#ifdef DOG_WINDOWS
@@ -296,7 +296,7 @@ int dog_exec_compiler_process(char *pawncc_path,
 		_STARTUPINFO.hStdInput = GetStdHandle(
 			STD_INPUT_HANDLE);
 
-		if (compiler_input_debug == true) {
+		if (compiler_input_info == true) {
 		#ifdef DOG_ANDROID
 			println(stdout, "** %s", compiler_input);
 		#else
@@ -314,7 +314,7 @@ int dog_exec_compiler_process(char *pawncc_path,
 		}
 
 		/* Create Windows process for compiler execution */
-		if (compiler_dog_flag_fast == true) {
+		if (compiler_opt_fast == true) {
 			/* Use _beginthreadex for fast compilation */
 			compiler_thread_data_t thread_data;
 			HANDLE thread_handle;
@@ -453,7 +453,7 @@ int dog_exec_compiler_process(char *pawncc_path,
 			return (-2);
 		}
 
-		if (compiler_input_debug == true) {
+		if (compiler_input_info == true) {
 		#ifdef DOG_ANDROID
 			println(stdout, "@ %s", compiler_input);
 		#else
@@ -499,7 +499,7 @@ int dog_exec_compiler_process(char *pawncc_path,
 		#ifdef DOG_ANDROID
 		/* Android-specific process creation using fork/vfork */
 			static bool vfork_mode = false;
-			if (compiler_dog_flag_fast == 1) {
+			if (compiler_opt_fast == 1) {
 				vfork_mode = true;
 			}
 			pid_t compiler_process_id;

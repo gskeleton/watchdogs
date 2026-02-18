@@ -3,13 +3,12 @@
 #include  "archive.h"
 #include  "crypto.h"
 #include  "units.h"
-#include  "debug.h"
+#include  "extra/debug.h"
 #include  "replicate.h"
 
 bool             installing_package = 0;
 static const char*opr = NULL;
 static char		 json_item[DOG_PATH_MAX];
-static char      command[DOG_MAX_PATH * 4];
 static int		 fdir_counts = 0;
 #ifdef DOG_WINDOWS
 static const char *separator = _PATH_STR_SEP_WIN32;
@@ -227,91 +226,71 @@ package_fetching_assets(char **package_assets,
 	return (try_generic_assets(package_assets, counts));
 }
 
-static
-int
-package_url_checking(const char *url, const char *github_token)
+static int package_url_checking(const char *url, const char *github_token)
 {
-	CURL *curl = curl_easy_init();
-	if (!curl)
+	CURL *pkg_curl = curl_easy_init();
+	if (!pkg_curl)
 		return (0);
 
 	CURLcode res;
 	long response_code = 0;
 	struct curl_slist *headers = NULL;
-	char dog_buffer_error[CURL_ERROR_SIZE] = { 0 };
+	char dog_error_buffer[CURL_ERROR_SIZE] = { 0 };
 
 	printf("\tCreate & Checking URL: %s...\t\t[V]\n", url);
 
 	if (strfind(dogconfig.dog_toml_github_tokens, "DO_HERE", true) ||
 	    dogconfig.dog_toml_github_tokens == NULL ||
-	    strlen(dogconfig.dog_toml_github_tokens) < 1) {
+	    strlen(dogconfig.dog_toml_github_tokens) < 1)
+	{
 		pr_color(stdout, DOG_COL_GREEN,
 		    "Can't read Github token.. skipping\n");
 	} else {
-		char auth_header[512];
+		char auth_header[DOG_PATH_MAX];
 		snprintf(auth_header, sizeof(auth_header),
 		    "Authorization: token %s", github_token);
 		headers = curl_slist_append(headers, auth_header);
 	}
 
 	headers = curl_slist_append(headers, "User-Agent: watchdogs/1.0");
-	headers = curl_slist_append(headers,
-	    "Accept: application/vnd.github.v3+json");
+	headers = curl_slist_append(headers, "Accept: application/vnd.github.v3+json");
 
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-	curl_easy_setopt(curl, CURLOPT_URL, url);
-	curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
-	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
+	curl_easy_setopt(pkg_curl, CURLOPT_HTTPHEADER, headers);
+	curl_easy_setopt(pkg_curl, CURLOPT_URL, url);
+	curl_easy_setopt(pkg_curl, CURLOPT_NOBODY, 1L);
+	curl_easy_setopt(pkg_curl, CURLOPT_FOLLOWLOCATION, 1L);
+	curl_easy_setopt(pkg_curl, CURLOPT_TIMEOUT, 30L);
 
 	print("   Try Connecting... ");
 
-	res = curl_easy_perform(curl);
-	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+	res = curl_easy_perform(pkg_curl);
+	curl_easy_getinfo(pkg_curl, CURLINFO_RESPONSE_CODE, &response_code);
 
-	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, dog_buffer_error);
+	curl_easy_setopt(pkg_curl, CURLOPT_ERRORBUFFER, dog_error_buffer);
 
-	curl_verify_cacert_pem(curl);
+	curl_verify_cacert_pem(pkg_curl);
+
+	res = curl_easy_perform(pkg_curl);
+	curl_easy_getinfo(pkg_curl, CURLINFO_RESPONSE_CODE, &response_code);
 
 	fflush(stdout);
 
-	res = curl_easy_perform(curl);
-	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-
-	if (response_code == DOG_CURL_RESPONSE_OK &&
-	    strlen(dog_buffer_error) == 0) {
-		printf("cURL result: %s\t\t[V]\n",
-		    curl_easy_strerror(res));
-		printf("Response code: %ld\t\t[V]\n", response_code);
-	} else {
-		if (strlen(dog_buffer_error) > 0) {
-			printf("Error: %s\t\t[X]\n", dog_buffer_error);
-			minimal_debugging();
-		} else {
-			printf("cURL result: %s\t\t[X]\n",
-			    curl_easy_strerror(res));
-			minimal_debugging();
-		}
-	}
-
-	curl_easy_cleanup(curl);
+	curl_easy_cleanup(pkg_curl);
 	curl_slist_free_all(headers);
 
 	return (response_code >= 200 && response_code < 300);
 }
 
-static
-int
-package_http_get_content(const char *url, const char *github_token,
-    char **out_html)
+static int
+package_http_get_content(const char *url, const char *github_token, char **out_html)
 {
-	CURL *curl;
+	CURL *pkg_curl;
 	CURLcode res;
 	struct curl_slist *headers = NULL;
 	struct memory_struct buffer = { 0 };
 
-	curl = curl_easy_init();
-	if (!curl)
+	pkg_curl = curl_easy_init();
+	if (!pkg_curl)
 		return (0);
 
 	if (github_token && strlen(github_token) > 0 &&
@@ -323,22 +302,22 @@ package_http_get_content(const char *url, const char *github_token,
 	}
 
 	headers = curl_slist_append(headers, "User-Agent: watchdogs/1.0");
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+	curl_easy_setopt(pkg_curl, CURLOPT_HTTPHEADER, headers);
 
-	curl_easy_setopt(curl, CURLOPT_URL, url);
+	curl_easy_setopt(pkg_curl, CURLOPT_URL, url);
 
 	memory_struct_init(&buffer);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&buffer);
+	curl_easy_setopt(pkg_curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
+	curl_easy_setopt(pkg_curl, CURLOPT_WRITEDATA, (void *)&buffer);
 
-	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 15L);
-	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
+	curl_easy_setopt(pkg_curl, CURLOPT_FOLLOWLOCATION, 1L);
+	curl_easy_setopt(pkg_curl, CURLOPT_CONNECTTIMEOUT, 15L);
+	curl_easy_setopt(pkg_curl, CURLOPT_TIMEOUT, 60L);
 
-	curl_verify_cacert_pem(curl);
+	curl_verify_cacert_pem(pkg_curl);
 
-	res = curl_easy_perform(curl);
-	curl_easy_cleanup(curl);
+	res = curl_easy_perform(pkg_curl);
+	curl_easy_cleanup(pkg_curl);
 	curl_slist_free_all(headers);
 
 	if (res != CURLE_OK || buffer.size == 0) {
@@ -367,8 +346,7 @@ package_parse_repo(const char *input, struct _repositories *ctx)
 	tag_ptr = strrchr(parse_input, '?');
 	if (tag_ptr) {
 		*tag_ptr = '\0';
-		strncpy(ctx->tag, tag_ptr + 1,
-		    sizeof(ctx->tag) - 1);
+		strncpy(ctx->tag, tag_ptr + 1, sizeof(ctx->tag) - 1);
 	}
 
 	path_ptr = parse_input;
@@ -381,18 +359,22 @@ package_parse_repo(const char *input, struct _repositories *ctx)
 		strcpy(ctx->host, "github");
 		strcpy(ctx->domain, "github.com");
 		path_ptr = strstr(path_ptr, "github.com") + 11;
+
 	} else if (strstr(path_ptr, "gitlab.com")) {
 		strcpy(ctx->host, "gitlab");
 		strcpy(ctx->domain, "gitlab.com");
 		path_ptr = strstr(path_ptr, "gitlab.com") + 11;
+
 	} else if (strstr(path_ptr, "gitea.com") || strstr(path_ptr, "gitea")) {
 		strcpy(ctx->host, "gitea");
 		strcpy(ctx->domain, "gitea.com");
 		path_ptr = strstr(path_ptr, "/") + 1;
+
 	} else if (strstr(path_ptr, "sourceforge.net")) {
 		strcpy(ctx->host, "sourceforge");
 		strcpy(ctx->domain, "sourceforge.net");
 		path_ptr = strstr(path_ptr, "sourceforge.net") + 16;
+
 	} else {
 		print(DOG_COL_BCYAN "1. GitHub | 2. GitLab | 3. Gitea | 4. SourceForge\n");
 		choice = readline("Please select host (1-4): ");
@@ -684,8 +666,10 @@ package_handle_repo(const struct _repositories *ctx, char *put_url,
 			
 			if (opr == NULL) {
 				pr_info(stdout,
-					"Installing for?\n   Windows (A/a/Enter) : GNU/Linux : (B/b)");
-				char *selecting_os = readline(" > ");
+					"Installing for?\n"
+					"   Windows (A/a/Enter) : GNU/Linux : (B/b)");
+				print(DOG_COL_CYAN ">" DOG_COL_DEFAULT);
+				char *selecting_os = readline(" ");
 				if (selecting_os[0] == '\0' ||
 					selecting_os[0] == 'A' || selecting_os[0] == 'a')
 				{
@@ -732,8 +716,7 @@ package_handle_repo(const struct _repositories *ctx, char *put_url,
 			};
 
 			for (j = 0; j < 2 && !ret; j++) {
-				snprintf(put_url, put_size,
-				    package_arch_format[j],
+				snprintf(put_url, put_size, package_arch_format[j],
 				    ctx->user,
 				    ctx->repo,
 				    tag_access);
@@ -796,7 +779,7 @@ void
 package_configure_samp_conf(const char *config_file, const char *fw_line,
     const char *plugin_name)
 {
-	FILE	*temp_file, *ctr_file;
+	FILE	*temp_file, *tmp_proc_file;
 	char	 temp_path[DOG_PATH_MAX];
 	char	 ctr_line[DOG_PATH_MAX];
 	int	 int_random_size, t_exist, tr_exist, tr_ln_has_tx;
@@ -819,13 +802,14 @@ package_configure_samp_conf(const char *config_file, const char *fw_line,
 	    "Create Dependencies '%s' into '%s'\t\t" DOG_COL_YELLOW "[V]\n",
 	    plugin_name, config_file);
 
-	ctr_file = fopen(config_file, "r");
-	if (ctr_file) {
+	tmp_proc_file = fopen(config_file, "r");
+
+	if (tmp_proc_file) {
 		t_exist = 0;
 		tr_exist = 0;
 		tr_ln_has_tx = 0;
 
-		while (fgets(ctr_line, sizeof(ctr_line), ctr_file)) {
+		while (fgets(ctr_line, sizeof(ctr_line), tmp_proc_file)) {
 			ctr_line[strcspn(ctr_line, "\n")] = 0;
 			if (strstr(ctr_line, plugin_name) != NULL)
 				t_exist = 1;
@@ -835,15 +819,15 @@ package_configure_samp_conf(const char *config_file, const char *fw_line,
 					tr_ln_has_tx = 1;
 			}
 		}
-		fclose(ctr_file);
+		fclose(tmp_proc_file);
 
 		if (t_exist)
 			return;
 
 		if (tr_exist && !tr_ln_has_tx) {
-			ctr_file = fopen(config_file, "r");
+			tmp_proc_file = fopen(config_file, "r");
 
-			while (fgets(ctr_line, sizeof(ctr_line), ctr_file)) {
+			while (fgets(ctr_line, sizeof(ctr_line), tmp_proc_file)) {
 				char	free_line[DOG_PATH_MAX];
 				strcpy(free_line, ctr_line);
 				free_line[strcspn(free_line, "\n")] =
@@ -858,21 +842,21 @@ package_configure_samp_conf(const char *config_file, const char *fw_line,
 				}
 			}
 
-			fclose(ctr_file);
+			fclose(tmp_proc_file);
 			fclose(temp_file);
 
 			remove(config_file);
 			rename(temp_path, config_file);
 
 		} else if (!tr_exist) {
-			ctr_file = fopen(config_file, "a");
-			fprintf(ctr_file, "%s %s\n", fw_line, plugin_name);
-			fclose(ctr_file);
+			tmp_proc_file = fopen(config_file, "a");
+			fprintf(tmp_proc_file, "%s %s\n", fw_line, plugin_name);
+			fclose(tmp_proc_file);
 		}
 	} else {
-		ctr_file = fopen(config_file, "w");
-		fprintf(ctr_file, "%s %s\n", fw_line, plugin_name);
-		fclose(ctr_file);
+		tmp_proc_file = fopen(config_file, "w");
+		fprintf(tmp_proc_file, "%s %s\n", fw_line, plugin_name);
+		fclose(tmp_proc_file);
 	}
 
 	return;
@@ -885,7 +869,7 @@ static
 void package_configure_omp_conf(const char *config_name,
     const char *package_name)
 {
-	FILE	*ctr_file;
+	FILE	*tmp_proc_file;
 	cJSON	*cJSON_obj, *pawn, *cJSON_key, *dir_item, *size_package_name;
 	char	*buffer, *cJSON_Printed;
 	long	 fle_size;
@@ -899,34 +883,36 @@ void package_configure_omp_conf(const char *config_name,
 	    "Create Dependencies '%s' into '%s'\t\t" DOG_COL_YELLOW "[V]\n",
 	    package_name, config_name);
 
-	ctr_file = fopen(config_name, "r");
+	tmp_proc_file = fopen(config_name, "r");
 
-	if (!ctr_file) {
+	if (!tmp_proc_file) {
 		cJSON_obj = cJSON_CreateObject();
 	} else {
-		fseek(ctr_file, 0, SEEK_END);
-		fle_size = ftell(ctr_file);
-		fseek(ctr_file, 0, SEEK_SET);
+		fseek(tmp_proc_file, 0, SEEK_END);
+		fle_size = ftell(tmp_proc_file);
+		fseek(tmp_proc_file, 0, SEEK_SET);
 
 		buffer = (char *)dog_malloc(fle_size + 1);
 		if (!buffer) {
-			pr_error(stdout, "Memory allocation failed!");
+			pr_error(stdout,
+				"Memory allocation failed!");
 			minimal_debugging();
-			fclose(ctr_file);
+			fclose(tmp_proc_file);
 			return;
 		}
 
-		file_read = fread(buffer, 1, fle_size, ctr_file);
+		file_read = fread(buffer, 1, fle_size, tmp_proc_file);
 		if (file_read != fle_size) {
-			pr_error(stdout, "Failed to read the entire file!");
+			pr_error(stdout,
+				"Failed to read the entire file!");
 			minimal_debugging();
 			dog_free(buffer);
-			fclose(ctr_file);
+			fclose(tmp_proc_file);
 			return;
 		}
 
 		buffer[fle_size] = '\0';
-		fclose(ctr_file);
+		fclose(tmp_proc_file);
 
 		cJSON_obj = cJSON_Parse(buffer);
 		dog_free(buffer);
@@ -944,13 +930,17 @@ void package_configure_omp_conf(const char *config_name,
 	cJSON_key = cJSON_GetObjectItem(pawn, "legacy_plugins");
 	if (!cJSON_key) {
 		cJSON_key = cJSON_CreateArray();
-		cJSON_AddItemToObject(pawn, "legacy_plugins", cJSON_key);
+		cJSON_AddItemToObject(pawn,
+							  "legacy_plugins",
+							  cJSON_key);
 	}
 
 	if (!cJSON_IsArray(cJSON_key)) {
 		cJSON_DeleteItemFromObject(pawn, "legacy_plugins");
 		cJSON_key = cJSON_CreateArray();
-		cJSON_AddItemToObject(pawn, "legacy_plugins", cJSON_key);
+		cJSON_AddItemToObject(pawn,
+							  "legacy_plugins",
+							  cJSON_key);
 	}
 
 	p_exist = 0;
@@ -968,10 +958,10 @@ void package_configure_omp_conf(const char *config_name,
 	}
 
 	cJSON_Printed = cJSON_Print(cJSON_obj);
-	ctr_file = fopen(config_name, "w");
-	if (ctr_file) {
-		fputs(cJSON_Printed, ctr_file);
-		fclose(ctr_file);
+	tmp_proc_file = fopen(config_name, "w");
+	if (tmp_proc_file) {
+		fputs(cJSON_Printed, tmp_proc_file);
+		fclose(tmp_proc_file);
 	}
 
 	cJSON_Delete(cJSON_obj);
@@ -987,7 +977,7 @@ void
 package_add_include(const char *input, char *package_name,
     char *following)
 {
-	FILE	*m_file, *this_proc_file;
+	FILE	*m_file, *tmp_proc_file;
 	char	*ct_modes, *pos, *insert_at, *line_start, *line_end;
 	char	*last_inc, *last_inc_end, *end;
 	char	 lgth_name[DOG_PATH_MAX];
@@ -1024,11 +1014,17 @@ package_add_include(const char *input, char *package_name,
 	ct_modes[fle_size] = '\0';
 	fclose(m_file);
 
-	strncpy(lgth_name, package_name, sizeof(lgth_name) - 1);
+	strncpy(lgth_name,
+			package_name,
+			sizeof(lgth_name) - 1);
 
-	if (strchr(lgth_name, '<') && strchr(lgth_name, '>')) {
-		char	*open = strchr(lgth_name, '<');
-		char	*close = strchr(lgth_name, '>');
+#define _include_trigger "#include"
+#define _include_chr_open '<'
+#define _include_chr_close '>'
+
+	if (strchr(lgth_name, _include_chr_open) && strchr(lgth_name, _include_chr_close)) {
+		char	*open = strchr(lgth_name, _include_chr_open);
+		char	*close = strchr(lgth_name, _include_chr_close);
 		if (open && close) {
 			memmove(lgth_name, open + 1, close - open - 1);
 			lgth_name[close - open - 1] = '\0';
@@ -1036,7 +1032,7 @@ package_add_include(const char *input, char *package_name,
 	}
 
 	pos = ct_modes;
-	while ((pos = strstr(pos, "#include"))) {
+	while ((pos = strstr(pos, _include_trigger))) {
 		line_end = strchr(pos, '\n');
 		if (!line_end)
 			line_end = ct_modes + fle_size;
@@ -1081,19 +1077,19 @@ package_add_include(const char *input, char *package_name,
 		pos = line_end + 1;
 	}
 
-	this_proc_file = fopen(input, "w");
-	if (!this_proc_file) {
+	tmp_proc_file = fopen(input, "w");
+	if (!tmp_proc_file) {
 		dog_free(ct_modes);
 		return;
 	}
 
 	if (insert_at) {
-		fwrite(ct_modes, 1, insert_at - ct_modes, this_proc_file);
+		fwrite(ct_modes, 1, insert_at - ct_modes, tmp_proc_file);
 
 		if (insert_at > ct_modes && *(insert_at - 1) != '\n')
-			fprintf(this_proc_file, "\n");
+			fprintf(tmp_proc_file, "\n");
 
-		fprintf(this_proc_file, "%s\n", package_name);
+		fprintf(tmp_proc_file, "%s\n", package_name);
 
 		if (*insert_at) {
 			end = ct_modes + fle_size;
@@ -1103,39 +1099,48 @@ package_add_include(const char *input, char *package_name,
 				end--;
 
 			if (end > insert_at)
-				fwrite(insert_at, 1, end - insert_at, this_proc_file);
-			fprintf(this_proc_file, "\n");
+				fwrite(insert_at, 1, end - insert_at,
+					tmp_proc_file);
+			fprintf(tmp_proc_file, "\n");
 		}
 	} else {
 		last_inc_end = NULL;
 		pos = ct_modes;
 
-		while ((pos = strstr(pos, "#include"))) {
+		while ((pos = strstr(pos, _include_trigger))) {
 			last_inc_end = strchr(pos, '\n');
-			if (!last_inc_end)
-				last_inc_end = ct_modes + fle_size;
+			if (!last_inc_end) {
+				last_inc_end
+					= ct_modes + fle_size;
+			}
 			pos = last_inc_end + 1;
 		}
 
 		if (last_inc_end) {
-			fwrite(ct_modes, 1, last_inc_end - ct_modes, this_proc_file);
-			fprintf(this_proc_file, "\n%s\n", package_name);
+			fwrite(ct_modes, 1, last_inc_end - ct_modes,
+					tmp_proc_file);
+			fprintf(tmp_proc_file, "\n%s\n", package_name);
 
 			end = ct_modes + fle_size;
 			while (end > last_inc_end && (*(end - 1) == '\n' ||
 			    *(end - 1) == '\r'))
+			{
 				end--;
+			}
 
-			if (end > last_inc_end)
+			if (end > last_inc_end) {
 				fwrite(last_inc_end, 1, end - last_inc_end,
-				    this_proc_file);
+				    tmp_proc_file);
+			}
 		} else {
-			fprintf(this_proc_file, "%s\n", package_name);
-			fwrite(ct_modes, 1, (size_t)fle_size, this_proc_file);
+			fprintf(tmp_proc_file, "%s\n", package_name);
+			fwrite(ct_modes, 1,
+					(size_t)fle_size,
+					tmp_proc_file);
 		}
 	}
 
-	fclose(this_proc_file);
+	fclose(tmp_proc_file);
 	dog_free(ct_modes);
 }
 
@@ -1145,8 +1150,8 @@ static void
 package_include_prints(const char *package_include)
 {
 	toml_table_t	*dog_toml_server_config;
-	FILE		*this_proc_file;
-	char		 dog_buffer_error[DOG_PATH_MAX],
+	FILE		*tmp_proc_file;
+	char		 dog_error_buffer[DOG_PATH_MAX],
 			 dependencies[DOG_PATH_MAX], _directive[DOG_MAX_PATH];
 	const char	*package_n, *direct_bnames;
 	char		*userinput;
@@ -1157,16 +1162,16 @@ package_include_prints(const char *package_include)
 	snprintf(dependencies, sizeof(dependencies), "%s", package_n);
 	direct_bnames = fet_basename(dependencies);
 
-	this_proc_file = fopen("watchdogs.toml", "r");
-	if (this_proc_file) {
-		dog_toml_server_config = toml_parse_file(this_proc_file,
-		    dog_buffer_error, sizeof(dog_buffer_error));
-		fclose(this_proc_file);
+	tmp_proc_file = fopen("watchdogs.toml", "r");
+	if (tmp_proc_file) {
+		dog_toml_server_config = toml_parse_file(tmp_proc_file,
+		    dog_error_buffer, sizeof(dog_error_buffer));
+		fclose(tmp_proc_file);
 
 		if (!dog_toml_server_config) {
 			pr_error(stdout,
 			    "failed to parse the watchdogs.toml..: %s",
-			    dog_buffer_error);
+			    dog_error_buffer);
 			minimal_debugging();
 			return;
 		}
@@ -1189,7 +1194,7 @@ package_include_prints(const char *package_include)
 
 	if (k == false) {
 		printf(DOG_COL_BCYAN
-		    "Where do you want to install %s? (enter for: %s)"
+		    "Where do you want to Add %s? (enter for: %s)"
 		    DOG_COL_DEFAULT, _directive,
 		    dogconfig.dog_toml_serv_input);
 		userinput = readline(" ");
@@ -1243,7 +1248,7 @@ static void move_inc_from_dir(const char *src_dir, const char *include_dest)
         snprintf(dst, sizeof(dst), "%s%s%s",
                  include_dest, separator, ent->d_name);
 
-        if (rename(src, dst) != 0) {
+        if (path_access(src) == 1 && rename(src, dst) != 0) {
 #ifdef DOG_WINDOWS
             char *argv[] = { "move", "/Y", src, dst, NULL };
 #else
@@ -1355,10 +1360,10 @@ dump_file_type(const char *dump_path, char *dump_pattern,
                            MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED)) {
                 move_success = 1;
             } else {
-                snprintf(command, sizeof(command), "\"%s\" \"%s\" >nul 2>&1 && del \"%s\"",
+                snprintf(tmp_buf, sizeof(tmp_buf), "\"%s\" \"%s\" >nul 2>&1 && del \"%s\"",
                          dogconfig.dog_sef_found_list[i], dest_path,
                          dogconfig.dog_sef_found_list[i]);
-                char *argv[] = { "copy", "/Y", command, NULL };
+                char *argv[] = { "copy", "/Y", tmp_buf, NULL };
                 move_success = dog_exec_command(argv);
             }
 		#else
@@ -1391,6 +1396,11 @@ dump_file_type(const char *dump_path, char *dump_pattern,
                         " [M] Plugins %s -> %s%s?\n",
                         basename, dump_loc, separator);
                 }
+#if defined (_DBG_PRINT)
+				pr_info(stdout,
+					"basename: %s dump_loc: %s separator: %s",
+					basename, dump_loc, separator);
+#endif
             } else {
                 pr_error(stdout, "Failed to move: %s", basename);
             }
@@ -1519,17 +1529,17 @@ void package_move_files(const char *package_dir, const char *package_loc)
                 snprintf(dest_file, sizeof(dest_file), "%s%s%s",
                          include_dest, separator, package_subdir_item->d_name);
                 
-                if (rename(src_file, dest_file) != 0) {
+                if (path_access(src_file) == 1 && rename(src_file, dest_file) != 0) {
 	#ifdef DOG_WINDOWS
-		            snprintf(command, sizeof(command),
+		            snprintf(tmp_buf, sizeof(tmp_buf),
 		                    "\"%s\" \"%s\"",
 		                    src_file, dest_file);
-		            char *moving[] = { "move", "/Y", command, ">nul", "2>&1", NULL };
+		            char *moving[] = { "move", "/Y", tmp_buf, ">nul", "2>&1", NULL };
 	#else
-		            snprintf(command, sizeof(command),
+		            snprintf(tmp_buf, sizeof(tmp_buf),
 		                    "\"%s\" \"%s\"",
 		                    src_file, dest_file);
-		            char *moving[] = { "mv", "-f", command, ">/dev/null", "2>&1", NULL };
+		            char *moving[] = { "mv", "-f", tmp_buf, ">/dev/null", "2>&1", NULL };
 	#endif
             		dog_exec_command(moving);
                 }
@@ -1555,18 +1565,18 @@ void package_move_files(const char *package_dir, const char *package_loc)
         snprintf(dest_file, sizeof(dest_file), "%s%s%s",
                  include_dest, separator, n_items->d_name);
         
-        if (rename(the_path, dest_file) != 0) {
+        if (path_access(the_path) == 1 && rename(the_path, dest_file) != 0) {
 	#ifdef DOG_WINDOWS
-            snprintf(command, sizeof(command),
+            snprintf(tmp_buf, sizeof(tmp_buf),
                     "\"%s\" \"%s\"",
                     the_path, dest_file);
-            char *moving[] = { "move", "/Y", command, ">nul", "2>&1" };
+            char *moving[] = { "move", "/Y", tmp_buf, ">nul", "2>&1" };
 
 	#else
-            snprintf(command, sizeof(command),
+            snprintf(tmp_buf, sizeof(tmp_buf),
                     "\"%s\" \"%s\"",
                     the_path, dest_file);
-            char *moving[] = { "mv", "-f", command, ">/dev/null", "2>&1" };
+            char *moving[] = { "mv", "-f", tmp_buf, ">/dev/null", "2>&1" };
 	#endif
             dog_exec_command(moving);
         }
@@ -1688,12 +1698,13 @@ dog_install_depends(const char *packages, const char *branch, const char *where)
 {
 	char			 buffer[1024] = {0}, package_url[1024] = {0},
 				 package_name[DOG_PATH_MAX] = {0};
-	char			*procure_buffer = NULL, *fet_pwd = NULL, *init_location = NULL,
+	char			*procure_buffer = NULL, *fet_pwd = NULL,
 				*locations = NULL;
+	static char *init_location = NULL;
 	const char		*dependencies[MAX_DEPENDS] = {0};
 	struct _repositories	 repo;
 	int			 package_counts = 0, i;
-	static int   k = false;
+	static int   location_ready = false;
 #ifdef DOG_WINDOWS
 	WIN32_FIND_DATAA ffd;
 	HANDLE           hFind;
@@ -1784,7 +1795,7 @@ dog_install_depends(const char *packages, const char *branch, const char *where)
 
 		dog_download_file(package_url, package_name);
 		if (where == NULL || where[0] == '\0') {
-			if (!k) {
+			if (!location_ready) {
 				printf("\n"
 					   ".."
 					   "LIST OF DIRECTORY: "
@@ -1845,8 +1856,9 @@ dog_install_depends(const char *packages, const char *branch, const char *where)
 				if (locations[0] == '\0' || locations[0] == '.') {
 					fet_pwd = dog_procure_pwd();
 					init_location = strdup(fet_pwd);
-					dog_apply_depends(package_name,
-					    fet_pwd);
+					if (fet_pwd)
+						dog_apply_depends(package_name,
+							fet_pwd);
 					dog_free(locations);
 				} else {
 					if (dir_exists(locations) == 0)
@@ -1857,7 +1869,7 @@ dog_install_depends(const char *packages, const char *branch, const char *where)
 					dog_free(locations);
 				}
 
-				k = true;
+				location_ready = true;
 			} else {
 				dog_apply_depends(package_name, init_location);
 			}

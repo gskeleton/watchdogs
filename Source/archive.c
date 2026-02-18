@@ -1,7 +1,7 @@
 #include  "utils.h"
 #include  "archive.h"
 #include  "curl.h"
-#include  "debug.h"
+#include  "extra/debug.h"
 #include  "units.h"
 
 static void

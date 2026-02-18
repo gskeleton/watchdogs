@@ -3,7 +3,7 @@
 #include "../crypto.h"
 #include "../replicate.h"
 #include "../compiler.h"
-#include "../debug.h"
+#include "debug.h"
 #include "server.h"
 
 static char sbuf[0x400];
@@ -46,7 +46,7 @@ dog_server_crash_check(void)
 {
     int n;  /* snprintf return value */
     size_t  size_l;  /* Output size tracker */
-    FILE *this_proc_file = NULL;  /* Log file handle */
+    FILE *tmp_proc_file = NULL;  /* Log file handle */
     char  out[DOG_MAX_PATH + 26]; /* Output buffer */
     char  buf[DOG_MAX_PATH];  /* Line buffer for log reading */
     rate_sampvoice_server = 0;
@@ -57,11 +57,11 @@ dog_server_crash_check(void)
 
     /* Open appropriate log file based on server environment */
     if (fet_server_env() == false)  /* SA-MP */
-        this_proc_file = fopen(dogconfig.dog_toml_server_logs, "rb");
+        tmp_proc_file = fopen(dogconfig.dog_toml_server_logs, "rb");
     else  /* open.mp */
-        this_proc_file = fopen(dogconfig.dog_toml_server_logs, "rb");
+        tmp_proc_file = fopen(dogconfig.dog_toml_server_logs, "rb");
 
-    if (this_proc_file == NULL) {
+    if (tmp_proc_file == NULL) {
         pr_error(stdout, "log file not found!.");
         minimal_debugging();
         return;
@@ -85,7 +85,7 @@ dog_server_crash_check(void)
     fflush(stdout);
 
     /* Process log file buffer by buffer */
-    while (fgets(buf, sizeof(buf), this_proc_file)) {
+    while (fgets(buf, sizeof(buf), tmp_proc_file)) {
         /* Pattern 1: Filterscript loading errors */
         if (strfind(buf, "Unable to load filterscript", true)) {
             n = snprintf(out, sizeof(out),
@@ -421,6 +421,11 @@ dog_server_crash_check(void)
             fwrite(out, 1, size_l, stdout);
             pr_color(stdout, DOG_COL_BLUE, "%s", buf);
             fflush(stdout);
+            n = snprintf(out, sizeof(out), "\tMaybe the plugin failed to load? "
+                "You can try upgrading the failed plugin and, "
+                "if you're on Windows, make sure you have the Visual C++ Redistributable installed.\n\t");
+            size_l = (n < 0) ? 0 : (size_t)n;
+            fwrite(out, 1, size_l, stdout);
         }
 
         /* Pattern 15: Timeout events */
@@ -518,22 +523,22 @@ dog_server_crash_check(void)
         fflush(stdout);
     }
 
-    fclose(this_proc_file);
+    fclose(tmp_proc_file);
 
     /* SampVoice port mismatch detection */
     if (rate_sampvoice_server) {
         if (path_access("server.cfg") == 0)
             goto skip;  /* No server.cfg to check */
 
-        this_proc_file = fopen("server.cfg", "rb");
-        if (this_proc_file == NULL)
+        tmp_proc_file = fopen("server.cfg", "rb");
+        if (tmp_proc_file == NULL)
             goto skip;
 
         int _sampvoice_port = 0;
         char _p_sampvoice_port[16] = {0};
 
         /* Find sv_port setting in server.cfg */
-        while (fgets(buf, sizeof(buf), this_proc_file)) {
+        while (fgets(buf, sizeof(buf), tmp_proc_file)) {
             if (strfind(buf, "sv_port", true)) {
                 if (sscanf(buf, "sv_port %d", &_sampvoice_port) != 1)
                     break;
@@ -541,7 +546,7 @@ dog_server_crash_check(void)
                 break;
             }
         }
-        fclose(this_proc_file);
+        fclose(tmp_proc_file);
 
         /* Compare configured port with actual running port */
         if (sampvoice_port && strcmp(_p_sampvoice_port, sampvoice_port) != 0) {

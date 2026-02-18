@@ -20,7 +20,6 @@ struct memory_struct {
 		size_t allocated;
 };
 
-#define DOG_CURL_RESPONSE_OK (200)
 #define MAX_NUM_SITES (80)
 #define MAX_USERNAME_LEN	100
 #define MAX_VARIATIONS		100

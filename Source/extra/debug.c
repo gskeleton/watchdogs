@@ -1,8 +1,8 @@
-#include "extra/server.h"
-#include "utils.h"
-#include "units.h"
-#include "crypto.h"
-#include "compiler.h"
+#include "../utils.h"
+#include "server.h"
+#include "../units.h"
+#include "../crypto.h"
+#include "../compiler.h"
 #include "debug.h"
 
 static void unit_restore(void) {
@@ -16,13 +16,13 @@ static void unit_restore(void) {
         
         sigint_handler
             = !sigint_handler;
-        compiler_is_err
-            = !compiler_is_err;
+        compiler_is_error
+            = !compiler_is_error;
         unit_selection_stat
             = !unit_selection_stat;
 }
 
-void _unit_debugger(int hard_debug,
+void _unit_debugger(int multi_debug,
             const char *function,
             const char *file, int line) {
 
@@ -40,7 +40,7 @@ void _unit_debugger(int hard_debug,
         return;
 #endif
 
-        if (hard_debug == 1) {
+        if (multi_debug == 1) {
             pr_color(stdout, DOG_COL_YELLOW, "-DEBUGGER ");
             printf("[function: %s | "
                 "line: %d | "
@@ -135,7 +135,7 @@ void _unit_debugger(int hard_debug,
             printf("FMA: Supported\n");
         #endif
             
-        } else if (hard_debug == 0) {
+        } else if (multi_debug == 0) {
             pr_color(stdout, DOG_COL_YELLOW, "-DEBUGGER ");
             printf("[function: %s | "
                 "line: %d | "

@@ -4,7 +4,7 @@
 #include  "replicate.h"
 #include  "compiler.h"
 #include  "units.h"
-#include  "debug.h"
+#include  "extra/debug.h"
 #include  "library.h"
 #include  "curl.h"
 
@@ -767,9 +767,8 @@ dog_download_file(const char *url, const char *output_filename)
 	char *query_pos = strchr(output_filename, '?');
 	if (query_pos) {
 		int name_len = query_pos - output_filename;
-		if (name_len >= sizeof(clp_fname)) {
+		if (name_len >= sizeof(clp_fname))
 			name_len = sizeof(clp_fname) - 1;
-		}
 		strncpy(clp_fname, output_filename, name_len);
 		clp_fname[name_len] = '\0';
 	} else {
@@ -778,41 +777,42 @@ dog_download_file(const char *url, const char *output_filename)
 		clp_fname[sizeof(clp_fname) - 1] = '\0';
 	}
 
-	char fnl_fname[DOG_PATH_MAX];
-	if (strstr(clp_fname, "://") || strstr(clp_fname, "http")) {
-		const char *url_filename = strrchr(url, _PATH_CHR_SEP_POSIX);
-		if (url_filename) {
-			char *url_query_pos = strchr(url_filename, '?');
-			if (url_query_pos) {
-				int url_name_len = url_query_pos -
-				    url_filename;
-				if (url_name_len >= DOG_PATH_MAX) {
-					url_name_len = sizeof(fnl_fname) -
-					    1;
+	char curl_url_finalname[DOG_PATH_MAX];
+	if (strstr(clp_fname, "://") != NULL || strstr(clp_fname, "http") != NULL) {
+		const char *curl_url_filename
+			= strrchr(url, _PATH_CHR_SEP_POSIX);
+		if (curl_url_filename) {
+			char *curl_url_query_pos
+				= strchr(curl_url_filename, '?');
+			if (curl_url_query_pos) {
+				int curl_url_name_len
+					= curl_url_query_pos - curl_url_filename;
+				if (curl_url_name_len >= DOG_PATH_MAX) {
+					curl_url_name_len = sizeof(curl_url_finalname) - 1;
 				}
-				strncpy(fnl_fname, url_filename,
-				    url_name_len);
-				fnl_fname[url_name_len] = '\0';
-				++url_filename;
+				strncpy(curl_url_finalname, curl_url_filename,
+				    curl_url_name_len);
+				curl_url_finalname[curl_url_name_len] = '\0';
+				++curl_url_filename;
 			} else {
-				strncpy(fnl_fname, url_filename,
-				    sizeof(fnl_fname) - 1);
-				fnl_fname[sizeof(fnl_fname) - 1] =
+				strncpy(curl_url_finalname, curl_url_filename,
+				    sizeof(curl_url_finalname) - 1);
+				curl_url_finalname[sizeof(curl_url_finalname) - 1] =
 				    '\0';
 			}
 		} else {
-			snprintf(fnl_fname, sizeof(fnl_fname),
+			snprintf(curl_url_finalname, sizeof(curl_url_finalname),
 			    "downloaded_file");
 		}
 	} else {
-		strncpy(fnl_fname, clp_fname,
-		    sizeof(fnl_fname) - 1);
-		fnl_fname[sizeof(fnl_fname) - 1] = '\0';
+		strncpy(curl_url_finalname, clp_fname,
+		    sizeof(curl_url_finalname) - 1);
+		curl_url_finalname[sizeof(curl_url_finalname) - 1] = '\0';
 	}
 
-	parsing_filename(fnl_fname);
+	parsing_filename(curl_url_finalname);
 
-	pr_color(stdout, DOG_COL_GREEN, "* Try Downloading %s", fnl_fname);
+	pr_color(stdout, DOG_COL_GREEN, "* Try Downloading %s", curl_url_finalname);
 
 	while (retry_count < 5) {
 		curl = curl_easy_init();
@@ -870,10 +870,10 @@ dog_download_file(const char *url, const char *output_filename)
 		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
 		curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
 
-		static bool rate_create_debugging = true;
-
 		curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, NULL);
 		curl_easy_setopt(curl, CURLOPT_XFERINFODATA, NULL);
+
+		static bool rate_create_debugging = false;
 
 		if (rate_create_debugging) {
 			curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
@@ -893,14 +893,14 @@ dog_download_file(const char *url, const char *output_filename)
 		curl_slist_free_all(headers);
 
 		if (res == CURLE_OK &&
-		    response_code == DOG_CURL_RESPONSE_OK &&
+		    response_code == 200 &&
 		    download_buffer.len > 0) {
-			FILE *fp = fopen(fnl_fname, "wb");
+			FILE *fp = fopen(curl_url_finalname, "wb");
 			if (!fp) {
 				pr_color(stdout, DOG_COL_RED,
 				    "* Failed to open file for writing: %s "
 				    "(errno: %d - %s)\n",
-				    fnl_fname, errno, strerror(errno));
+				    curl_url_finalname, errno, strerror(errno));
 				dog_free(download_buffer.data);
 				++retry_count;
 				continue;
@@ -914,26 +914,26 @@ dog_download_file(const char *url, const char *output_filename)
 				pr_color(stdout, DOG_COL_RED,
 				    "* Failed to write all data to file: %s "
 				    "(written: %zu, expected: %zu)\n",
-				    fnl_fname, written,
+				    curl_url_finalname, written,
 				    download_buffer.len);
 				dog_free(download_buffer.data);
-				unlink(fnl_fname);
+				unlink(curl_url_finalname);
 				++retry_count;
 				continue;
 			}
 
 			buf_free(&download_buffer);
 
-			if (stat(fnl_fname, &file_stat) == 0 &&
+			if (stat(curl_url_finalname, &file_stat) == 0 &&
 			    file_stat.st_size > 0) {
 				pr_color(stdout, DOG_COL_GREEN,
 				    " %% successful: %" PRIdMAX " bytes to %s\n",
 				    (intmax_t)file_stat.st_size,
-				    fnl_fname);
+				    curl_url_finalname);
 
 				char size_filename[DOG_PATH_MAX];
 				snprintf(size_filename, sizeof(size_filename),
-				    "%s", fnl_fname);
+				    "%s", curl_url_finalname);
 
 				char *extension = NULL;
 				if ((extension = strstr(size_filename,
@@ -947,20 +947,20 @@ dog_download_file(const char *url, const char *output_filename)
 					*extension = '\0';
 				}
 
-				dog_extract_archive(fnl_fname,
+				dog_extract_archive(curl_url_finalname,
 				    size_filename);
 
 				if (installing_package) {
 					if (path_exists(
-                      fnl_fname) == 1) {
-                      destroy_arch_dir(fnl_fname);
+                      curl_url_finalname) == 1) {
+                      destroy_arch_dir(curl_url_finalname);
                   }
                 } else {
 					if (installing_pawncc) {
 						if (path_exists(
-						    fnl_fname) == 1) {
+						    curl_url_finalname) == 1) {
 							destroy_arch_dir(
-							    fnl_fname);
+							    curl_url_finalname);
 						}
 						pawncc_dir_source = strdup(
 							size_filename);
@@ -982,7 +982,7 @@ dog_download_file(const char *url, const char *output_filename)
 
 	pr_color(stdout, DOG_COL_RED,
 	    " Failed to download %s from %s after %d retries\n",
-	    fnl_fname, url, retry_count);
+	    curl_url_finalname, url, retry_count);
 
 	return (1);
 }

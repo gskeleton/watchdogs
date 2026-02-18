@@ -54,14 +54,14 @@ typedef struct {
 extern struct
 timespec pre_start,post_end;
 extern char *compiler_full_includes;
-extern char compiler_path_include_buf[];
-extern bool compiler_is_err,
-    compiler_installing_stdlib,
-    compiler_debug_flag_is_exists,
-    compiler_dog_flag_debug,
-    compiler_input_debug,
-    compiler_dog_flag_clean,
-    compiler_dog_flag_fast,
+extern char compiler_include_path[DOG_PATH_MAX];
+extern bool compiler_is_error,
+    compiler_missing_stdlib,
+    compiler_debug_options,
+    compiler_opt_debug,
+    compiler_input_info,
+    compiler_opt_clean,
+    compiler_opt_fast,
     process_file_success;
 
 int

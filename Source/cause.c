@@ -1,7 +1,7 @@
 #include  "utils.h"
 #include  "units.h"
 #include  "crypto.h"
-#include  "debug.h"
+#include  "extra/debug.h"
 #include  "replicate.h"
 #include  "cause.h"
 
@@ -57,6 +57,7 @@ static void compiler_detailed(const char *dog_output, int debug,
 
     if (path_exists(dog_output) && debug && error_count < 1 && header_size >= 1 && total_size >= 1) {
         __set_default_access(dog_output);
+
         unsigned long hash = crypto_djb2_hash_file(dog_output);
 
         len = snprintf(outbuf, sizeof(outbuf),
@@ -142,7 +143,9 @@ void cause_compiler_expl(const char *log_file, const char *dog_output, int debug
             int column = 0;
             for (int i = 0; ccs[i].cs_t; ++i) {
                 if ((found = strstr(compiler_line, ccs[i].cs_t))) {
-                    column = found - compiler_line;
+                    const char *colon = strchr(compiler_line, ':');
+                    if (colon)
+                        column = colon - compiler_line;
                     break;
                 }
             }

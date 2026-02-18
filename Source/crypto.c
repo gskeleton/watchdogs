@@ -146,6 +146,24 @@ uint32_t crypto_string_hash(const char *s)
       return (h);
 }
 
+/* Hex to bytes */
+int hex_to_bytes(const char *hex, uint8_t *out, size_t max_out)
+{
+    size_t len = strlen(hex);
+    if (len % 2 != 0)
+        return -1;
+
+    size_t final_len = len / 2;
+    if (final_len > max_out)
+        return -1;
+
+    for (size_t i = 0; i < final_len; i++) {
+        sscanf(hex + 2*i, "%2hhx", &out[i]);
+    }
+
+    return final_len;
+}
+
 /* DJB2 hash function applied to file contents */
 unsigned long crypto_djb2_hash_file(const char *filename) {
       FILE *f = fopen(filename, "rb");

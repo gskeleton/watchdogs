@@ -8,7 +8,7 @@ CFLAGS         = -O2 -pipe
 LDFLAGS        = -lm -lcurl -lreadline -lhistory -larchive
 
 SRCS = \
-	Source/debug.c \
+	Source/extra/debug.c \
 	Source/curl.c \
 	Source/units.c \
 	Source/utils.c \

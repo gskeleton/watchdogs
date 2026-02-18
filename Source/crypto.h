@@ -47,6 +47,8 @@ uint32_t crypto_generate_crc32(const void *data, size_t length);
 
 uint32_t crypto_string_hash(const char *s);
 
+int hex_to_bytes(const char *hex, uint8_t *out, size_t max_out);
+
 unsigned long crypto_djb2_hash_file(const char *filename);
 
 void crypto_simple_rand_bytes(uint8_t *buf, size_t len);
