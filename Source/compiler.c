@@ -420,111 +420,107 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
             goto skip_parent;
         
         /* Handle parent directory references in compile arguments */
-        for (;;) {
-            if (strstr(new_compile_args_val, "../") != NULL) {
-                char *tmp_args = strdup(new_compile_args_val);
-                if (!tmp_args)
-                    break;
-                size_t
-                    write_pos = 0, j,
-                    read_cur = 0, scan_idx;
-                bool
-                    parent_ready = false;
-                for (j = 0; tmp_args[j] != '\0';) {
-                    if (!parent_ready && !strncmp(&tmp_args[j], "../", 3)) {
-                        j += 3;
-                        while (tmp_args[j] != '\0' && tmp_args[j] != ' ' &&
-                               tmp_args[j] != '"')
-                        {
-                            compiler_parsing[write_pos++]
-                                = tmp_args[j++];
+    		for (;;) {
+                if (strstr(new_compile_args_val, "../") != NULL) {
+    				char *tmp_args = strdup(new_compile_args_val);
+    				if (!tmp_args)
+    					break;
+    				size_t
+    					write_pos = 0, j,
+    					read_cur = 0, sidx;
+    				bool
+    					parent_ready = false;
+    				for (j = 0; tmp_args[j] != '\0';) {
+    					if (!parent_ready && !strncmp(&tmp_args[j], "../", 3)) {
+    						j += 3;
+    						while (tmp_args[j] != '\0' && tmp_args[j] != ' ' &&
+    							   tmp_args[j] != '"')
+    						{
+    							compiler_parsing[write_pos++]
+    								= tmp_args[j++];
+    						}
+    						for (sidx = 0; sidx < write_pos; sidx++) {
+    							if (compiler_parsing[sidx] ==
+    								_PATH_CHR_SEP_POSIX ||
+    								compiler_parsing[sidx] ==
+    								_PATH_CHR_SEP_WIN32)
+    							{
+    								read_cur =
+    									sidx + 1;
+    							}
+    						}
+    						if (read_cur > 0) {
+    							write_pos = read_cur;
+    						}
+    						parent_ready = !parent_ready;
+    						break;
+    					} else { ++j; }
+    				}
+    
+    				dog_free(tmp_args);
+    
+    				if (!parent_ready && write_pos < 1) {
+    					strcpy(compiler_parsing, "../");
+    					goto parent_next;
+    				}
+    
+    				const int push_integar = 3;
+    				memmove(compiler_parsing + push_integar,
+                            compiler_parsing, write_pos);
+    				memcpy(compiler_parsing, "../", push_integar);
+                    
+    				write_pos += push_integar;
+    				compiler_parsing[write_pos] = '\0';
+    				
+    				if (compiler_parsing[write_pos - 1]
+                        != _PATH_CHR_SEP_POSIX &&
+    					compiler_parsing[write_pos - 1]
+                        != _PATH_CHR_SEP_WIN32)
+                    {
+                        strcat(compiler_parsing, "/");
+                    }
+    
+    			parent_next:
+    				memset(compiler_temp, 0, sizeof(compiler_temp));
+    				strcpy(compiler_temp, compiler_parsing);
+    
+    				if (strstr(compiler_temp, gamemodes_slash) ||
+    					strstr(compiler_temp, gamemodes_back_slash))
+    				{
+    					char *p = strstr(compiler_temp, gamemodes_slash);
+    					if (!p) {
+    						p = strstr(compiler_temp, gamemodes_back_slash);
                         }
-                        for (scan_idx = 0; scan_idx < write_pos; scan_idx++) {
-                            if (compiler_parsing[scan_idx] ==
-                                _PATH_CHR_SEP_POSIX ||
-                                compiler_parsing[scan_idx] ==
-                                _PATH_CHR_SEP_WIN32)
-                            {
-                                read_cur =
-                                    scan_idx + 1;
-                            }
-                        }
-                        if (read_cur > 0) {
-                            write_pos = read_cur;
-                        }
-                        parent_ready = !parent_ready;
-                        break;
-                    } else { ++j; }
-                }
-
-                dog_free(tmp_args);
-
-                if (!parent_ready && write_pos < 1) {
-                    strcpy(compiler_parsing, "../");
-                    goto parent_next;
-                }
-
-                const int push_integar = 3;
-                memmove(compiler_parsing + push_integar, compiler_parsing, write_pos);
-                memcpy(compiler_parsing, "../", push_integar);
-                write_pos += push_integar;
-                compiler_parsing[write_pos] = '\0';
-                
-                if (compiler_parsing[write_pos - 1] != _PATH_CHR_SEP_POSIX &&
-                    compiler_parsing[write_pos - 1] != _PATH_CHR_SEP_WIN32)
-                    { strcat(compiler_parsing, "/"); }
-
-            parent_next:
-                memset(compiler_temp, 0, sizeof(compiler_temp));
-                strcpy(compiler_temp, compiler_parsing);
-
-                if (strstr(compiler_temp, gamemodes_slash) ||
-                    strstr(compiler_temp, gamemodes_back_slash))
-                {
-                    char *p = strstr(compiler_temp,
-                        gamemodes_slash);
-                    if (!p)
-                        p = strstr(compiler_temp,
-                            gamemodes_back_slash);
-                    if (p)
-                        *p = '\0';
-                }
-
-                char *rets = strdup(dogconfig.dog_toml_all_flags);
-
-                memset(compiler_buf, 0, sizeof(compiler_buf));
-
-                if (!strstr(rets, "gamemodes/") &&
-                    !strstr(rets, "pawno/include/") &&
-                    !strstr(rets, "qawno/include/"))
-                {
-                    snprintf(compiler_buf, sizeof(compiler_buf),
-                        "-i" "=\"%s\""
-                        "-i" "=\"%s" "gamemodes/\" "
-                        "-i" "=\"%s" "pawno/include/\" "
-                        "-i" "=\"%s" "qawno/include/\" ",
-                    compiler_temp, compiler_temp, compiler_temp, compiler_temp);
-                } else {
-                    snprintf(compiler_buf, sizeof(compiler_buf),
-                        "-i" "=\"%s\"",
-                        compiler_temp);
-                }
-
-                if (rets) {
-                    free(rets);
-                    rets = NULL;
-                }
-
-                strncpy(compiler_path_include_buf, compiler_buf,
-                    sizeof(compiler_path_include_buf) - 1);
-                compiler_path_include_buf[
-                    sizeof(compiler_path_include_buf) - 1] = '\0';
-            } else {
-                snprintf(compiler_path_include_buf, sizeof(compiler_path_include_buf),
-                    "-i=none");
-            }
-            break;
-        }
+                        if (p) *p = '\0';
+    				}
+    
+    				if (!strstr(dogconfig.dog_toml_all_flags, "gamemodes/") &&
+    					!strstr(dogconfig.dog_toml_all_flags, "pawno/include/") &&
+    					!strstr(dogconfig.dog_toml_all_flags, "qawno/include/"))
+    				{
+    				    memset(compiler_buf, 0, sizeof(compiler_buf));
+    					snprintf(compiler_buf, sizeof(compiler_buf),
+    						"-i" "=\"%s\""
+    						"-i" "=\"%s" "gamemodes/\" "
+    						"-i" "=\"%s" "pawno/include/\" "
+    						"-i" "=\"%s" "qawno/include/\" ",
+    					compiler_temp, compiler_temp, compiler_temp, compiler_temp);
+    				} else {
+    				    memset(compiler_buf, 0, sizeof(compiler_buf));
+    					snprintf(compiler_buf, sizeof(compiler_buf),
+    						"-i" "=\"%s\"", compiler_temp);
+    				}
+    
+    				strncpy(compiler_path_include_buf, compiler_buf,
+    					sizeof(compiler_path_include_buf) - 1);
+    				compiler_path_include_buf[
+    					sizeof(compiler_path_include_buf) - 1] = '\0';
+    			} else {
+    				snprintf(compiler_path_include_buf, sizeof(compiler_path_include_buf),
+    					" ");
+    			}
+    			break;
+    		}
 
     skip_parent:
 		if (*new_compile_args_val == '\0' ||
@@ -748,7 +744,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
     					break;
     				size_t
     					write_pos = 0, j,
-    					read_cur = 0, scan_idx;
+    					read_cur = 0, sidx;
     				bool
     					parent_ready = false;
     				for (j = 0; tmp_args[j] != '\0';) {
@@ -760,14 +756,14 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
     							compiler_parsing[write_pos++]
     								= tmp_args[j++];
     						}
-    						for (scan_idx = 0; scan_idx < write_pos; scan_idx++) {
-    							if (compiler_parsing[scan_idx] ==
+    						for (sidx = 0; sidx < write_pos; sidx++) {
+    							if (compiler_parsing[sidx] ==
     								_PATH_CHR_SEP_POSIX ||
-    								compiler_parsing[scan_idx] ==
+    								compiler_parsing[sidx] ==
     								_PATH_CHR_SEP_WIN32)
     							{
     								read_cur =
-    									scan_idx + 1;
+    									sidx + 1;
     							}
     						}
     						if (read_cur > 0) {
@@ -786,14 +782,20 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
     				}
     
     				const int push_integar = 3;
-    				memmove(compiler_parsing + push_integar, compiler_parsing, write_pos);
+    				memmove(compiler_parsing + push_integar,
+                            compiler_parsing, write_pos);
     				memcpy(compiler_parsing, "../", push_integar);
+                    
     				write_pos += push_integar;
     				compiler_parsing[write_pos] = '\0';
     				
-    				if (compiler_parsing[write_pos - 1] != _PATH_CHR_SEP_POSIX &&
-    					compiler_parsing[write_pos - 1] != _PATH_CHR_SEP_WIN32)
-    					{ strcat(compiler_parsing, "/"); }
+    				if (compiler_parsing[write_pos - 1]
+                        != _PATH_CHR_SEP_POSIX &&
+    					compiler_parsing[write_pos - 1]
+                        != _PATH_CHR_SEP_WIN32)
+                    {
+                        strcat(compiler_parsing, "/");
+                    }
     
     			parent_next2:
     				memset(compiler_temp, 0, sizeof(compiler_temp));
@@ -802,23 +804,18 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
     				if (strstr(compiler_temp, gamemodes_slash) ||
     					strstr(compiler_temp, gamemodes_back_slash))
     				{
-    					char *p = strstr(compiler_temp,
-    						gamemodes_slash);
-    					if (!p)
-    						p = strstr(compiler_temp,
-    							gamemodes_back_slash);
-    					if (p)
-    						*p = '\0';
+    					char *p = strstr(compiler_temp, gamemodes_slash);
+    					if (!p) {
+    						p = strstr(compiler_temp, gamemodes_back_slash);
+                        }
+                        if (p) *p = '\0';
     				}
     
-    				char *rets = strdup(dogconfig.dog_toml_all_flags);
-    
-    				memset(compiler_buf, 0, sizeof(compiler_buf));
-    
-    				if (!strstr(rets, "gamemodes/") &&
-    					!strstr(rets, "pawno/include/") &&
-    					!strstr(rets, "qawno/include/"))
+    				if (!strstr(dogconfig.dog_toml_all_flags, "gamemodes/") &&
+    					!strstr(dogconfig.dog_toml_all_flags, "pawno/include/") &&
+    					!strstr(dogconfig.dog_toml_all_flags, "qawno/include/"))
     				{
+    				    memset(compiler_buf, 0, sizeof(compiler_buf));
     					snprintf(compiler_buf, sizeof(compiler_buf),
     						"-i" "=\"%s\""
     						"-i" "=\"%s" "gamemodes/\" "
@@ -826,14 +823,9 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
     						"-i" "=\"%s" "qawno/include/\" ",
     					compiler_temp, compiler_temp, compiler_temp, compiler_temp);
     				} else {
+    				    memset(compiler_buf, 0, sizeof(compiler_buf));
     					snprintf(compiler_buf, sizeof(compiler_buf),
-    						"-i" "=\"%s\"",
-    						compiler_temp);
-    				}
-    
-    				if (rets) {
-    					free(rets);
-    					rets = NULL;
+    						"-i" "=\"%s\"", compiler_temp);
     				}
     
     				strncpy(compiler_path_include_buf, compiler_buf,
@@ -842,7 +834,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
     					sizeof(compiler_path_include_buf) - 1] = '\0';
     			} else {
     				snprintf(compiler_path_include_buf, sizeof(compiler_path_include_buf),
-    					"-i=none");
+    					" ");
     			}
     			break;
     		}
