@@ -53,16 +53,16 @@ typedef struct {
 
 extern struct
 timespec pre_start,post_end;
-extern bool compiler_is_err;
-extern bool compiler_installing_stdlib;
 extern char *compiler_full_includes;
-extern bool compiler_debug_flag_is_exists;
-extern bool compiler_dog_flag_debug;
-extern bool compiler_input_debug;
-extern bool compiler_dog_flag_clean;
-extern bool compiler_dog_flag_fast;
-extern bool process_file_success;
 extern char compiler_path_include_buf[];
+extern bool compiler_is_err,
+    compiler_installing_stdlib,
+    compiler_debug_flag_is_exists,
+    compiler_dog_flag_debug,
+    compiler_input_debug,
+    compiler_dog_flag_clean,
+    compiler_dog_flag_fast,
+    process_file_success;
 
 int
 dog_exec_compiler(const char *arg,
