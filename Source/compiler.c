@@ -421,8 +421,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
         
         /* Handle parent directory references in compile arguments */
         for (;;) {
-            if (strfind(new_compile_args_val, "../", true) !=
-                false) {
+            if (strstr(new_compile_args_val, "../") != NULL) {
                 char *tmp_args = strdup(new_compile_args_val);
                 if (!tmp_args)
                     break;
@@ -743,8 +742,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
             
     		/* Handle parent directory references in compile arguments */
     		for (;;) {
-    			if (strfind(new_compile_args_val, "../", true) !=
-    				false) {
+                if (strstr(new_compile_args_val, "../") != NULL) {
     				char *tmp_args = strdup(new_compile_args_val);
     				if (!tmp_args)
     					break;
