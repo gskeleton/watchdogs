@@ -24,6 +24,7 @@ bool          unit_selection_stat = false;
 static struct timespec cmd_start = { 0 };
 static struct timespec cmd_end = { 0 };
 static double command_dur;
+static char tmp_buf[DOG_MAX_PATH * 2];
 
 static void
 cleanup_local_resources(char **ptr_command_prompt, char **ptr_command, 
@@ -224,6 +225,8 @@ checkout_unit_rule(void)
         compiling_gamemode = false;
         const char *argsc[] = { NULL, NULL, NULL,
             NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+        pr_info(stdout,
+            "After compiling the script, type running to start your server");
         dog_exec_compiler(argsc[0], argsc[1], argsc[2],
             argsc[3], argsc[4], argsc[5], argsc[6], argsc[7],
             argsc[8], argsc[9]);
@@ -1027,7 +1030,7 @@ __command__(char *unit_pre_command)
             _STARTUPINFO.hStdError  = GetStdHandle(STD_ERROR_HANDLE);
             _STARTUPINFO.hStdInput  = GetStdHandle(STD_INPUT_HANDLE);
 
-            memset(tmp_buf, 0, sizeof(tmp_buf));
+            tmp_buf[0] = '\0';
         
             snprintf(tmp_buf, DOG_PATH_MAX, "%s%s",
                 _PATH_STR_EXEC, dogconfig.dog_toml_server_binary);
@@ -1043,7 +1046,7 @@ __command__(char *unit_pre_command)
         #else
             pid_t process_id;
 
-            memset(tmp_buf, 0, sizeof(tmp_buf));
+            tmp_buf[0] = '\0';
         
             snprintf(tmp_buf, DOG_PATH_MAX, "%s%s%s",
                 dog_procure_pwd(), _PATH_STR_SEP_POSIX,
@@ -1105,7 +1108,7 @@ __command__(char *unit_pre_command)
 
                 fd_set readfds;
 
-                memset(tmp_buf, 0, sizeof(tmp_buf));
+                tmp_buf[0] = '\0';
 
                 while (true) {
 

@@ -38,6 +38,7 @@ static bool    compiler_time_issue = false;
 static bool    compiler_target_exists = false;
 char          *compiler_full_includes = NULL;
 static char    compiler_temp[DOG_PATH_MAX + 28] = { 0 };
+static char    tmp_buf[DOG_MAX_PATH * 2];
 static char    tmp_parsing[DOG_PATH_MAX] = { 0 };
 char           compiler_include_path[DOG_PATH_MAX] = { 0 };
 static char    appended_flags[456] = { 0 };
@@ -135,7 +136,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 	memset(compiler_temp, 0, sizeof(compiler_temp));
 	memset(compiler_include_path, 0,
 	    sizeof(compiler_include_path));
-	memset(tmp_buf, 0, sizeof(tmp_buf));
+	tmp_buf[0] = '\0';
 	memset(appended_flags, 0,
 	    sizeof(appended_flags));
 
@@ -180,7 +181,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 
         if (false != compiler_opt_clean)
 		{
-			memset(tmp_buf, 0, sizeof(tmp_buf));
+			tmp_buf[0] = '\0';
 			snprintf(tmp_buf, sizeof(tmp_buf),
 				" ");
 			dog_free(dogconfig.dog_toml_all_flags);
@@ -198,7 +199,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 			compiler_opt_compact  = true;
 			compiler_opt_fast     = true;
 			compiler_opt_detailed = true;
-			memset(tmp_buf, 0, sizeof(tmp_buf));
+			tmp_buf[0] = '\0';
             #define _MAX_PLAYERS "MAX_PLAYERS=50"
             #define _MAX_VEHICLES "MAX_VEHICLES=100"
             #define _MAX_ACTORS "MAX_ACTORS=10"
@@ -213,7 +214,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 				}
 			dogconfig.dog_toml_all_flags = strdup(tmp_buf);
 		case 2:
-			memset(tmp_buf, 0, sizeof(tmp_buf));
+			tmp_buf[0] = '\0';
             #define _MAX_PLAYERS2 "MAX_PLAYERS=100"
             #define _MAX_VEHICLES2 "MAX_VEHICLES=1000"
             #define _MAX_ACTORS2 "MAX_ACTORS=100"
@@ -234,7 +235,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 			compiler_opt_compact  = true;
 			compiler_opt_fast     = true;
 			compiler_opt_detailed = true;
-			memset(tmp_buf, 0, sizeof(tmp_buf));
+			tmp_buf[0] = '\0';
             #define _MAX_PLAYERS3 "MAX_PLAYERS=50"
             #define _MAX_VEHICLES3 "MAX_VEHICLES=50"
             #define _MAX_ACTORS3 "MAX_ACTORS=50"
@@ -333,7 +334,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 		}
 
 		#ifdef DOG_ANDROID
-			memset(tmp_buf, 0, sizeof(tmp_buf));
+			tmp_buf[0] = '\0';
 			snprintf(tmp_buf, sizeof(tmp_buf), "%s -w:200-",
 				dogconfig.dog_toml_all_flags);
 			dog_free(dogconfig.dog_toml_all_flags);
@@ -417,7 +418,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 					!strstr(dogconfig.dog_toml_all_flags,
 					"qawno/include/"))
 				{
-					memset(tmp_buf, 0, sizeof(tmp_buf));
+					tmp_buf[0] = '\0';
 					snprintf(tmp_buf, sizeof(tmp_buf),
 						"-i" "=\"%s\" "
 						"-i" "=\"%s" "gamemodes/\" "
@@ -425,7 +426,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 						"-i" "=\"%s" "qawno/include/\" ",
 					compiler_temp, compiler_temp, compiler_temp, compiler_temp);
 				} else {
-					memset(tmp_buf, 0, sizeof(tmp_buf));
+					tmp_buf[0] = '\0';
 					snprintf(tmp_buf, sizeof(tmp_buf),
 						"-i" "=\"%s\"", compiler_temp);
 				}
@@ -510,6 +511,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 					memset(tmp_buf,
 						0, sizeof(tmp_buf));
 					
+					#ifndef DOG_ANDROID
 					#define FZF_COMMAND "%s | fzf " \
 						"--height 40%% --reverse " \
 						"--prompt 'Select file to compile: ' " \
@@ -518,6 +520,11 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 						"head -n 20 {}; " \
 						"echo \"=== Path ===\"; " \
 						"realpath {}; fi'"
+					#else
+					#define FZF_COMMAND "%s | fzf " \
+						"--height 40%% --reverse " \
+						"--prompt 'Select file to compile: ' "
+					#endif
 					snprintf(tmp_buf, sizeof(tmp_buf),
 						FZF_COMMAND,
 						posix_fzf_finder);
@@ -720,7 +727,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 						!strstr(dogconfig.dog_toml_all_flags,
 						"qawno/include/"))
 					{
-						memset(tmp_buf, 0, sizeof(tmp_buf));
+						tmp_buf[0] = '\0';
 						snprintf(tmp_buf, sizeof(tmp_buf),
 							"-i" "=\"%s\" "
 							"-i" "=\"%s" "gamemodes/\" "
@@ -728,7 +735,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 							"-i" "=\"%s" "qawno/include/\" ",
 						compiler_temp, compiler_temp, compiler_temp, compiler_temp);
 					} else {
-						memset(tmp_buf, 0, sizeof(tmp_buf));
+						tmp_buf[0] = '\0';
 						snprintf(tmp_buf, sizeof(tmp_buf),
 							"-i" "=\"%s\"", compiler_temp);
 					}
@@ -1052,7 +1059,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 					new_compile_args_val, true) == true)
 				{
 					memset(compiler_temp, 0, sizeof(compiler_temp));
-					memset(tmp_buf, 0, sizeof(tmp_buf));
+					tmp_buf[0] = '\0';
 
 					snprintf(compiler_temp,
 						sizeof(compiler_temp), "%s",
@@ -1132,7 +1139,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 		compiler_done2:
 				tmp_proc_file = fopen(
 					".watchdogs/compiler.log", "r");
-				memset(tmp_buf, 0, sizeof(tmp_buf));
+				tmp_buf[0] = '\0';
 				if (tmp_proc_file) {
 					bool has_err = false;
 					while (fgets(
@@ -1197,7 +1204,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 		if (tmp_proc_file)
 			fclose(tmp_proc_file);
 
-		memset(tmp_buf, 0, sizeof(tmp_buf));
+		tmp_buf[0] = '\0';
 
 		tmp_proc_file = fopen(".watchdogs/compiler.log", "rb");
 

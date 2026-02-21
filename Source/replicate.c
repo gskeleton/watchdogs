@@ -10,6 +10,7 @@ bool             installing_package = 0;
 static const char*opr = NULL;
 static char		 json_item[DOG_PATH_MAX];
 static int		 fdir_counts = 0;
+static char      tmp_buf[DOG_MAX_PATH];
 #ifdef DOG_WINDOWS
 static const char *separator = _PATH_STR_SEP_WIN32;
 #else
@@ -1360,7 +1361,7 @@ dump_file_type(const char *dump_path, char *dump_pattern,
                            MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED)) {
                 move_success = 1;
             } else {
-                memset(tmp_buf, 0, sizeof(tmp_buf));
+                tmp_buf[0] = '\0';
                 snprintf(tmp_buf, sizeof(tmp_buf), "\"%s\" \"%s\" >nul 2>&1 && del \"%s\"",
                          dogconfig.dog_sef_found_list[i], dest_path,
                          dogconfig.dog_sef_found_list[i]);
@@ -1531,7 +1532,7 @@ void package_move_files(const char *package_dir, const char *package_loc)
                          include_dest, separator, package_subdir_item->d_name);
                 
                 if (path_access(src_file) == 1 && rename(src_file, dest_file) != 0) {
-                    memset(tmp_buf, 0, sizeof(tmp_buf));
+                    tmp_buf[0] = '\0';
 	#ifdef DOG_WINDOWS
 		            snprintf(tmp_buf, sizeof(tmp_buf),
 		                    "\"%s\" \"%s\"",
@@ -1568,7 +1569,7 @@ void package_move_files(const char *package_dir, const char *package_loc)
                  include_dest, separator, n_items->d_name);
         
         if (path_access(the_path) == 1 && rename(the_path, dest_file) != 0) {
-            memset(tmp_buf, 0, sizeof(tmp_buf));
+            tmp_buf[0] = '\0';
 	#ifdef DOG_WINDOWS
             snprintf(tmp_buf, sizeof(tmp_buf),
                     "\"%s\" \"%s\"",

@@ -6,10 +6,8 @@
 #include  "curl.h"
 #include  "utils.h"
 
-char
-	tmp_buf
-	[DOG_MAX_PATH * 2]
-		= {0};
+static char
+	tmp_buf[DOG_MAX_PATH * 2];
 
 const char	*unit_command_list[] = {
 	"help", "exit",
@@ -231,7 +229,7 @@ is_running_in_container(void)
 	if (path_access("/run/.containerenv"))
 		return (true);
 
-	memset(tmp_buf, 0, sizeof(tmp_buf));
+	tmp_buf[0] = '\0';
 
 	fp = fopen("/proc/1/cgroup", "r");
 	if (fp) {
@@ -407,7 +405,7 @@ int dog_mkdir_recursive(const char *path)
 	if (!path || !*path)
 		return (-1);
 
-	memset(tmp_buf, 0, sizeof(tmp_buf));
+	tmp_buf[0] = '\0';
 
 	snprintf(tmp_buf, sizeof(tmp_buf), "%s", path);
 	len = strlen(tmp_buf);
@@ -592,7 +590,7 @@ dog_exec_command(char *const av[])
     int rv;
     unsigned char c;
     
-	memset(tmp_buf, 0, sizeof(tmp_buf));
+	tmp_buf[0] = '\0';
 
     if (av == NULL || av[0] == NULL)
         return (-1);
@@ -1199,7 +1197,7 @@ dog_kill_process(const char *process)
         return (false);
 
 #ifdef DOG_WINDOWS
-	memset(tmp_buf, 0, sizeof(tmp_buf));
+	tmp_buf[0] = '\0';
 
     STARTUPINFOA _STARTUPINFO;
     PROCESS_INFORMATION _PROCESS_INFO;
@@ -1468,7 +1466,7 @@ validate_src_dest(const char *c_src, const char *c_dest)
 {
     struct stat st;
 
-	memset(tmp_buf, 0, sizeof(tmp_buf));
+	tmp_buf[0] = '\0';
 
     if (!c_src || !c_dest)
         return (0);
@@ -1566,7 +1564,7 @@ _run_file_operation(
 				*p = _PATH_CHR_SEP_WIN32;
 		}
 
-	memset(tmp_buf, 0, sizeof(tmp_buf));
+	tmp_buf[0] = '\0';
 
     if (strcmp(operation, "mv") == 0) {
         snprintf(tmp_buf, sizeof(tmp_buf),
@@ -1749,7 +1747,7 @@ dog_check_compiler_options(int *compatibility, int *optimized_lt)
 		NULL
 	);
 
-	memset(tmp_buf, 0, sizeof(tmp_buf));
+	tmp_buf[0] = '\0';
 
 	if (hFile != INVALID_HANDLE_VALUE) {
 		_STARTUPINFO.cb = sizeof(_STARTUPINFO);
@@ -1806,7 +1804,7 @@ dog_check_compiler_options(int *compatibility, int *optimized_lt)
 	}
 	#endif
 
-	memset(tmp_buf, 0, sizeof(tmp_buf));
+	tmp_buf[0] = '\0';
 
 	tmp_proc_fileile = fopen(".watchdogs/compiler_test.log", "r");
 	if (tmp_proc_fileile) {
@@ -1852,7 +1850,7 @@ dog_parse_toml_config(void)
 		return (0);
 	}
 
-	memset(tmp_buf, 0, sizeof(tmp_buf));
+	tmp_buf[0] = '\0';
 
 	dog_toml_parse = toml_parse_file(tmp_proc_fileile, tmp_buf,
 	    sizeof(tmp_buf));
@@ -1974,16 +1972,16 @@ dog_generate_toml_content(FILE *file, const char *dog_os_type,
 	if (compatible && optimized_lt) {
 		if (samp_server_stat == true)
 			fprintf(file,
-				"   option = [\"-Z:+\", \"-d:2\", \"-O:2\", \"LOCALHOST=1\"] # compiler options\n");
+				"   option = [\"-Z:+\", \"-d:2\", \"-O:2\", \"-;+\", \"-(+\", \"LOCALHOST=1\"] # compiler options\n");
 		else
 			fprintf(file,
-				"   option = [\"-Z:+\", \"-d:2\", \"-O:1\", \"LOCALHOST=1\"] # compiler options\n");
+				"   option = [\"-Z:+\", \"-d:2\", \"-O:1\", \"-;+\", \"-(+\", \"LOCALHOST=1\"] # compiler options\n");
 	} else if (compatible) {
 		fprintf(file,
-		    "   option = [\"-Z:+\", \"-d:2\", \"LOCALHOST=1\"] # compiler options\n");
+		    "   option = [\"-Z:+\", \"-d:2\", \"-;+\", \"-(+\", \"LOCALHOST=1\"] # compiler options\n");
 	} else {
 		fprintf(file,
-		    "   option = [\"-d:3\", \"LOCALHOST=1\"] # compiler options\n");
+		    "   option = [\"-d:3\", \"-;+\", \"-(+\", \"LOCALHOST=1\"] # compiler options\n");
 	}
 
 	fprintf(file, "   includes = [\"gamemodes/\"," \
@@ -1995,11 +1993,11 @@ dog_generate_toml_content(FILE *file, const char *dog_os_type,
 		fprintf(file, "   output = \"%s.amx\" # project output\n",
 		    sef_path);
 	} else {
-		if (path_exists("Doguu/server.p") == 1) {
+		if (path_exists("gamemodes/server.p") == 1) {
 			fprintf(file,
-			    "   input = \"Doguu/server.p\" # project input\n");
+			    "   input = \"gamemodes/server.p\" # project input\n");
 			fprintf(file,
-			    "   output = \"Doguu/server.amx\" # project output\n");
+			    "   output = \"gamemodes/server.amx\" # project output\n");
 		} else {
 			fprintf(file,
 			    "   input = \"gamemodes/grandlarc.pwn\" # project input\n");
@@ -2197,7 +2195,7 @@ dog_configure_toml(void)
 		return (1);
 	}
 
-	memset(tmp_buf, 0, sizeof(tmp_buf));
+	tmp_buf[0] = '\0';
 	
 	FILE	*tmp_proc_file = fopen("watchdogs.toml", "r");
 	dog_toml_parse = toml_parse_file(tmp_proc_file, tmp_buf,
@@ -2674,7 +2672,7 @@ skip_:
 	if (ret_pawncc)
 		{
 			dog_free(dogconfig.dog_pawncc_path);
-            memset(tmp_buf, 0, sizeof(tmp_buf));
+            tmp_buf[0] = '\0';
 			snprintf(tmp_buf, sizeof(tmp_buf),
 				"%s", dogconfig.dog_sef_found_list[0]);
 			dogconfig.dog_pawncc_path = strdup(tmp_buf);

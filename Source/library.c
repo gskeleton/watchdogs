@@ -217,6 +217,8 @@ dog_install_server(const char *platform)
 {
 	minimal_debugging();
 
+	installing_pawncc = false;
+
 	if (strcmp(platform, "linux") != 0 &&
 	    strcmp(platform, "windows") != 0 &&
 	    strcmp(platform, "termux") != 0) {

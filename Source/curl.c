@@ -966,6 +966,7 @@ dog_download_file(const char *url, const char *output_filename)
 						pawncc_dir_source = strdup(
 							size_filename);
 						dog_apply_pawncc();
+						installing_pawncc = false;
 					}
 				}
 

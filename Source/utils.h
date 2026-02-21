@@ -275,8 +275,6 @@ size_t w_strlcat(char *dst, const char *src, size_t size);
 
 # endif
 
-extern char tmp_buf[DOG_MAX_PATH * 2];
-
 void dog_sef_path_revert(void);
 
 extern const char* dog_find_near_command(const char *ptr_command,
