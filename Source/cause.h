@@ -245,6 +245,6 @@ done'"
 #define COMPILER_DT_SEL0000421 "It looks like there’s a mismatch between the forward declaration and the public function, possibly a typo? For instance, it's written as OnplayerClickMap when it should be OnPlayerClickMap here."
 #define COMPILER_DT_SEL0000091 "Have you made sure you're using the latest SA-MP or open.mp stdlib? Get them here: https://github.com/pawn-lang/samp-stdlib : https://github.com/pawn-lang/pawn-stdlib"
 
-void cause_compiler_expl(const char *log_file,const char *dog_output,int debug);
+void cause_pawn_expl(const char *log_file,const char *dog_output,int debug);
 
 #endif

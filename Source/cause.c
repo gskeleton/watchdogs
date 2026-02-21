@@ -30,8 +30,8 @@ static const char *dog_find_warn_err(const char *line)
     return (NULL);
 }
 
-static void compiler_detailed(const char *dog_output, int debug,
-                              int warning_count, int error_count, const char *compiler_ver,
+static void pawn_detailed(const char *dog_output, int debug,
+                              int warning_count, int error_count, const char *pawn_ver,
                               long int header_size, long int code_size, long int data_size,
                               long int stack_size, long int total_size)
 {
@@ -79,14 +79,14 @@ static void compiler_detailed(const char *dog_output, int debug,
 
     len = snprintf(outbuf, sizeof(outbuf),
                    "** Pawn Compiler %s - Copyright (c) 1997-2006, ITB CompuPhase\n",
-                   compiler_ver);
+                   pawn_ver);
     if (len > 0)
         printf("%.*s", len, outbuf);
 
     print_restore_color();
 }
 
-void cause_compiler_expl(const char *log_file, const char *dog_output, int debug)
+void cause_pawn_expl(const char *log_file, const char *dog_output, int debug)
 {
     minimal_debugging();
 
@@ -96,56 +96,56 @@ void cause_compiler_expl(const char *log_file, const char *dog_output, int debug
 
     long warning_count = 0, error_count = 0;
     long int header_size = 0, code_size = 0, data_size = 0, stack_size = 0, total_size = 0;
-    char compiler_line[DOG_MORE_MAX_PATH] = {0}, compiler_ver[64] = {0};
+    char pawn_line[DOG_MORE_MAX_PATH] = {0}, pawn_ver[64] = {0};
 
-    while (fgets(compiler_line, sizeof(compiler_line), _log_file)) {
+    while (fgets(pawn_line, sizeof(pawn_line), _log_file)) {
 
-        if (dog_strcase(compiler_line, "Warnings.") ||
-            dog_strcase(compiler_line, "Warning.") ||
-            dog_strcase(compiler_line, "Errors.") ||
-            dog_strcase(compiler_line, "Error."))
+        if (dog_strcase(pawn_line, "Warnings.") ||
+            dog_strcase(pawn_line, "Warning.") ||
+            dog_strcase(pawn_line, "Errors.") ||
+            dog_strcase(pawn_line, "Error."))
             continue;
 
-        if (dog_strcase(compiler_line, "Header size:")) {
-            header_size = strtol(strchr(compiler_line, ':') + 1, NULL, 10);
+        if (dog_strcase(pawn_line, "Header size:")) {
+            header_size = strtol(strchr(pawn_line, ':') + 1, NULL, 10);
             continue;
-        } else if (dog_strcase(compiler_line, "Code size:")) {
-            code_size = strtol(strchr(compiler_line, ':') + 1, NULL, 10);
+        } else if (dog_strcase(pawn_line, "Code size:")) {
+            code_size = strtol(strchr(pawn_line, ':') + 1, NULL, 10);
             continue;
-        } else if (dog_strcase(compiler_line, "Data size:")) {
-            data_size = strtol(strchr(compiler_line, ':') + 1, NULL, 10);
+        } else if (dog_strcase(pawn_line, "Data size:")) {
+            data_size = strtol(strchr(pawn_line, ':') + 1, NULL, 10);
             continue;
-        } else if (dog_strcase(compiler_line, "Stack/heap size:")) {
-            stack_size = strtol(strchr(compiler_line, ':') + 1, NULL, 10);
+        } else if (dog_strcase(pawn_line, "Stack/heap size:")) {
+            stack_size = strtol(strchr(pawn_line, ':') + 1, NULL, 10);
             continue;
-        } else if (dog_strcase(compiler_line, "Total requirements:")) {
-            total_size = strtol(strchr(compiler_line, ':') + 1, NULL, 10);
+        } else if (dog_strcase(pawn_line, "Total requirements:")) {
+            total_size = strtol(strchr(pawn_line, ':') + 1, NULL, 10);
             continue;
-        } else if (dog_strcase(compiler_line, "Pawn Compiler ")) {
-            char *p = strstr(compiler_line, " ");
+        } else if (dog_strcase(pawn_line, "Pawn Compiler ")) {
+            char *p = strstr(pawn_line, " ");
             while (*p && !isdigit(*p)) p++;
             if (*p)
-                sscanf(p, "%63s", compiler_ver);
+                sscanf(p, "%63s", pawn_ver);
             continue;
         }
 
-        printf(DOG_COL_BWHITE "%s" DOG_COL_DEFAULT, compiler_line);
+        printf(DOG_COL_BWHITE "%s" DOG_COL_DEFAULT, pawn_line);
         fflush(stdout);
 
-        if (dog_strcase(compiler_line, "warning"))
+        if (dog_strcase(pawn_line, "warning"))
             ++warning_count;
-        if (dog_strcase(compiler_line, "error"))
+        if (dog_strcase(pawn_line, "error"))
             ++error_count;
 
-        const char *description = dog_find_warn_err(compiler_line);
+        const char *description = dog_find_warn_err(pawn_line);
         if (description) {
             const char *found = NULL;
             int column = 0;
             for (int i = 0; ccs[i].cs_t; ++i) {
-                if ((found = strstr(compiler_line, ccs[i].cs_t))) {
-                    const char *colon = strchr(compiler_line, ':');
+                if ((found = strstr(pawn_line, ccs[i].cs_t))) {
+                    const char *colon = strchr(pawn_line, ':');
                     if (colon)
-                        column = colon - compiler_line;
+                        column = colon - pawn_line;
                     break;
                 }
             }
@@ -187,8 +187,8 @@ void cause_compiler_expl(const char *log_file, const char *dog_output, int debug
     }
 
     fclose(_log_file);
-    compiler_detailed(dog_output, debug, warning_count, error_count,
-                      compiler_ver, header_size, code_size,
+    pawn_detailed(dog_output, debug, warning_count, error_count,
+                      pawn_ver, header_size, code_size,
                       data_size, stack_size, total_size);
 }
 

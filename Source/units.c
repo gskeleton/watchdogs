@@ -233,7 +233,7 @@ checkout_unit_rule(void)
             argsc[8], argsc[9]);
     }
     static bool rate_stdlib = false;
-    if (compiler_missing_stdlib == true &&
+    if (pawn_missing_stdlib == true &&
         rate_stdlib == false)
     {
         rate_stdlib = !rate_stdlib;
@@ -1186,14 +1186,14 @@ __command__(char *unit_pre_command)
                 argsc[4], argsc[5], argsc[6], argsc[7], argsc[8], argsc[9]);
             dog_configure_toml();
             
-            if (!compiler_is_error) unit_ret_main("running");
+            if (!pawn_is_error) unit_ret_main("running");
         } else {
             const char *argsc[] = { NULL, args2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
             dog_exec_compiler(argsc[0], argsc[1], argsc[2], argsc[3], argsc[4],
                 argsc[5], argsc[6], argsc[7], argsc[8], argsc[6]);
             dog_configure_toml();
             
-            if (!compiler_is_error) {
+            if (!pawn_is_error) {
                 unit_ret_main("running");
             }
         }
@@ -1416,7 +1416,7 @@ loop_main:
         if (dogconfig.dog_toml_packages) { free(dogconfig.dog_toml_packages); dogconfig.dog_toml_packages = NULL; }
         if (dogconfig.dog_toml_serv_input) { free(dogconfig.dog_toml_serv_input); dogconfig.dog_toml_serv_input = NULL; }
         if (dogconfig.dog_toml_serv_output) { free(dogconfig.dog_toml_serv_output); dogconfig.dog_toml_serv_output = NULL; }
-        if (compiler_full_includes) { free(compiler_full_includes); compiler_full_includes = NULL; }
+        if (pawn_full_includes) { free(pawn_full_includes); pawn_full_includes = NULL; }
         
         exit(EXIT_SUCCESS);
     } else if (ret == -2) {

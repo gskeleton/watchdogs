@@ -16,8 +16,8 @@ static void unit_restore(void) {
         
         sigint_handler
             = !sigint_handler;
-        compiler_is_error
-            = !compiler_is_error;
+        pawn_is_error
+            = !pawn_is_error;
         unit_selection_stat
             = !unit_selection_stat;
 }

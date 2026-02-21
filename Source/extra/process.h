@@ -5,10 +5,10 @@
 extern char **environ;
 #endif
 
-long compiler_get_milisec();
-void compiler_stage_trying(const char *stage, int ms);
+long pawn_get_milisec();
+void pawn_stage_trying(const char *stage, int ms);
 void dog_serv_init(char *input_path, char *pawncc_path);
-int dog_exec_compiler_process(char *pawncc_path,
+int dog_exec_pawn_process(char *pawncc_path,
 							  char *input_path,
 							  char *output_path);
 

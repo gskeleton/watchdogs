@@ -1710,7 +1710,7 @@ super_mode_check_done:
 }
 
 static void
-dog_check_compiler_options(int *compatibility, int *optimized_lt)
+dog_check_pawn_options(int *compatibility, int *optimized_lt)
 {
 	FILE	*tmp_proc_fileile;
 	int	 found_Z = 0, found_ver = 0;
@@ -1718,8 +1718,8 @@ dog_check_compiler_options(int *compatibility, int *optimized_lt)
 	if (dir_exists(".watchdogs") == 0)
 		MKDIR(".watchdogs");
 
-	if (path_access(".watchdogs/compiler_test.log"))
-		remove(".watchdogs/compiler_test.log");
+	if (path_access(".watchdogs/pawnc_test.log"))
+		remove(".watchdogs/pawnc_test.log");
 
     if (binary_condition_check(dogconfig.dog_sef_found_list[0]) == false) {
     	return;
@@ -1738,7 +1738,7 @@ dog_check_compiler_options(int *compatibility, int *optimized_lt)
 	_ATTRIBUTES.bInheritHandle = TRUE;
 
 	hFile = CreateFileA(
-		".watchdogs\\compiler_test.log",
+		".watchdogs\\pawnc_test.log",
 		GENERIC_WRITE,
 		FILE_SHARE_WRITE,
 		&_ATTRIBUTES,
@@ -1777,7 +1777,7 @@ dog_check_compiler_options(int *compatibility, int *optimized_lt)
 	pid_t pid;
 	int fd;
 	
-	fd = open(".watchdogs/compiler_test.log",
+	fd = open(".watchdogs/pawnc_test.log",
 			O_CREAT | O_WRONLY | O_TRUNC,
 			0644);
 
@@ -1806,7 +1806,7 @@ dog_check_compiler_options(int *compatibility, int *optimized_lt)
 
 	tmp_buf[0] = '\0';
 
-	tmp_proc_fileile = fopen(".watchdogs/compiler_test.log", "r");
+	tmp_proc_fileile = fopen(".watchdogs/pawnc_test.log", "r");
 	if (tmp_proc_fileile) {
 		while (fgets(tmp_buf, sizeof(tmp_buf),
 		    tmp_proc_fileile) != NULL) {
@@ -1817,7 +1817,7 @@ dog_check_compiler_options(int *compatibility, int *optimized_lt)
 			if (strfind(tmp_buf, "error while loading shared libraries:", true) ||
 				strfind(tmp_buf, "required file not found", true)) {
 				dog_printfile(
-					".watchdogs/compiler_test.log");
+					".watchdogs/pawnc_test.log");
 			}
 		}
 
@@ -1828,12 +1828,12 @@ dog_check_compiler_options(int *compatibility, int *optimized_lt)
 
 		fclose(tmp_proc_fileile);
 	} else {
-		pr_error(stdout, "Failed to open .watchdogs/compiler_test.log");
+		pr_error(stdout, "Failed to open .watchdogs/pawnc_test.log");
 		minimal_debugging();
 	}
 
-	if (path_access(".watchdogs/compiler_test.log"))
-		remove(".watchdogs/compiler_test.log");
+	if (path_access(".watchdogs/pawnc_test.log"))
+		remove(".watchdogs/pawnc_test.log");
 }
 
 static int
@@ -1888,14 +1888,14 @@ static int
 dog_find_compiler(const char *dog_os_type)
 {
 	int		 is_windows = (strcmp(dog_os_type, "windows") == 0);
-	const char	*compiler_name = is_windows ? "pawncc.exe" : "pawncc";
+	const char	*pawn_name = is_windows ? "pawncc.exe" : "pawncc";
 
 	if (fet_server_env() == false)
-		return (dog_find_path("pawno", compiler_name, NULL));
+		return (dog_find_path("pawno", pawn_name, NULL));
 	else if (fet_server_env() == true)
-		return (dog_find_path("qawno", compiler_name, NULL));
+		return (dog_find_path("qawno", pawn_name, NULL));
 	else
-		return (dog_find_path("pawno", compiler_name, NULL));
+		return (dog_find_path("pawno", pawn_name, NULL));
 }
 
 static bool	samp_server_stat = false;
@@ -2020,7 +2020,7 @@ dog_generate_toml_content(FILE *file, const char *dog_os_type,
 }
 
 static void
-compiler_configure_libpath(void)
+pawn_configure_libpath(void)
 {
   	// skipping WSL if signal is windows
 	#ifdef DOG_LINUX
@@ -2108,11 +2108,11 @@ dog_configure_toml(void)
 	char          *_pawncc_ptr = NULL;
 	char appended_flags[3]          = { 0 };
 
-	compiler_debug_options     = false;
-	if (compiler_full_includes)
+	pawn_debug_options     = false;
+	if (pawn_full_includes)
 		{
-			free(compiler_full_includes);
-			compiler_full_includes      = NULL;
+			free(pawn_full_includes);
+			pawn_full_includes      = NULL;
 		}
 
 	dog_os_type = dog_procure_os();
@@ -2169,7 +2169,7 @@ dog_configure_toml(void)
 		fclose(toml_file);
 	} else {
 		if (find_pawncc)
-			dog_check_compiler_options(&compatibility, &optimized_lt);
+			dog_check_pawn_options(&compatibility, &optimized_lt);
 
 		toml_file = fopen("watchdogs.toml", "w");
 		if (!toml_file) {
@@ -2364,7 +2364,7 @@ skip_depends:
 			dog_free(_toml_path_val.u.s);
 		}
 		
-		compiler_full_includes = buf;
+		pawn_full_includes = buf;
 	}
 
 	toml_array_t *option_arr;
@@ -2399,8 +2399,8 @@ skip_:
 			}
 
 			if (strfind(toml_option_value.u.s,
-				"-d", true) || compiler_opt_debug > 0)
-				compiler_debug_options = true;
+				"-d", true) || pawn_opt_debug > 0)
+				pawn_debug_options = true;
 
 			size_t old_len = expect ? strlen(expect) :
 				0;
@@ -2676,7 +2676,7 @@ skip_:
 			snprintf(tmp_buf, sizeof(tmp_buf),
 				"%s", dogconfig.dog_sef_found_list[0]);
 			dogconfig.dog_pawncc_path = strdup(tmp_buf);
-			compiler_configure_libpath();
+			pawn_configure_libpath();
 		}
 	else {
 			pr_info(stdout,

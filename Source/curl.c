@@ -344,7 +344,7 @@ tracking_username(CURL *curl, const char *username)
 }
 
 static void
-find_compiler_tools(int *found_pawncc_exe, int *found_pawncc,
+find_pawn_tools(int *found_pawncc_exe, int *found_pawncc,
     int *found_pawndisasm_exe, int *found_pawndisasm,
     int *found_pawnc_dll, int *found_PAWNC_DLL)
 {
@@ -388,7 +388,7 @@ find_compiler_tools(int *found_pawncc_exe, int *found_pawncc,
 }
 
 static const char *
-get_compiler_directory(void)
+get_pawn_directory(void)
 {
 	const char *dir_path = NULL;
 
@@ -405,7 +405,7 @@ get_compiler_directory(void)
 }
 
 static void
-copy_compiler_tool(const char *src_path, const char *tool_name,
+copy_pawn_tool(const char *src_path, const char *tool_name,
     const char *dest_dir)
 {
 	char dest_path[DOG_PATH_MAX];
@@ -533,11 +533,11 @@ dog_apply_pawncc(void)
 
 	dog_sef_path_revert();
 
-	find_compiler_tools(&found_pawncc_exe, &found_pawncc,
+	find_pawn_tools(&found_pawncc_exe, &found_pawncc,
 	    &found_pawndisasm_exe, &found_pawndisasm,
 	    &found_pawnc_dll, &found_PAWNC_DLL);
 
-	dest_dir = get_compiler_directory();
+	dest_dir = get_pawn_directory();
 	if (!dest_dir) {
 		pr_error(stdout, "Failed to create compiler directory");
 		minimal_debugging();
@@ -628,23 +628,23 @@ dog_apply_pawncc(void)
 	}
 
 	if (found_pawncc_exe && pawncc_exe_src[0])
-		copy_compiler_tool(pawncc_exe_src, "pawncc.exe", dest_dir);
+		copy_pawn_tool(pawncc_exe_src, "pawncc.exe", dest_dir);
 
 	if (found_pawncc && pawncc_src[0])
-		copy_compiler_tool(pawncc_src, "pawncc", dest_dir);
+		copy_pawn_tool(pawncc_src, "pawncc", dest_dir);
 
 	if (found_pawndisasm_exe && pawndisasm_exe_src[0])
-		copy_compiler_tool(pawndisasm_exe_src, "pawndisasm.exe",
+		copy_pawn_tool(pawndisasm_exe_src, "pawndisasm.exe",
 		    dest_dir);
 
 	if (found_pawndisasm && pawndisasm_src[0])
-		copy_compiler_tool(pawndisasm_src, "pawndisasm", dest_dir);
+		copy_pawn_tool(pawndisasm_src, "pawndisasm", dest_dir);
 
 	if (found_PAWNC_DLL && PAWNC_DLL_src[0])
-		copy_compiler_tool(PAWNC_DLL_src, "PAWNC.dll", dest_dir);
+		copy_pawn_tool(PAWNC_DLL_src, "PAWNC.dll", dest_dir);
 
 	if (found_pawnc_dll && pawnc_dll_src[0])
-		copy_compiler_tool(pawnc_dll_src, "pawnc.dll", dest_dir);
+		copy_pawn_tool(pawnc_dll_src, "pawnc.dll", dest_dir);
 
 	setup_linux_library();
 
