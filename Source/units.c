@@ -496,7 +496,7 @@ __command__(char *unit_pre_command)
                 fseek(tmp_proc_file, 0, SEEK_END);
                 long size = ftell(tmp_proc_file);
                 rewind(tmp_proc_file);
-                unsigned char *buffer = dog_malloc(size);
+                unsigned char *tmp_buf = dog_malloc(size);
                 fread(buffer, 1, size, tmp_proc_file);
                 fclose(tmp_proc_file);
 
@@ -1078,7 +1078,6 @@ __command__(char *unit_pre_command)
                 int stdout_fd;
                 int stderr_fd;
                 int max_fd;
-                char buffer[1024];
                 ssize_t br;
 
                 stdout_fd = stdout_pipe[0];
@@ -1106,12 +1105,12 @@ __command__(char *unit_pre_command)
                         FD_ISSET(stdout_fd, &readfds))
                     {
                         br = read(stdout_fd,
-                                  buffer, sizeof(buffer)-1);
+                                  tmp_buf, sizeof(tmp_buf)-1);
                         if (br <= 0) {
                             stdout_fd = -1;
                         } else {
-                            buffer[br] = '\0';
-                            printf("%s", buffer);
+                            tmp_buf[br] = '\0';
+                            printf("%s", tmp_buf);
                         }
                     }
 
@@ -1119,12 +1118,12 @@ __command__(char *unit_pre_command)
                         FD_ISSET(stderr_fd, &readfds))
                     {
                         br = read(stderr_fd,
-                                  buffer, sizeof(buffer)-1);
+                                  tmp_buf, sizeof(tmp_buf)-1);
                         if (br <= 0) {
                             stderr_fd = -1;
                         } else {
-                            buffer[br] = '\0';
-                            fprintf(stderr, "%s", buffer);
+                            tmp_buf[br] = '\0';
+                            fprintf(stderr, "%s", tmp_buf);
                         }
                     }
 
