@@ -85,42 +85,6 @@ static void compiler_show_tip(void) {
     return;
 }
 
-void _compiler_bitmask_start(void) {
-	unsigned int __set_bit = 0;
-
-	if (compiler_opt_debug)
-		__set_bit |= BIT_FLAG_DEBUG;
-
-	if (compiler_opt_asm)
-		__set_bit |= BIT_FLAG_ASSEMBLER;
-
-	if (compiler_opt_compat)
-		__set_bit |= BIT_FLAG_COMPAT;
-
-	if (compiler_opt_prolix)
-		__set_bit |= BIT_FLAG_PROLIX;
-
-	if (compiler_opt_compact)
-		__set_bit |= BIT_FLAG_COMPACT;
-
-	if (compiler_opt_fast)
-		__set_bit |= BIT_FLAG_TIME;
-
-	char *p = appended_flags;
-	p += strlen(p);
-
-	for (int i = 0; object_opt[i].option; i++) {
-		if (!(__set_bit & object_opt[i].flag))
-			continue;
-
-		memcpy(p, object_opt[i].option,
-			object_opt[i].len);
-		p += object_opt[i].len;
-	}
-
-	*p = '\0';
-}
-
 int
 dog_exec_compiler(const char *args, const char *compile_args_val,
     const char *second_arg, const char *four_arg, const char *five_arg,
@@ -288,8 +252,40 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 		if (false != compiler_opt_fast) {
 			compiler_opt_compact  = true;
 		}
-
-		_compiler_bitmask_start();
+    		
+    	unsigned int __set_bit = 0;
+    
+    	if (compiler_opt_debug)
+    		__set_bit |= BIT_FLAG_DEBUG;
+    
+    	if (compiler_opt_asm)
+    		__set_bit |= BIT_FLAG_ASSEMBLER;
+    
+    	if (compiler_opt_compat)
+    		__set_bit |= BIT_FLAG_COMPAT;
+    
+    	if (compiler_opt_prolix)
+    		__set_bit |= BIT_FLAG_PROLIX;
+    
+    	if (compiler_opt_compact)
+    		__set_bit |= BIT_FLAG_COMPACT;
+    
+    	if (compiler_opt_fast)
+    		__set_bit |= BIT_FLAG_TIME;
+    
+    	char *p = appended_flags;
+    	p += strlen(p);
+    
+    	for (int i = 0; object_opt[i].option; i++) {
+    		if (!(__set_bit & object_opt[i].flag))
+    			continue;
+    
+    		memcpy(p, object_opt[i].option,
+    			object_opt[i].len);
+    		p += object_opt[i].len;
+    	}
+    
+    	*p = '\0';
 
 	apply_debugger:
 		if (compiler_retry_stat == 2)
