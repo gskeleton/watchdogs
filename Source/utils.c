@@ -472,8 +472,7 @@ int binary_condition_check(char *path) {
 	    return false;
 	}
 
-	unsigned char buffer[4096];
-	ssize_t bytes_read = read(fd, buffer, sizeof(buffer));
+	ssize_t bytes_read = read(fd, tmp_buf, sizeof(tmp_buf));
 	if (bytes_read < 0) {
 	    pr_error(stderr, "read failed");
 	    minimal_debugging();
@@ -484,12 +483,12 @@ int binary_condition_check(char *path) {
 	int non_printable = 0;
 
 	for (ssize_t i = 0; i < bytes_read; i++) {
-	    if (buffer[i] == 0) {
+	    if (tmp_buf[i] == 0) {
 	        close(fd);
 	        return true;
 	    }
-	    if (buffer[i] < 7 ||
-			(buffer[i] > 14 && buffer[i] < 32)) {
+	    if (tmp_buf[i] < 7 ||
+			(tmp_buf[i] > 14 && tmp_buf[i] < 32)) {
 	        non_printable++;
 	    }
 	}
