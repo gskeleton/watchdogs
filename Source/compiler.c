@@ -633,11 +633,10 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 				= strrchr(copy_input, '.');
 			if (extension)
 				*extension = '\0';
-			char end_output[DOG_PATH_MAX];
-			snprintf(end_output, DOG_PATH_MAX,
+			snprintf(tmp_buf, DOG_PATH_MAX,
 				"%s.amx", copy_input);
 			dogconfig.dog_toml_serv_output
-				= strdup(end_output);
+				= strdup(tmp_buf);
 			dog_free(copy_input);
 
 			if (path_exists(dogconfig.dog_toml_serv_input) == 0) {
