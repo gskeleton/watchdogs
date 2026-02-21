@@ -287,6 +287,9 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 				}
 			dogconfig.dog_toml_all_flags = strdup(tmp_buf);
 		}
+		if (false != compiler_opt_fast) {
+			compiler_opt_compact  = true;
+		}
 
 		_compiler_bitmask_start();
 
