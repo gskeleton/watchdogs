@@ -1360,6 +1360,7 @@ dump_file_type(const char *dump_path, char *dump_pattern,
                            MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED)) {
                 move_success = 1;
             } else {
+                memset(tmp_buf, 0, sizeof(tmp_buf));
                 snprintf(tmp_buf, sizeof(tmp_buf), "\"%s\" \"%s\" >nul 2>&1 && del \"%s\"",
                          dogconfig.dog_sef_found_list[i], dest_path,
                          dogconfig.dog_sef_found_list[i]);
@@ -1530,6 +1531,7 @@ void package_move_files(const char *package_dir, const char *package_loc)
                          include_dest, separator, package_subdir_item->d_name);
                 
                 if (path_access(src_file) == 1 && rename(src_file, dest_file) != 0) {
+                    memset(tmp_buf, 0, sizeof(tmp_buf));
 	#ifdef DOG_WINDOWS
 		            snprintf(tmp_buf, sizeof(tmp_buf),
 		                    "\"%s\" \"%s\"",
@@ -1566,6 +1568,7 @@ void package_move_files(const char *package_dir, const char *package_loc)
                  include_dest, separator, n_items->d_name);
         
         if (path_access(the_path) == 1 && rename(the_path, dest_file) != 0) {
+            memset(tmp_buf, 0, sizeof(tmp_buf));
 	#ifdef DOG_WINDOWS
             snprintf(tmp_buf, sizeof(tmp_buf),
                     "\"%s\" \"%s\"",
