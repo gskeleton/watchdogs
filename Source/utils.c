@@ -1013,6 +1013,27 @@ int match_wildcard(const char *str, const char *pat)
 	return (*p == '\0');
 }
 
+void normalize_spaces(char *str)
+{
+    char *src = str;
+    char *dst = str;
+    int space = 0;
+
+    while (*src) {
+        if (isspace((unsigned char)*src)) {
+            if (!space) {
+                *dst++ = ' ';
+                space = 1;
+            }
+        } else {
+            *dst++ = *src;
+            space = 0;
+        }
+        src++;
+    }
+    *dst = '\0';
+}
+
 static void configure_path_sep(char *out, size_t sk_dependssz,
                                const char *open_dir,
                                const char *entry_name)
