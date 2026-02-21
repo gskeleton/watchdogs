@@ -496,7 +496,7 @@ __command__(char *unit_pre_command)
                 fseek(tmp_proc_file, 0, SEEK_END);
                 long size = ftell(tmp_proc_file);
                 rewind(tmp_proc_file);
-                unsigned char *tmp_buf = dog_malloc(size);
+                unsigned char *buffer = dog_malloc(size);
                 fread(buffer, 1, size, tmp_proc_file);
                 fclose(tmp_proc_file);
 
@@ -1026,7 +1026,9 @@ __command__(char *unit_pre_command)
             _STARTUPINFO.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
             _STARTUPINFO.hStdError  = GetStdHandle(STD_ERROR_HANDLE);
             _STARTUPINFO.hStdInput  = GetStdHandle(STD_INPUT_HANDLE);
-            
+
+            memset(tmp_buf, 0, sizeof(tmp_buf));
+        
             snprintf(tmp_buf, DOG_PATH_MAX, "%s%s",
                 _PATH_STR_EXEC, dogconfig.dog_toml_server_binary);
             
@@ -1040,7 +1042,9 @@ __command__(char *unit_pre_command)
             }
         #else
             pid_t process_id;
-            
+
+            memset(tmp_buf, 0, sizeof(tmp_buf));
+        
             snprintf(tmp_buf, DOG_PATH_MAX, "%s%s%s",
                 dog_procure_pwd(), _PATH_STR_SEP_POSIX,
                 dogconfig.dog_toml_server_binary);
@@ -1085,6 +1089,8 @@ __command__(char *unit_pre_command)
                 max_fd = (stdout_fd > stderr_fd ? stdout_fd : stderr_fd) + 1;
 
                 fd_set readfds;
+
+                memset(tmp_buf, 0, sizeof(tmp_buf));
 
                 while (true) {
 
