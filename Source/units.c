@@ -1064,6 +1064,8 @@ __command__(char *unit_pre_command)
             
             process_id = fork();
             if (process_id == 0) {
+                chdir(dog_procure_pwd());
+                
                 close(stdout_pipe[0]);
                 close(stderr_pipe[0]);
                 
@@ -1073,7 +1075,20 @@ __command__(char *unit_pre_command)
                 close(stdout_pipe[1]);
                 close(stderr_pipe[1]);
                 
-                execl("/bin/sh", "sh", "-c", tmp_buf, (char *)NULL);
+                execl(tmp_buf, tmp_buf, (char *)NULL);
+                
+                perror("execl failed");
+                fprintf(stderr, "errno = %d\n", errno);
+        
+                int status;
+                waitpid(process_id, &status, 0);
+                
+                if (WIFEXITED(status)) {
+                    printf("Child exited with code %d\n", WEXITSTATUS(status));
+                } else if (WIFSIGNALED(status)) {
+                    printf("Child killed by signal %d\n", WTERMSIG(status));
+                }
+
                 _exit(127);
             } else if (process_id > 0) {
                 close(stdout_pipe[1]);
