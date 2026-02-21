@@ -472,6 +472,8 @@ int binary_condition_check(char *path) {
 	    return false;
 	}
 
+    memset(tmp_buf, 0, sizeof(tmp_buf));
+    
 	ssize_t bytes_read = read(fd, tmp_buf, sizeof(tmp_buf));
 	if (bytes_read < 0) {
 	    pr_error(stderr, "read failed");
@@ -590,6 +592,7 @@ dog_exec_command(char *const av[])
     size_t rem;
     int rv;
     unsigned char c;
+    
 	memset(tmp_buf, 0, sizeof(tmp_buf));
 
     if (av == NULL || av[0] == NULL)
@@ -2651,6 +2654,7 @@ skip_:
 	if (ret_pawncc)
 		{
 			dog_free(dogconfig.dog_pawncc_path);
+            memset(tmp_buf, 0, sizeof(tmp_buf));
 			snprintf(tmp_buf, sizeof(tmp_buf),
 				"%s", dogconfig.dog_sef_found_list[0]);
 			dogconfig.dog_pawncc_path = strdup(tmp_buf);
