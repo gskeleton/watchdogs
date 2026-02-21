@@ -1,0 +1,20 @@
+--------------------     --------------------------                -
+|                  |     |                        |                -
+|     BASE URL     | --> |      URL CHECKING      |                -
+|                  |     |                        |                -
+--------------------     --------------------------                -
+                                    |
+                                    v
+---------------------    --------------------------                -
+|                   |    |                        |                -
+|     APPLYING      |    |  PATTERNS - FILTERING  |                -
+|                   |    |                        |                -
+---------------------    --------------------------                -
+         ^                                |
+         |                                v
+--------------------------     --------------------------          -
+|                        |     |                        |          -
+| FILES/FOLDERS CHECKING | <-- |       INSTALLING       |          -
+|                        |     |                        |          -
+--------------------------     --------------------------          -
+In Replicate, the presence of a .dogkeepnormal file in a repo forces .inc files into pawno/include or qawno/include, bypassing the recursive move flow.

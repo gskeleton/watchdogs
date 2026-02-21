@@ -8,20 +8,20 @@ CFLAGS         = -O2 -pipe
 LDFLAGS        = -lm -lcurl -lreadline -lhistory -larchive
 
 SRCS = \
-	Source/extra/debug.c \
-	Source/curl.c \
-	Source/units.c \
-	Source/utils.c \
-	Source/replicate.c \
-	Source/cause.c \
-	Source/extra/process.c \
-	Source/compiler.c \
-	Source/archive.c \
-	Source/library.c \
-	Source/extra/server.c \
-	Source/crypto.c \
-	External/tomlc/toml.c \
-	External/cJSON/cJSON.c
+	debug.c \
+	curl.c \
+	units.c \
+	utils.c \
+	replicate.c \
+	cause.c \
+	process.c \
+	compiler.c \
+	archive.c \
+	library.c \
+	server.c \
+	crypto.c \
+	tomlc/toml.c \
+	cJSON/cJSON.c
 
 OBJS = $(SRCS:.c=.o)
 
@@ -41,13 +41,14 @@ init:
 			mingw-w64-ucrt-x86_64-gcc \
 			mingw-w64-ucrt-x86_64-lld \
 			mingw-w64-ucrt-x86_64-curl \
+			mingw-w64-ucrt-x86_64-fzf \
 			mingw-w64-ucrt-x86_64-readline \
 			mingw-w64-ucrt-x86_64-libarchive \
 			procps-ng; \
 	elif echo "$$UNAME_S" | grep -qi "Linux" && [ -d "/data/data/com.termux" ]; then \
 		echo "==> Using apt (Termux)"; \
 		apt -o Acquire::Queue-Mode=access -o Acquire::Retries=3 update -y && \
-		DEBIAN_FRONTEND=noninteractive \
+		export DEBIAN_FRONTEND=noninteractive \
 		apt -o Dpkg::Use-Pty=0 install -y --no-install-recommends \
 			unstable-repo x11-repo coreutils binutils procps clang curl tree fzf \
 			libarchive readline; \
@@ -56,7 +57,7 @@ init:
 			echo "==> Using apt (Debian/Ubuntu)"; \
 			dpkg --add-architecture i386 2>/dev/null || true; \
 			apt -o Acquire::Queue-Mode=access -o Acquire::Retries=3 update -y && \
-			DEBIAN_FRONTEND=noninteractive \
+			export DEBIAN_FRONTEND=noninteractive \
 			apt -o Dpkg::Use-Pty=0 install -y --no-install-recommends \
 				build-essential curl procps clang lld make binutils fzf \
 				libcurl4-openssl-dev libatomic1 libreadline-dev libarchive-dev \
