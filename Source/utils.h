@@ -320,6 +320,8 @@ bool strend(const char *str, const char *suffix, bool nocase);
 bool strfind(const char *text, const char *pattern, bool nocase);
 int match_wildcard(const char *str, const char *pat);
 
+void normalize_spaces(char *str);
+
 bool dog_kill_process(const char *process);
 
 int dog_find_path(const char *sef_path, const char *sef_name, const char *ignore_dir);
