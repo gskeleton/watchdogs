@@ -443,10 +443,13 @@ static int setup_linux_library(void)
 			found_lib = dog_find_path("lib/", "libpawnc.so", NULL);
 	}
 
+    memset(tmp_buf, 0, sizeof(tmp_buf));
+
 	for (i = 0; i < dogconfig.dog_sef_count; i++) {
 		if (strstr(
 		    dogconfig.dog_sef_found_list[i],
-		    "libpawnc.so")) {
+		    "libpawnc.so"))
+        {
 			strncpy(tmp_buf,
 			    dogconfig.dog_sef_found_list[i],
 			    DOG_PATH_MAX);
