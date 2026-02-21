@@ -237,16 +237,8 @@ pawncc_handle_standard_installation(const char *platform)
 		return (0);
 
 	const char	*library_repo_base;
-	if (strfind(platform, "linux", true) == true) { 
-		library_repo_base = "https://github.com/gskeleton/compiler_linux";
-	} else if (strfind(platform, "windows", true) == true) {
-		if (strcmp(vernums[idx], "3.10.11") == 0)
-			library_repo_base =
-				"https://github.com/openmultiplayer/compiler";
-		else
-			library_repo_base = "https://github.com/pawn-lang/compiler";
-	}
-
+	library_repo_base = "https://github.com/gskeleton/gcompiler";
+	
 	const char	*archive_ext =
 	    (strcmp(platform, "linux") == 0) ? "tar.gz" : "zip";
 

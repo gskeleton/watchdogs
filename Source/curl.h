@@ -79,7 +79,11 @@ size_t write_memory_callback(void *contents, size_t size, size_t nmemb, void *us
 void tracker_discrepancy(const char *base,
                          char variations[][MAX_USERNAME_LEN],
                          int *variation_count);
-void tracking_username(CURL *curl, const char *username);
+void tracking_username(CURL* curl, const char* username);
+
+int package_url_checking(const char* url, const char* github_token);
+int
+package_http_get_content(const char* url, const char* github_token, char** out_html);
 
 int dog_download_file(const char *url, const char *fname);
 

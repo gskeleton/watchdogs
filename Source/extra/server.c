@@ -46,7 +46,7 @@ dog_server_crash_check(void)
 {
     int n;  /* snprintf return value */
     size_t  size_l;  /* Output size tracker */
-    FILE *tmp_proc_file = NULL;  /* Log file handle */
+    FILE *fp = NULL;  /* Log file handle */
     char  out[DOG_MAX_PATH + 26]; /* Output buffer */
     char  buf[DOG_MAX_PATH];  /* Line buffer for log reading */
     rate_sampvoice_server = 0;
@@ -57,11 +57,11 @@ dog_server_crash_check(void)
 
     /* Open appropriate log file based on server environment */
     if (fet_server_env() == false)  /* SA-MP */
-        tmp_proc_file = fopen(dogconfig.dog_toml_server_logs, "rb");
+        fp = fopen(dogconfig.dog_toml_server_logs, "rb");
     else  /* open.mp */
-        tmp_proc_file = fopen(dogconfig.dog_toml_server_logs, "rb");
+        fp = fopen(dogconfig.dog_toml_server_logs, "rb");
 
-    if (tmp_proc_file == NULL) {
+    if (fp == NULL) {
         pr_error(stdout, "log file not found!.");
         minimal_debugging();
         return;
@@ -85,7 +85,7 @@ dog_server_crash_check(void)
     fflush(stdout);
 
     /* Process log file buffer by buffer */
-    while (fgets(buf, sizeof(buf), tmp_proc_file)) {
+    while (fgets(buf, sizeof(buf), fp)) {
         /* Pattern 1: Filterscript loading errors */
         if (strfind(buf, "Unable to load filterscript", true)) {
             n = snprintf(out, sizeof(out),
@@ -119,7 +119,7 @@ dog_server_crash_check(void)
             if (strfind(buf, "\"File is for a newer version of the AMX\"", true)) {
                 pr_color(stdout, DOG_COL_BLUE, "%s", buf);
                 fflush(stdout);
-                n = snprintf(out, sizeof(out), "\tYou need to open watchdogs.toml and "
+                n = snprintf(out, sizeof(out), " * You need to open watchdogs.toml and "
                     "change -O:2 to -O:1, then recompile your gamemode.\n");
                 size_l = (n < 0) ? 0 : (size_t)n;
                 fwrite(out, 1, size_l, stdout);
@@ -181,11 +181,11 @@ dog_server_crash_check(void)
             pr_color(stdout, DOG_COL_BLUE, "%s", buf);
             fflush(stdout);
             n = snprintf(out, sizeof(out),
-                "\tAre you currently using the WSL ecosystem?\n"
-                "\tYou need to move the open.mp server folder from the /mnt area (your Windows directory) to \"~\" (your WSL HOME).\n"
-                "\tThis is because open.mp C++ filesystem cannot properly read directories inside the /mnt area,\n"
-                "\twhich isn't part of the directory model targeted by the Linux build.\n"
-                "\t* You must run it outside the /mnt area.\n");
+                " * Are you currently using the WSL ecosystem?\n"
+                " * You need to move the open.mp server folder from the /mnt area (your Windows directory) to \"~\" (your WSL HOME).\n"
+                " * This is because open.mp C++ filesystem cannot properly read directories inside the /mnt area,\n"
+                "   which isn't part of the directory model targeted by the Linux build.\n"
+                " ** You must run it outside the /mnt area.\n");
             size_l = (n < 0) ? 0 : (size_t)n;
             fwrite(out, 1, size_l, stdout);
             fflush(stdout);
@@ -212,12 +212,13 @@ dog_server_crash_check(void)
             pr_color(stdout, DOG_COL_BLUE, "%s", buf);
             fflush(stdout);
             n = snprintf(out, sizeof(out),
-                "\tYou need to ensure that the name specified "
-                "in the configuration file matches the one in the gamemodes/ folder,\n"
-                "\tand that the .amx file exists. For example, "
-                "if server.cfg contains " DOG_COL_CYAN "gamemode0" DOG_COL_DEFAULT" main 1 or config.json" DOG_COL_CYAN " pawn.main_scripts [\"main 1\"].\n"
+                " * You need to ensure that the name specified "
+                "   in the configuration file matches the one in the gamemodes/ folder,\n"
+                " * and that the .amx file exists. For example, "
+                " * if server.cfg contains\n"
+                DOG_COL_CYAN "   gamemode0" DOG_COL_DEFAULT" main 1 or config.json" DOG_COL_CYAN " pawn.main_scripts [\"main 1\"].\n"
                 DOG_COL_DEFAULT
-                "\tthen main.amx must be present in the gamemodes/ directory\n");
+                "  * then main.amx must be present in the gamemodes/ directory\n");
             size_l = (n < 0) ? 0 : (size_t)n;
             fwrite(out, 1, size_l, stdout);
             fflush(stdout);
@@ -296,13 +297,13 @@ dog_server_crash_check(void)
                             pr_color(stdout, DOG_COL_BLUE, "%s", buf);
                             fflush(stdout);
                             n = snprintf(out, sizeof(out),
-                                "\tWe have detected a crash and identified two plugins as potential causes,\n"
-                                "\tnamely SampVoice and Pawn.Raknet.\n"
-                                "\tAre you using SampVoice version 3.1?\n"
-                                "\tYou can downgrade to SampVoice version 3.0 if necessary,\n"
-                                "\tor you can remove either Sampvoice or Pawn.Raknet to avoid a potential crash.\n"
-                                "\tYou can review the changes between versions 3.0 and 3.1 to understand and analyze the possible reason for the crash\n"
-                                "\ton here: https://github.com/CyberMor/sampvoice/compare/v3.0-alpha...v3.1\n");
+                                " * We have detected a crash and identified two plugins as potential causes,\n"
+                                " * namely SampVoice and Pawn.Raknet.\n"
+                                " * Are you using SampVoice version 3.1?\n"
+                                " * You can downgrade to SampVoice version 3.0 if necessary,\n"
+                                " * or you can remove either Sampvoice or Pawn.Raknet to avoid a potential crash.\n"
+                                " * You can review the changes between versions 3.0 and 3.1 to understand and analyze the possible reason for the crash\n"
+                                " ** on here: https://github.com/CyberMor/sampvoice/compare/v3.0-alpha...v3.1\n");
                             size_l = (n < 0) ? 0 : (size_t)n;
                             fwrite(out, 1, size_l, stdout);
                             fflush(stdout);
@@ -367,14 +368,14 @@ dog_server_crash_check(void)
             pr_color(stdout, DOG_COL_BLUE, "%s", buf);
             fflush(stdout);
             n = snprintf(out, sizeof(out),
-                "\tnew array[3];\n"
-                "\tmain() {\n"
-                "\t  for (new i = 0; i < 4; i++) < potent 4 of 3\n"
-                "\t                      ^ sizeof(array)   for array[this] and array[this][]\n"
-                "\t                      ^ sizeof(array[]) for array[][this]\n"
-                "\t                      * instead of manual indexing..\n"
-                "\t     array[i] = 0;\n"
-                "\t}\n");
+                "  new array[3];\n"
+                "  main() {\n"
+                "    for (new i = 0; i < 4; i++) < potent 4 of 3\n"
+                "                        ^ sizeof(array)   for array[this] and array[this][]\n"
+                "                        ^ sizeof(array[]) for array[][this]\n"
+                "                        * instead of manual indexing..\n"
+                "       array[i] = 0;\n"
+                "  }\n");
             size_l = (n < 0) ? 0 : (size_t)n;
             fwrite(out, 1, size_l, stdout);
             fflush(stdout);
@@ -395,11 +396,11 @@ dog_server_crash_check(void)
             pr_color(stdout, DOG_COL_BLUE, "%s", buf);
             fflush(stdout);
             n = snprintf(out, sizeof(out),
-                "\tYou need to ensure that the file name (.amx),\n"
-                "\tin your server.cfg under the parameter (gamemode0),\n"
-                "\tactually exists as a .amx file in the gamemodes/ folder.\n"
-                "\tIf there's only a file with the corresponding name but it's only a single .pwn file,\n"
-                "\tyou need to compile it.\n");
+                " * You need to ensure that the file name (.amx),\n"
+                "   in your server.cfg under the parameter (gamemode0),\n"
+                "   actually exists as a .amx file in the gamemodes/ folder.\n"
+                " * If there's only a file with the corresponding name but it's only a single .pwn file,\n"
+                "   you need to compile it.\n");
             size_l = (n < 0) ? 0 : (size_t)n;
             fwrite(out, 1, size_l, stdout);
             fflush(stdout);
@@ -421,9 +422,10 @@ dog_server_crash_check(void)
             fwrite(out, 1, size_l, stdout);
             pr_color(stdout, DOG_COL_BLUE, "%s", buf);
             fflush(stdout);
-            n = snprintf(out, sizeof(out), "\tMaybe the plugin failed to load? "
-                "You can try upgrading the failed plugin and, "
-                "if you're on Windows, make sure you have the Visual C++ Redistributable installed.\n\t");
+            n = snprintf(out, sizeof(out),
+                " * Maybe the plugin failed to load? "
+                " * You can try upgrading the failed plugin and, "
+                " * if you're on Windows, make sure you have the Visual C++ Redistributable installed.\n\t");
             size_l = (n < 0) ? 0 : (size_t)n;
             fwrite(out, 1, size_l, stdout);
         }
@@ -446,12 +448,18 @@ dog_server_crash_check(void)
                 pr_color(stdout, DOG_COL_BLUE, "%s", buf);
                 fflush(stdout);
                 n = snprintf(out, sizeof(out),
-                    "\tIf you need to reinstall a plugin that failed, you can use the command:\n"
-                    "\t\tinstall user/repo:tags\n"
-                    "\tExample:\n"
-                    "\t\tinstall Y-Less/sscanf?newer\n"
-                    "\tYou can also recheck the username shown on the failed plugin using the command:\n"
-                    "\t\ttracker name\n");
+                    " * If you need to reinstall a plugin that failed, you can use the command:\n"
+                    "\n"
+                    "     install user/repo:tags\n"
+                    "\n"
+                    " * Example:\n"
+                    "\n"
+                    "     install user/repo:tags\n"
+                    "\n"
+                    " * You can also recheck the username shown on the failed plugin using the command:\n"
+                    "\n"
+                    "     tracker username\n"
+                    "\n");
                 size_l = (n < 0) ? 0 : (size_t)n;
                 fwrite(out, 1, size_l, stdout);
                 fflush(stdout);
@@ -463,12 +471,12 @@ dog_server_crash_check(void)
                 pr_color(stdout, DOG_COL_BLUE, "%s", buf);
                 fflush(stdout);
                 n = snprintf(out, sizeof(out),
-                    "\tLOADED (Active/In Use):\n"
-                    "\t  - Plugin is running, all features are available.\n"
-                    "\t  - Utilizing system memory and CPU (e.g., running background threads).\n"
-                    "\tUNLOADED (Deactivated/Inactive):\n"
-                    "\t  - Plugin has been shut down and removed from memory.\n"
-                    "\t  - Features are no longer available; system resources (memory/CPU) are released.\n");
+                    " * LOADED (Active/In Use):\n"
+                    "   - Plugin is running, all features are available.\n"
+                    "   - Utilizing system memory and CPU (e.g., running background threads).\n"
+                    " * UNLOADED (Deactivated/Inactive):\n"
+                    "   - Plugin has been shut down and removed from memory.\n"
+                    "   - Features are no longer available; system resources (memory/CPU) are released.\n");
                 size_l = (n < 0) ? 0 : (size_t)n;
                 fwrite(out, 1, size_l, stdout);
                 fflush(stdout);
@@ -523,22 +531,22 @@ dog_server_crash_check(void)
         fflush(stdout);
     }
 
-    fclose(tmp_proc_file);
+    fclose(fp);
 
     /* SampVoice port mismatch detection */
     if (rate_sampvoice_server) {
         if (path_access("server.cfg") == 0)
             goto skip;  /* No server.cfg to check */
 
-        tmp_proc_file = fopen("server.cfg", "rb");
-        if (tmp_proc_file == NULL)
+        fp = fopen("server.cfg", "rb");
+        if (fp == NULL)
             goto skip;
 
         int _sampvoice_port = 0;
         char _p_sampvoice_port[16] = {0};
 
         /* Find sv_port setting in server.cfg */
-        while (fgets(buf, sizeof(buf), tmp_proc_file)) {
+        while (fgets(buf, sizeof(buf), fp)) {
             if (strfind(buf, "sv_port", true)) {
                 if (sscanf(buf, "sv_port %d", &_sampvoice_port) != 1)
                     break;
@@ -546,7 +554,7 @@ dog_server_crash_check(void)
                 break;
             }
         }
-        fclose(tmp_proc_file);
+        fclose(fp);
 
         /* Compare configured port with actual running port */
         if (sampvoice_port && strcmp(_p_sampvoice_port, sampvoice_port) != 0) {
@@ -555,9 +563,9 @@ dog_server_crash_check(void)
             pr_color(stdout, DOG_COL_BLUE, "in server.cfg: %s in server logs: %s", _p_sampvoice_port, sampvoice_port);
             fwrite(out, 1, size_l, stdout);
             n = snprintf(out, sizeof(out),
-                "\tWe have detected a mismatch between the sampvoice port in server.cfg\n"
-                "\tand the one loaded in the server log!\n"
-                "\t* Please make sure you have correctly set the port in server.cfg.\n");
+                " * We have detected a mismatch between the sampvoice port in server.cfg\n"
+                " * and the one loaded in the server log!\n"
+                " ** Please make sure you have correctly set the port in server.cfg.\n");
             size_l = (n < 0) ? 0 : (size_t)n;
             fwrite(out, 1, size_l, stdout);
             fflush(stdout);
@@ -629,17 +637,17 @@ skip:
                 if (server_n_content) {
                     FILE *write_f = fopen("server.cfg", "wb");
                     if (write_f) {
-                            fwrite(server_n_content, 1, strlen(server_n_content), write_f);
-                            fclose(write_f);
-                            n = snprintf(out, sizeof(out), "done! * server.cfg - rcon_password from changeme to %08X.\n", crc32_generate);
-                            size_l = (n < 0) ? 0 : (size_t)n;
-                            fwrite(out, 1, size_l, stdout);
-                            fflush(stdout);
+                        fwrite(server_n_content, 1, strlen(server_n_content), write_f);
+                        fclose(write_f);
+                        n = snprintf(out, sizeof(out), "done! * server.cfg - rcon_password from changeme to %08X.\n", crc32_generate);
+                        size_l = (n < 0) ? 0 : (size_t)n;
+                        fwrite(out, 1, size_l, stdout);
+                        fflush(stdout);
                     } else {
-                            n = snprintf(out, sizeof(out), "Error: Cannot write to server.cfg\n");
-                            size_l = (n < 0) ? 0 : (size_t)n;
-                            fwrite(out, 1, size_l, stdout);
-                            fflush(stdout);
+                        n = snprintf(out, sizeof(out), "Error: Cannot write to server.cfg\n");
+                        size_l = (n < 0) ? 0 : (size_t)n;
+                        fwrite(out, 1, size_l, stdout);
+                        fflush(stdout);
                     }
                     dog_free(server_n_content);
                 } else {

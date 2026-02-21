@@ -30,8 +30,8 @@ static const char *dog_find_warn_err(const char *line)
     return (NULL);
 }
 
-static void pawn_detailed(const char *dog_output, int debug,
-                              int warning_count, int error_count, const char *pawn_ver,
+static void pc_detailed(const char *dog_output, int debug,
+                              int warning_count, int error_count, const char *pc_ver,
                               long int header_size, long int code_size, long int data_size,
                               long int stack_size, long int total_size)
 {
@@ -79,14 +79,12 @@ static void pawn_detailed(const char *dog_output, int debug,
 
     len = snprintf(outbuf, sizeof(outbuf),
                    "** Pawn Compiler %s - Copyright (c) 1997-2006, ITB CompuPhase\n",
-                   pawn_ver);
+                   pc_ver);
     if (len > 0)
         printf("%.*s", len, outbuf);
-
-    print_restore_color();
 }
 
-void cause_pawn_expl(const char *log_file, const char *dog_output, int debug)
+void cause_pc_expl(const char *log_file, const char *dog_output, int debug)
 {
     minimal_debugging();
 
@@ -96,99 +94,69 @@ void cause_pawn_expl(const char *log_file, const char *dog_output, int debug)
 
     long warning_count = 0, error_count = 0;
     long int header_size = 0, code_size = 0, data_size = 0, stack_size = 0, total_size = 0;
-    char pawn_line[DOG_MORE_MAX_PATH] = {0}, pawn_ver[64] = {0};
+    char pc_line[DOG_MORE_MAX_PATH] = {0}, pc_ver[64] = {0};
 
-    while (fgets(pawn_line, sizeof(pawn_line), _log_file)) {
+    while (fgets(pc_line, sizeof(pc_line), _log_file)) {
 
-        if (dog_strcase(pawn_line, "Warnings.") ||
-            dog_strcase(pawn_line, "Warning.") ||
-            dog_strcase(pawn_line, "Errors.") ||
-            dog_strcase(pawn_line, "Error."))
+        if (dog_strcase(pc_line, "Warnings.") ||
+            dog_strcase(pc_line, "Warning.") ||
+            dog_strcase(pc_line, "Errors.") ||
+            dog_strcase(pc_line, "Error."))
             continue;
 
-        if (dog_strcase(pawn_line, "Header size:")) {
-            header_size = strtol(strchr(pawn_line, ':') + 1, NULL, 10);
+        if (dog_strcase(pc_line, "Header size:")) {
+            header_size = strtol(strchr(pc_line, ':') + 1, NULL, 10);
             continue;
-        } else if (dog_strcase(pawn_line, "Code size:")) {
-            code_size = strtol(strchr(pawn_line, ':') + 1, NULL, 10);
+        } else if (dog_strcase(pc_line, "Code size:")) {
+            code_size = strtol(strchr(pc_line, ':') + 1, NULL, 10);
             continue;
-        } else if (dog_strcase(pawn_line, "Data size:")) {
-            data_size = strtol(strchr(pawn_line, ':') + 1, NULL, 10);
+        } else if (dog_strcase(pc_line, "Data size:")) {
+            data_size = strtol(strchr(pc_line, ':') + 1, NULL, 10);
             continue;
-        } else if (dog_strcase(pawn_line, "Stack/heap size:")) {
-            stack_size = strtol(strchr(pawn_line, ':') + 1, NULL, 10);
+        } else if (dog_strcase(pc_line, "Stack/heap size:")) {
+            stack_size = strtol(strchr(pc_line, ':') + 1, NULL, 10);
             continue;
-        } else if (dog_strcase(pawn_line, "Total requirements:")) {
-            total_size = strtol(strchr(pawn_line, ':') + 1, NULL, 10);
+        } else if (dog_strcase(pc_line, "Total requirements:")) {
+            total_size = strtol(strchr(pc_line, ':') + 1, NULL, 10);
             continue;
-        } else if (dog_strcase(pawn_line, "Pawn Compiler ")) {
-            char *p = strstr(pawn_line, " ");
+        } else if (dog_strcase(pc_line, "Pawn Compiler ")) {
+            char *p = strstr(pc_line, " ");
             while (*p && !isdigit(*p)) p++;
             if (*p)
-                sscanf(p, "%63s", pawn_ver);
+                sscanf(p, "%63s", pc_ver);
             continue;
         }
 
-        printf(DOG_COL_BWHITE "%s" DOG_COL_DEFAULT, pawn_line);
+        printf(DOG_COL_BWHITE "%s" DOG_COL_DEFAULT, pc_line);
         fflush(stdout);
 
-        if (dog_strcase(pawn_line, "warning"))
+        if (dog_strcase(pc_line, "warning"))
             ++warning_count;
-        if (dog_strcase(pawn_line, "error"))
+        if (dog_strcase(pc_line, "error"))
             ++error_count;
 
-        const char *description = dog_find_warn_err(pawn_line);
+        const char *description = dog_find_warn_err(pc_line);
         if (description) {
             const char *found = NULL;
             int column = 0;
             for (int i = 0; ccs[i].cs_t; ++i) {
-                if ((found = strstr(pawn_line, ccs[i].cs_t))) {
-                    const char *colon = strchr(pawn_line, ':');
+                if ((found = strstr(pc_line, ccs[i].cs_t))) {
+                    const char *colon = strchr(pc_line, ':');
                     if (colon)
-                        column = colon - pawn_line;
+                        column = colon - pc_line;
                     break;
                 }
             }
             for (int i = 0; i < column; ++i)
                 putchar(' ');
 
-#ifdef DOG_LINUX
-            if (strfind(description, "file doesn't exist, insufficient permissions", true) == 1) {
-                if (path_exists(".watchdogs/help.txt") == 1)
-                    remove(".watchdogs/help.txt");
-                bool ret = false;
-                FILE *help = fopen(".watchdogs/help.txt", "w");
-                if (help) {
-                    fprintf(help, HELP_PICK1);
-                    fprintf(help, HELP_PICK2);
-                    fprintf(help, HELP_PICK3);
-                    fprintf(help, HELP_PICK4);
-                    fprintf(help, HELP_PICK5);
-                    fprintf(help, HELP_PICK6);
-                    fprintf(help, HELP_PICK8);
-                    fprintf(help, HELP_PICK9);
-                    fprintf(help, "\n");
-                    fprintf(help, HELP_PICK01);
-                    fprintf(help, HELP_PICK02);
-                    fclose(help);
-                    ret = true;
-                }
-                if (ret)
-                    pr_color(stdout, DOG_COL_CYAN, "^ %s" DOG_COL_YELLOW " See " DOG_COL_CYAN
-                                            ".watchdogs/help.txt | cat .watchdogs/help.txt : type .watchdogs/help.txt\n",
-                         description);
-                else
-                    pr_color(stdout, DOG_COL_CYAN, "^ %s \n", description);
-                continue;
-            }
-#endif
-            pr_color(stdout, DOG_COL_CYAN, "^ %s \n", description);
+            pr_color(stdout, DOG_COL_CYAN, ": %s \n", description);
         }
     }
 
     fclose(_log_file);
-    pawn_detailed(dog_output, debug, warning_count, error_count,
-                      pawn_ver, header_size, code_size,
+    pc_detailed(dog_output, debug, warning_count, error_count,
+                      pc_ver, header_size, code_size,
                       data_size, stack_size, total_size);
 }
 

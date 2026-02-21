@@ -1,1292 +1,1010 @@
-#include  "utils.h"
-#include  "curl.h"
-#include  "archive.h"
-#include  "crypto.h"
-#include  "units.h"
-#include  "extra/debug.h"
-#include  "replicate.h"
+#include "utils.h"
+#include "curl.h"
+#include "archive.h"
+#include "crypto.h"
+#include "units.h"
+#include "extra/debug.h"
+#include "replicate.h"
 
-bool             installing_package = 0;
-static const char*opr = NULL;
+#define	URL_GITHUB_API		"https://api.github.com/"
+#define	URL_GITHUB_RAW		"https://github.com/"
+#define	URL_GITLAB_RAW		"https://gitlab.com/"
+#define	URL_GITEA_RAW		"https://gitea.com/"
+#define	URL_SF_RAW		"https://sourceforge.net/"
+
+#define	URL_GH_RELEASE_TAG	URL_GITHUB_API "repos/%s/%s/releases/tags/%s"
+#define	URL_GH_RELEASE_LATEST	URL_GITHUB_API "repos/%s/%s/releases/latest"
+#define	URL_GH_ARCHIVE_TAG	URL_GITHUB_RAW "%s/%s/archive/refs/tags/%s.tar.gz"
+#define	URL_GH_ARCHIVE_TAG_ZIP	URL_GITHUB_RAW "%s/%s/archive/refs/tags/%s.zip"
+#define	URL_GH_ARCHIVE_BRANCH	URL_GITHUB_RAW "%s/%s/archive/refs/heads/%s.zip"
+#define	URL_GL_ARCHIVE		URL_GITLAB_RAW "%s/%s/-/archive/%s/%s-%s.tar.gz"
+#define	URL_GA_ARCHIVE		URL_GITEA_RAW "%s/%s/archive/%s.tar.gz"
+#define	URL_SF_DOWNLOAD		URL_SF_RAW "projects/%s/files/latest/download"
+
+bool		 installing_package = 0;
+static const char* opr = NULL;
 static char		 json_item[DOG_PATH_MAX];
 static int		 fdir_counts = 0;
-static char      tmp_buf[DOG_MAX_PATH];
+static char		 pbuf[DOG_MAX_PATH];
 #ifdef DOG_WINDOWS
-static const char *separator = _PATH_STR_SEP_WIN32;
+static const char* separator = _PATH_STR_SEP_WIN32;
 #else
-static const char *separator = _PATH_STR_SEP_POSIX;
+static const char* separator = _PATH_STR_SEP_POSIX;
 #endif
 
-const char		*match_windows_lookup_pattern[] =
-	ASSERT_PATTERN("windows", "win", "win32", "win32", "msvc", "mingw");
+const char* match_windows_lookup_pattern[] =
+ASSERT_PATTERN("windows", "win", "win32", "win32", "msvc", "mingw");
 
-const char		*match_linux_lookup_pattern[] =
-	ASSERT_PATTERN("linux", "ubuntu", "debian", "cent", "centos",
-	    "almalinux", "rockylinux", "cent_os", "fedora", "arch",
-	    "archlinux", "alphine", "rhel", "redhat", "linuxmint", "mint");
+const char* match_linux_lookup_pattern[] =
+ASSERT_PATTERN("linux", "ubuntu", "debian", "cent", "centos",
+    "almalinux", "rockylinux", "cent_os", "fedora", "arch",
+    "archlinux", "alphine", "rhel", "redhat", "linuxmint", "mint");
 
-const char		*match_any_lookup_pattern[] =
-	ASSERT_PATTERN("src", "source", "proj", "project", "server",
-	    "_server", "gamemode", "gamemodes", "bin", "build", "packages",
-	    "resources", "modules", "plugins", "addons", "extensions",
-	    "scripts", "system", "core", "runtime", "libs", "include",
-	    "deps", "dependencies");
+const char* match_any_lookup_pattern[] =
+ASSERT_PATTERN("src", "source", "proj", "project", "server",
+    "_server", "gamemode", "gamemodes", "bin", "build", "packages",
+    "resources", "modules", "plugins", "addons", "extensions",
+    "scripts", "system", "core", "runtime", "libs", "include",
+    "deps", "dependencies");
 
-static
-int
-this_os_archive(const char *filename)
+static int
+this_os_archive(const char* filename)
 {
-	int		 k;
-	char		 size_host_os[DOG_PATH_MAX];
-	char		 filename_lwr[DOG_PATH_MAX];
-	const char	**lookup_pattern = NULL;
+    int		 k;
+    char		 size_host_os[DOG_PATH_MAX];
+    char		 filename_lwr[DOG_PATH_MAX];
+    const char** lookup_pattern = NULL;
 
-	strncpy(size_host_os, opr, sizeof(size_host_os) - 1);
-	size_host_os[sizeof(size_host_os) - 1] = '\0';
+    strlcpy(size_host_os, opr, sizeof(size_host_os));
+    size_host_os[sizeof(size_host_os) - 1] = '\0';
 
-	for (long int i = 0; size_host_os[i]; i++)
-		size_host_os[i] = tolower(size_host_os[i]);
+    for (long int i = 0; size_host_os[i]; i++)
+        size_host_os[i] = tolower(size_host_os[i]);
 
-	if (strfind(size_host_os, "win", true))
-		lookup_pattern = match_windows_lookup_pattern;
-	else if (strfind(size_host_os, "linux", true))
-		lookup_pattern = match_linux_lookup_pattern;
+    if (strfind(size_host_os, "win", true))
+        lookup_pattern = match_windows_lookup_pattern;
+    else if (strfind(size_host_os, "linux", true))
+        lookup_pattern = match_linux_lookup_pattern;
 
-	if (!lookup_pattern)
-		return (0);
+    if (!lookup_pattern)
+        return (0);
 
-	strncpy(filename_lwr, filename, sizeof(filename_lwr) - 1);
-	filename_lwr[sizeof(filename_lwr) - 1] = '\0';
+    strlcpy(filename_lwr, filename, sizeof(filename_lwr));
+    filename_lwr[sizeof(filename_lwr) - 1] = '\0';
 
-	for (int i = 0; filename_lwr[i]; i++)
-		filename_lwr[i] = tolower(filename_lwr[i]);
+    for (int i = 0; filename_lwr[i]; i++)
+        filename_lwr[i] = tolower(filename_lwr[i]);
 
-	for (k = 0; lookup_pattern[k] != NULL; ++k) {
-		if (strfind(filename_lwr, lookup_pattern[k], true))
-			return (1);
-	}
+    for (k = 0; lookup_pattern[k] != NULL; ++k) {
+        if (strfind(filename_lwr, lookup_pattern[k], true))
+            return (1);
+    }
 
-	return (0);
-}
-
-static
-int
-this_more_archive(const char *filename)
-{
-	int	 k;
-	int	 ret = 0;
-
-	for (k = 0; match_any_lookup_pattern[k] != NULL; ++k) {
-		if (strfind(filename, match_any_lookup_pattern[k], true)) {
-			ret = 1;
-			break;
-		}
-	}
-
-	return (ret);
-}
-
-static char *
-try_build_os_asseets(char **assets, int count, const char *os_pattern)
-{
-	int			 i;
-	const char	*const	*lookup_pattern = NULL;
-
-	if (strfind(os_pattern, "win", true))
-		lookup_pattern = match_windows_lookup_pattern;
-	else if (strfind(os_pattern, "linux", true))
-		lookup_pattern = match_linux_lookup_pattern;
-	else
-		return (NULL);
-
-	for (i = 0; i < count; i++) {
-		const char	*asset = assets[i];
-		int		 p;
-
-		for (p = 0; lookup_pattern[p]; p++) {
-			if (!strfind(asset, lookup_pattern[p], true))
-				continue;
-
-			return (strdup(asset));
-		}
-	}
-
-	return (NULL);
-}
-
-static char *
-try_server_assets(char **assets, int count, const char *os_pattern)
-{
-	const char	*const	*os_patterns = NULL;
-	int			 i;
-
-	if (strfind(os_pattern, "win", true))
-		os_patterns = match_windows_lookup_pattern;
-	else if (strfind(os_pattern, "linux", true))
-		os_patterns = match_linux_lookup_pattern;
-	else
-		return (NULL);
-
-	for (i = 0; i < count; i++) {
-		const char	*asset = assets[i];
-		int		 p;
-
-		for (p = 0; match_any_lookup_pattern[p]; p++) {
-			if (strfind(asset, match_any_lookup_pattern[p], true))
-				break;
-		}
-
-		if (!match_any_lookup_pattern[p])
-			continue;
-
-		for (p = 0; os_patterns[p]; p++) {
-			if (strfind(asset, os_patterns[p], true))
-				return (strdup(asset));
-		}
-	}
-
-	return (NULL);
-}
-
-static char *
-try_generic_assets(char **assets, int count)
-{
-	int	i;
-
-	for (i = 0; i < count; i++) {
-		const char	*asset = assets[i];
-		int		 p;
-
-		for (p = 0; match_any_lookup_pattern[p]; p++) {
-			if (strfind(asset, match_any_lookup_pattern[p], true))
-				return (strdup(asset));
-		}
-	}
-
-	for (i = 0; i < count; i++) {
-		const char	*asset = assets[i];
-		int		 p;
-
-		for (p = 0; match_windows_lookup_pattern[p]; p++) {
-			if (strfind(asset, match_windows_lookup_pattern[p], true))
-				break;
-		}
-
-		if (match_windows_lookup_pattern[p])
-			continue;
-
-		for (p = 0; match_linux_lookup_pattern[p]; p++) {
-			if (strfind(asset, match_linux_lookup_pattern[p], true))
-				break;
-		}
-
-		if (match_linux_lookup_pattern[p])
-			continue;
-
-		return (strdup(asset));
-	}
-
-	return (strdup(assets[0]));
-}
-
-static
-char *
-package_fetching_assets(char **package_assets,
-					    int counts, const char *pf_os)
-{
-	char		*result = NULL;
-	char		 size_host_os[32] = {0};
-
-	if (counts == 0)
-		return (NULL);
-	if (counts == 1)
-		return (strdup(package_assets[0]));
-
-	if (pf_os && pf_os[0]) {
-		opr = pf_os;
-	} else {
-		opr = "windows";
-	}
-
-	if (opr) {
-		strncpy(size_host_os, opr, sizeof(size_host_os) - 1);
-		for (int j = 0; size_host_os[j]; j++)
-			size_host_os[j] = tolower(size_host_os[j]);
-	}
-
-	if (size_host_os[0]) {
-		result = try_server_assets(package_assets, counts, size_host_os);
-		if (result)
-			return (result);
-
-		result = try_build_os_asseets(package_assets, counts, size_host_os);
-		if (result)
-			return (result);
-	}
-
-	return (try_generic_assets(package_assets, counts));
-}
-
-static int package_url_checking(const char *url, const char *github_token)
-{
-	CURL *pkg_curl = curl_easy_init();
-	if (!pkg_curl)
-		return (0);
-
-	CURLcode res;
-	long response_code = 0;
-	struct curl_slist *headers = NULL;
-	char dog_error_buffer[CURL_ERROR_SIZE] = { 0 };
-
-	printf("\tCreate & Checking URL: %s...\t\t[V]\n", url);
-
-	if (strfind(dogconfig.dog_toml_github_tokens, "DO_HERE", true) ||
-	    dogconfig.dog_toml_github_tokens == NULL ||
-	    strlen(dogconfig.dog_toml_github_tokens) < 1)
-	{
-		pr_color(stdout, DOG_COL_GREEN,
-		    "Can't read Github token.. skipping\n");
-	} else {
-		char auth_header[DOG_PATH_MAX];
-		snprintf(auth_header, sizeof(auth_header),
-		    "Authorization: token %s", github_token);
-		headers = curl_slist_append(headers, auth_header);
-	}
-
-	headers = curl_slist_append(headers, "User-Agent: watchdogs/1.0");
-	headers = curl_slist_append(headers, "Accept: application/vnd.github.v3+json");
-
-	curl_easy_setopt(pkg_curl, CURLOPT_HTTPHEADER, headers);
-	curl_easy_setopt(pkg_curl, CURLOPT_URL, url);
-	curl_easy_setopt(pkg_curl, CURLOPT_NOBODY, 1L);
-	curl_easy_setopt(pkg_curl, CURLOPT_FOLLOWLOCATION, 1L);
-	curl_easy_setopt(pkg_curl, CURLOPT_TIMEOUT, 30L);
-
-	print("   Try Connecting... ");
-
-	res = curl_easy_perform(pkg_curl);
-	curl_easy_getinfo(pkg_curl, CURLINFO_RESPONSE_CODE, &response_code);
-
-	curl_easy_setopt(pkg_curl, CURLOPT_ERRORBUFFER, dog_error_buffer);
-
-	curl_verify_cacert_pem(pkg_curl);
-
-	res = curl_easy_perform(pkg_curl);
-	curl_easy_getinfo(pkg_curl, CURLINFO_RESPONSE_CODE, &response_code);
-
-	fflush(stdout);
-
-	curl_easy_cleanup(pkg_curl);
-	curl_slist_free_all(headers);
-
-	return (response_code >= 200 && response_code < 300);
+    return (0);
 }
 
 static int
-package_http_get_content(const char *url, const char *github_token, char **out_html)
+this_more_archive(const char* filename)
 {
-	CURL *pkg_curl;
-	CURLcode res;
-	struct curl_slist *headers = NULL;
-	struct memory_struct buffer = { 0 };
+    int	 k;
+    int	 ret = 0;
 
-	pkg_curl = curl_easy_init();
-	if (!pkg_curl)
-		return (0);
+    for (k = 0; match_any_lookup_pattern[k] != NULL; ++k) {
+        if (strfind(filename, match_any_lookup_pattern[k], true)) {
+            ret = 1;
+            break;
+        }
+    }
 
-	if (github_token && strlen(github_token) > 0 &&
-	    !strfind(github_token, "DO_HERE", true)) {
-		char auth_header[512];
-		snprintf(auth_header, sizeof(auth_header),
-		    "Authorization: token %s", github_token);
-		headers = curl_slist_append(headers, auth_header);
-	}
+    return (ret);
+}
 
-	headers = curl_slist_append(headers, "User-Agent: watchdogs/1.0");
-	curl_easy_setopt(pkg_curl, CURLOPT_HTTPHEADER, headers);
+static char*
+try_build_os_asseets(char** assets, int count, const char* os_pattern)
+{
+    int			 i;
+    const char* const* lookup_pattern = NULL;
 
-	curl_easy_setopt(pkg_curl, CURLOPT_URL, url);
+    if (strfind(os_pattern, "win", true))
+        lookup_pattern = match_windows_lookup_pattern;
+    else if (strfind(os_pattern, "linux", true))
+        lookup_pattern = match_linux_lookup_pattern;
+    else
+        return (NULL);
 
-	memory_struct_init(&buffer);
-	curl_easy_setopt(pkg_curl, CURLOPT_WRITEFUNCTION, write_memory_callback);
-	curl_easy_setopt(pkg_curl, CURLOPT_WRITEDATA, (void *)&buffer);
+    for (i = 0; i < count; i++) {
+        const char* asset = assets[i];
+        int		 p;
 
-	curl_easy_setopt(pkg_curl, CURLOPT_FOLLOWLOCATION, 1L);
-	curl_easy_setopt(pkg_curl, CURLOPT_CONNECTTIMEOUT, 15L);
-	curl_easy_setopt(pkg_curl, CURLOPT_TIMEOUT, 60L);
+        for (p = 0; lookup_pattern[p]; p++) {
+            if (!strfind(asset, lookup_pattern[p], true))
+                continue;
 
-	curl_verify_cacert_pem(pkg_curl);
+            return (strdup(asset));
+        }
+    }
 
-	res = curl_easy_perform(pkg_curl);
-	curl_easy_cleanup(pkg_curl);
-	curl_slist_free_all(headers);
+    return (NULL);
+}
 
-	if (res != CURLE_OK || buffer.size == 0) {
-		memory_struct_free(&buffer);
-		return (0);
-	}
+static char*
+try_server_assets(char** assets, int count, const char* os_pattern)
+{
+    const char* const* os_patterns = NULL;
+    int			 i;
 
-	*out_html = buffer.memory;
+    if (strfind(os_pattern, "win", true))
+        os_patterns = match_windows_lookup_pattern;
+    else if (strfind(os_pattern, "linux", true))
+        os_patterns = match_linux_lookup_pattern;
+    else
+        return (NULL);
 
-	return (1);
+    for (i = 0; i < count; i++) {
+        const char* asset = assets[i];
+        int		 p;
+
+        for (p = 0; match_any_lookup_pattern[p]; p++) {
+            if (strfind(asset, match_any_lookup_pattern[p], true))
+                break;
+        }
+
+        if (!match_any_lookup_pattern[p])
+            continue;
+
+        for (p = 0; os_patterns[p]; p++) {
+            if (strfind(asset, os_patterns[p], true))
+                return (strdup(asset));
+        }
+    }
+
+    return (NULL);
+}
+
+static char*
+try_generic_assets(char** assets, int count)
+{
+    int	i;
+
+    for (i = 0; i < count; i++) {
+        const char* asset = assets[i];
+        int		 p;
+
+        for (p = 0; match_any_lookup_pattern[p]; p++) {
+            if (strfind(asset, match_any_lookup_pattern[p], true))
+                return (strdup(asset));
+        }
+    }
+
+    for (i = 0; i < count; i++) {
+        const char* asset = assets[i];
+        int		 p;
+
+        for (p = 0; match_windows_lookup_pattern[p]; p++) {
+            if (strfind(asset, match_windows_lookup_pattern[p], true))
+                break;
+        }
+
+        if (match_windows_lookup_pattern[p])
+            continue;
+
+        for (p = 0; match_linux_lookup_pattern[p]; p++) {
+            if (strfind(asset, match_linux_lookup_pattern[p], true))
+                break;
+        }
+
+        if (match_linux_lookup_pattern[p])
+            continue;
+
+        return (strdup(asset));
+    }
+
+    return (strdup(assets[0]));
+}
+
+static
+char*
+package_fetching_assets(char** package_assets,
+    int counts, const char* pf_os)
+{
+    char* result = NULL;
+    char		 size_host_os[32] = { 0 };
+
+    if (counts == 0)
+        return (NULL);
+    if (counts == 1)
+        return (strdup(package_assets[0]));
+
+    if (pf_os && pf_os[0]) {
+        opr = pf_os;
+    }
+    else {
+        opr = "windows";
+    }
+
+    if (opr) {
+        strncpy(size_host_os, opr, sizeof(size_host_os) - 1);
+        for (int j = 0; size_host_os[j]; j++)
+            size_host_os[j] = tolower(size_host_os[j]);
+    }
+
+    if (size_host_os[0]) {
+        result = try_server_assets(package_assets, counts, size_host_os);
+        if (result)
+            return (result);
+
+        result = try_build_os_asseets(package_assets, counts, size_host_os);
+        if (result)
+            return (result);
+    }
+
+    return (try_generic_assets(package_assets, counts));
+}
+
+static int package_parse_repo(const char* input, struct _repositories* ctx)
+{
+    char* parse_input, * tag_ptr, * path_ptr, * slash;
+    char* repo_ptr, * dot_git;
+    char* choice;
+
+    memset(ctx, 0, sizeof(*ctx));
+
+    parse_input = dog_malloc(1024);
+    if (!parse_input)
+        return (0);
+
+    strlcpy(parse_input, input, 1024);
+    parse_input[1024 - 1] = '\0';
+
+    tag_ptr = strrchr(parse_input, '?');
+    if (tag_ptr) {
+        *tag_ptr = '\0';
+        strlcpy(ctx->tag,
+                tag_ptr + 1,
+                sizeof(ctx->tag));
+    }
+
+    path_ptr = parse_input;
+    if (strncmp(path_ptr, "https://", 8) == 0)
+        path_ptr += 8;
+    else if (strncmp(path_ptr, "http://", 7) == 0)
+        path_ptr += 7;
+
+    char* match;
+    match = strstr(path_ptr, "github.com");
+    if (match) {
+        strlcpy(ctx->host,
+                "github",
+                sizeof(ctx->host));
+        strlcpy(ctx->domain,
+                "github.com",
+                sizeof(ctx->domain));
+        path_ptr = match + strlen("github.com");
+
+    } else if ((match = strstr(path_ptr, "gitlab.com"))) {
+        strlcpy(ctx->host,
+                "gitlab",
+                sizeof(ctx->host));
+        strlcpy(ctx->domain,
+                "gitlab.com",
+                sizeof(ctx->domain));
+        path_ptr = match + strlen("gitlab.com");
+
+    } else if ((match = strstr(path_ptr, "gitea.com"))) {
+        strlcpy(ctx->host,
+                "gitea",
+                sizeof(ctx->host));
+        strlcpy(ctx->domain,
+                "gitea.com",
+                sizeof(ctx->domain));
+        path_ptr = match + strlen("gitea.com");
+
+    } else if ((match = strstr(path_ptr, "sourceforge.net"))) {
+        strlcpy(ctx->host,
+                "sourceforge",
+                sizeof(ctx->host));
+        strlcpy(ctx->domain,
+                "sourceforge.net",
+                sizeof(ctx->domain));
+        path_ptr = match + strlen("sourceforge.net");
+
+    } else {
+        print(DOG_COL_BCYAN
+            "1) GitHub | 2) GitLab | 3) Gitea | 4) SourceForge\n");
+
+        choice = readline("Please select host (1-4): ");
+        if (choice[0] == '\0') {
+            strlcpy(ctx->host, "github", sizeof(ctx->host));
+            strlcpy(ctx->domain, "github.com", sizeof(ctx->domain));
+            goto done;
+        }
+
+        switch (choice[0]) {
+        case '1':
+            strlcpy(ctx->host, "github", sizeof(ctx->host));
+            strlcpy(ctx->domain, "github.com", sizeof(ctx->domain));
+            break;
+        case '2':
+            strlcpy(ctx->host, "gitlab", sizeof(ctx->host));
+            strlcpy(ctx->domain, "gitlab.com", sizeof(ctx->domain));
+            break;
+        case '3':
+            strlcpy(ctx->host, "gitea", sizeof(ctx->host));
+            strlcpy(ctx->domain, "gitea.com", sizeof(ctx->domain));
+            break;
+        case '4':
+            strlcpy(ctx->host, "sourceforge", sizeof(ctx->host));
+            strlcpy(ctx->domain, "sourceforge.net", sizeof(ctx->domain));
+            break;
+        default:
+            strlcpy(ctx->host, "github", sizeof(ctx->host));
+            strlcpy(ctx->domain, "github.com", sizeof(ctx->domain));
+            break;
+        }
+        dog_free(choice);
+    }
+
+done:
+    slash = strchr(path_ptr, '/');
+    if (!slash) {
+        dog_free(parse_input);
+        return (0);
+    }
+
+    *slash = '\0';
+    strlcpy(ctx->user, path_ptr, sizeof(ctx->user));
+
+    repo_ptr = slash + 1;
+    dot_git = strstr(repo_ptr, ".git");
+    if (dot_git)  *dot_git = '\0';
+
+    strlcpy(ctx->repo, repo_ptr, sizeof(ctx->repo));
+
+    dog_free(parse_input);
+    return (1);
 }
 
 static int
-package_parse_repo(const char *input, struct _repositories *ctx)
+package_gh_release_assets(const char* user, const char* repo, char* _tag,
+    char** out_urls, int max_urls)
 {
-	char	*parse_input, *tag_ptr, *path_ptr, *slash, *repo_ptr, *dot_git;
-	char	*choice;
+    char		 api_url[DOG_PATH_MAX * 2];
+    char* json_data = NULL;
+    const char* p;
+    int		 url_count = 0;
 
-	memset(ctx, 0, sizeof(*ctx));
-	parse_input = dog_malloc(1024);
-	if (!parse_input)
-		return (0);
-	strncpy(parse_input, input, 1024 - 1);
-	parse_input[1024 - 1] = '\0';
+    snprintf(api_url, sizeof(api_url),
+        URL_GH_RELEASE_TAG, user, repo, _tag);
 
-	tag_ptr = strrchr(parse_input, '?');
-	if (tag_ptr) {
-		*tag_ptr = '\0';
-		strncpy(ctx->tag, tag_ptr + 1, sizeof(ctx->tag) - 1);
-	}
+    int ret = package_http_get_content(api_url,
+                                       dogconfig.dog_toml_github_tokens,
+                                       &json_data);
+    if (!ret)
+    {
+        dog_free(json_data);
+        return (0);
+    }
 
-	path_ptr = parse_input;
-	if (strncmp(path_ptr, "https://", 8) == 0)
-		path_ptr += 8;
-	else if (strncmp(path_ptr, "http://", 7) == 0)
-		path_ptr += 7;
+    p = json_data;
+    while (url_count < max_urls &&
+        (p = strstr(p, "\"browser_download_url\"")) != NULL) {
+        const char* url_end;
+        size_t		 url_len;
 
-	if (strstr(path_ptr, "github.com")) {
-		strcpy(ctx->host, "github");
-		strcpy(ctx->domain, "github.com");
-		path_ptr = strstr(path_ptr, "github.com") + 11;
+        p += strlen("\"browser_download_url\"");
+        p = strchr(p, '"');
+        if (!p)
+            break;
+        ++p;
 
-	} else if (strstr(path_ptr, "gitlab.com")) {
-		strcpy(ctx->host, "gitlab");
-		strcpy(ctx->domain, "gitlab.com");
-		path_ptr = strstr(path_ptr, "gitlab.com") + 11;
+        url_end = strchr(p, '"');
+        if (!url_end)
+            break;
 
-	} else if (strstr(path_ptr, "gitea.com") || strstr(path_ptr, "gitea")) {
-		strcpy(ctx->host, "gitea");
-		strcpy(ctx->domain, "gitea.com");
-		path_ptr = strstr(path_ptr, "/") + 1;
+        url_len = url_end - p;
+        out_urls[url_count] = dog_malloc(url_len + 1);
+        if (!out_urls[url_count]) {
+            for (int i = 0; i < url_count; ++i) {
+                dog_free(out_urls[i]);
+            }
+            dog_free(json_data);
+            return (0);
+        }
 
-	} else if (strstr(path_ptr, "sourceforge.net")) {
-		strcpy(ctx->host, "sourceforge");
-		strcpy(ctx->domain, "sourceforge.net");
-		path_ptr = strstr(path_ptr, "sourceforge.net") + 16;
+        strlcpy(out_urls[url_count], p, url_len + 1);
+        out_urls[url_count][url_len] = '\0';
 
-	} else {
-		print(DOG_COL_BCYAN "1. GitHub | 2. GitLab | 3. Gitea | 4. SourceForge\n");
-		choice = readline("Please select host (1-4): ");
-		if (choice) {
-			if (choice[0] == '1') {
-				strcpy(ctx->host, "github");
-				strcpy(ctx->domain, "github.com");
-			} else if (choice[0] == '2') {
-				strcpy(ctx->host, "gitlab");
-				strcpy(ctx->domain, "gitlab.com");
-			} else if (choice[0] == '3') {
-				strcpy(ctx->host, "gitea");
-				strcpy(ctx->domain, "gitea.com");
-			} else if (choice[0] == '4') {
-				strcpy(ctx->host, "sourceforge");
-				strcpy(ctx->domain, "sourceforge.net");
-			} else {
-				strcpy(ctx->host, "github");
-				strcpy(ctx->domain, "github.com");
-			}
-			free(choice);
-		}
-	}
+        ++url_count;
+        p = url_end + 1;
+    }
 
-	slash = strchr(path_ptr, '/');
-	if (slash) {
-		*slash = '\0';
-		strncpy(ctx->user, path_ptr,
-		    sizeof(ctx->user) - 1);
-		repo_ptr = slash + 1;
-		dot_git = strstr(repo_ptr, ".git");
-		if (dot_git)
-			*dot_git = '\0';
-		strncpy(ctx->repo, repo_ptr,
-		    sizeof(ctx->repo) - 1);
-		dog_free(parse_input);
-		return (1);
-	}
-
-	dog_free(parse_input);
-	return (0);
-}
-
-static int
-package_gh_release_assets(const char *user, const char *repo, char *_tag,
-    char **out_urls, int max_urls)
-{
-	char		 api_url[DOG_PATH_MAX * 2];
-	char		*json_data = NULL;
-	const char	*p;
-	int		 url_count = 0;
-
-	snprintf(api_url, sizeof(api_url),
-	    "%sapi.github.com/repos/%s/%s/releases/tags/%s",
-	    "https://", user, repo, _tag);
-
-	if (!package_http_get_content(api_url, dogconfig.dog_toml_github_tokens,
-	    &json_data)) {
-		dog_free(json_data);
-		return (0);
-	}
-
-	p = json_data;
-	while (url_count < max_urls &&
-	    (p = strstr(p, "\"browser_download_url\"")) != NULL) {
-		const char	*url_end;
-		size_t		 url_len;
-
-		p += strlen("\"browser_download_url\"");
-		p = strchr(p, '"');
-		if (!p)
-			break;
-		++p;
-
-		url_end = strchr(p, '"');
-		if (!url_end)
-			break;
-
-		url_len = url_end - p;
-		out_urls[url_count] = dog_malloc(url_len + 1);
-		if (!out_urls[url_count]) {
-		    for (int i = 0; i < url_count; ++i) {
-		        dog_free(out_urls[i]);
-		    }
-		    dog_free(json_data);
-		    return (0);
-		}
-
-		strncpy(out_urls[url_count], p, url_len);
-		out_urls[url_count][url_len] = '\0';
-
-		++url_count;
-		p = url_end + 1;
-	}
-
-	dog_free(json_data);
-	return (url_count);
+    dog_free(json_data);
+    return (url_count);
 }
 
 static void
-package_build_repo_url(const struct _repositories *ctx,
-    int rate_tag_page, char *put_url, size_t put_size)
+package_build_repo_url(const struct _repositories* ctx,
+    int rate_tag_page, char* put_url, size_t put_size)
 {
-	char	tag_access[tag_size] = {0};
+    char tag_access[128] = { 0 };
+    int is_github = strcmp(ctx->host, "github") == 0;
+    int has_tag = ctx->tag[0] != '\0';
 
-	if (ctx->tag[0]) {
-		strncpy(tag_access, ctx->tag,
-		    sizeof(tag_access) - 1);
+    if (has_tag)
+        strlcpy(tag_access, ctx->tag, sizeof(tag_access));
 
-		if (strcmp(tag_access, "newer") == 0) {
-			if (strcmp(ctx->host, "github") ==
-			    0 && !rate_tag_page)
-				strcpy(tag_access, "latest");
-		}
-	}
+    if (has_tag && strcmp(tag_access, "newer") == 0 &&
+        is_github && !rate_tag_page)
+        strlcpy(tag_access, "latest", sizeof(tag_access));
 
-	if (
-		strcmp(ctx->host, "github")
-		== 0)
-	{
-		if (rate_tag_page && tag_access[0]) {
-			if (!strcmp(tag_access, "latest")) {
-				snprintf(put_url, put_size,
-					"https://%s/%s/%s/releases/latest",
-				    ctx->domain, ctx->user, ctx->repo);
-			} else {
-				snprintf(put_url, put_size,
-					"https://%s/%s/%s/releases/tag/%s",
-				    ctx->domain, ctx->user,
-				    ctx->repo, tag_access);
-			}
-		} else if (tag_access[0]) {
-			if (!strcmp(tag_access, "latest")) {
-				snprintf(put_url, put_size,
-					"https://%s/%s/%s/releases/latest",
-				    ctx->domain, ctx->user, ctx->repo);
-			} else {
-				snprintf(put_url, put_size,
-					"https://%s/%s/%s/archive/refs/tags/%s.tar.gz",
-				    ctx->domain, ctx->user,
-				    ctx->repo, tag_access);
-			}
-		} else {
-			snprintf(put_url, put_size,
-				"https://%s/%s/%s/archive/refs/heads/main.zip",
-			    ctx->domain, ctx->user, ctx->repo);
-		}
-	}
+    if (!is_github)
+        return;
+
+    if (rate_tag_page && has_tag) {
+        if (strcmp(tag_access, "latest") == 0) {
+            snprintf(put_url, put_size,
+                "https://%s/%s/%s/releases/latest",
+                ctx->domain, ctx->user, ctx->repo);
+        }
+        else {
+            snprintf(put_url, put_size,
+                "https://%s/%s/%s/releases/tag/%s",
+                ctx->domain, ctx->user, ctx->repo, tag_access);
+        }
+
+    }
+    else if (has_tag) {
+        if (strcmp(tag_access, "latest") == 0) {
+            snprintf(put_url, put_size,
+                "https://%s/%s/%s/releases/latest",
+                ctx->domain, ctx->user, ctx->repo);
+        }
+        else {
+            snprintf(put_url, put_size,
+                URL_GH_ARCHIVE_TAG,
+                ctx->user, ctx->repo, tag_access);
+        }
+
+    }
+    else {
+        snprintf(put_url, put_size,
+            URL_GH_ARCHIVE_BRANCH,
+            ctx->user, ctx->repo, "main");
+    }
 }
 
 static int
-package_gh_latest_tag(const char *_user, const char *_repo, char *out_tag,
-    size_t put_size)
+package_gh_latest_tag(const char* user, const char* repo,
+    char* out_tag, size_t put_size)
 {
-	char		 api_url[DOG_PATH_MAX * 2];
-	char		*json_data = NULL;
-	const char	*p;
-	int		 ret = 0;
+    char api_url[DOG_PATH_MAX * 2];
+    char* json_data = NULL;
+    const char* p, * end;
+    size_t tag_len;
 
-	snprintf(api_url, sizeof(api_url),
-	    "%sapi.github.com/repos/%s/%s/releases/latest",
-	    "https://", _user, _repo);
+    if (!user || !repo || !out_tag || put_size == 0)
+        return (0);
 
-	if (!package_http_get_content(api_url, dogconfig.dog_toml_github_tokens,
-	    &json_data))
-		return (0);
+    snprintf(api_url, sizeof(api_url),
+        URL_GH_RELEASE_LATEST, user, repo);
 
-	p = strstr(json_data, "\"tag_name\"");
-	if (p) {
-		p = strchr(p, ':');
-		if (p) {
-			++p;
-			while (*p && (*p == ' ' || *p == '\t' || *p == '\n' ||
-			    *p == '\r'))
-				++p;
+    int ret = package_http_get_content(api_url,
+        dogconfig.dog_toml_github_tokens,
+        &json_data);
+    if (!ret)
+    {
+        return (0);
+    }
 
-			if (*p == '"') {
-				++p;
-				const char	*end = strchr(p, '"');
-				if (end) {
-					size_t	 tag_len = end - p;
-					if (tag_len < put_size) {
-						strncpy(out_tag, p, tag_len);
-						out_tag[tag_len] = '\0';
-						ret = 1;
-					}
-				}
-			}
-		}
-	}
+    p = strstr(json_data, "\"tag_name\"");
+    if (!p) {
+        dog_free(json_data);
+        return (0);
+    }
 
-	dog_free(json_data);
-	return (ret);
+    p = strchr(p, ':');
+    if (!p) {
+        dog_free(json_data);
+        return (0);
+    }
+
+    while (*p && (*p == ':' || *p == ' ' || *p == '\t' ||
+        *p == '\n' || *p == '\r'))
+        ++p;
+
+    if (*p != '"') {
+        dog_free(json_data);
+        return (0);
+    }
+
+    ++p;
+    end = strchr(p, '"');
+    if (!end) {
+        dog_free(json_data);
+        return (0);
+    }
+
+    tag_len = end - p;
+    if (tag_len >= put_size)
+        tag_len = put_size - 1;
+
+    strlcpy(out_tag, p, tag_len + 1);
+    out_tag[tag_len] = '\0';
+
+    dog_free(json_data);
+    return (1);
 }
 
 static int
-parsing_generic_repo(const struct _repositories *repo, char *put_url,
-    size_t put_size, const char *branch)
+parsing_generic_repo(const struct _repositories* repo, char* put_url,
+    size_t put_size, const char* branch)
 {
-	if (strcmp(repo->host, "gitlab") == 0) {
-		snprintf(put_url, put_size,
-		    "https://"
-		    "gitlab.com/%s/%s/-/archive/%s/%s-%s.tar.gz",
-		    repo->user, repo->repo, branch ? branch : "main",
-		    repo->repo, branch ? branch : "main");
-		return (1);
-	} else if (strcmp(repo->host, "gitea") == 0) {
-		snprintf(put_url, put_size,
-		    "https://"
-		    "gitea.com/%s/%s/archive/%s.tar.gz",
-		    repo->user, repo->repo, branch ? branch : "main");
-		return (1);
-	} else if (strcmp(repo->host, "sourceforge") == 0) {
-		snprintf(put_url, put_size,
-		    "https://"
-		    "sourceforge.net/projects/%s/files/latest/download",
-		    repo->repo);
-		return (1);
-	}
-	return (0);
+    const char* fmt = NULL;
+    const char* b = branch ? branch : "main";
+
+    if (strcmp(repo->host, "gitlab") == 0) {
+        fmt = URL_GL_ARCHIVE;
+    }
+    else if (strcmp(repo->host, "gitea") == 0) {
+        fmt = URL_GA_ARCHIVE;
+    }
+    else if (strcmp(repo->host, "sourceforge") == 0) {
+        fmt = URL_SF_DOWNLOAD;
+    }
+
+    if (!fmt)
+        return (0);
+
+    if (strcmp(repo->host, "sourceforge") == 0) {
+        snprintf(put_url, put_size, fmt, repo->repo);
+    }
+    else if (strcmp(repo->host, "gitea") == 0) {
+        snprintf(put_url, put_size, fmt, repo->user, repo->repo, b);
+    }
+    else {
+        snprintf(put_url, put_size, fmt,
+            repo->user, repo->repo, b,
+            repo->repo, b);
+    }
+    
+    return (0);
 }
 
 static int
-package_handle_repo(const struct _repositories *ctx, char *put_url,
-    size_t put_size, const char *branch)
+package_handle_repo(const struct _repositories* ctx, char* put_url,
+    size_t put_size, const char* branch)
 {
-	const char	*package_repo_branch[] = { branch, "main", "master" };
-	char		 tag_access[128];
-	char		*package_assets[10];
-	char		*package_best_asset;
-	int		 ret = 0, j, asset_counts, use_fallback_branch = 0;
+    char		 tag_value[128];
+    char* asset_list[10];
+    char* selected_asset;
+    int		 found = 0, idx, asset_count, use_fallback = 0;
+#define MAX_FALLBACK_BRANCH (3)
+    const char* fallback_branches[] = { branch, "main", "master" };
 
-	if (strcmp(ctx->host, "github") != 0)
-		return (parsing_generic_repo(ctx, put_url,
-		    put_size, branch));
+    if (strcmp(ctx->host, "github") != 0)
+        return (parsing_generic_repo(ctx, put_url,
+            put_size, branch));
 
-	if (ctx->tag[0] &&
-	    strcmp(ctx->tag, "newer") == 0) {
-		if (package_gh_latest_tag(ctx->user,
-		    ctx->repo, tag_access,
-		    sizeof(tag_access))) {
-			pr_info(stdout,
-			    "Creating latest/newer tag: " DOG_COL_CYAN
-			    "%s " DOG_COL_DEFAULT "~instead of latest "
-			    DOG_COL_CYAN "(?newer)" DOG_COL_DEFAULT "\t\t"
-			    DOG_COL_YELLOW "[V]",
-			    tag_access);
-		} else {
-			pr_error(stdout,
-			    "Failed to get latest tag for %s/%s,"
-			    "Falling back to main branch\t\t[X]",
-			    ctx->user, ctx->repo);
-			minimal_debugging();
-			use_fallback_branch = 1;
-		}
-	} else {
-		strncpy(tag_access, ctx->tag,
-		    sizeof(tag_access) - 1);
-	}
+    if (ctx->tag[0] && strcmp(ctx->tag, "newer") == 0) {
+        int ret = package_gh_latest_tag(ctx->user,
+                                        ctx->repo,
+                                        tag_value,
+                                        sizeof(tag_value));
+        if (ret) {
+            pr_info(stdout,
+                "Creating latest/newer tag: " DOG_COL_CYAN
+                "%s " DOG_COL_DEFAULT "~instead of latest "
+                DOG_COL_CYAN "(?newer)" DOG_COL_DEFAULT "\t\t"
+                DOG_COL_YELLOW "[V]",
+                tag_value);
+        } else {
+            pr_error(stdout,
+                "Failed to get latest tag for %s/%s,"
+                "Falling back to main branch\t\t[X]",
+                ctx->user, ctx->repo);
+            minimal_debugging();
+            use_fallback = 1;
+        }
+    } else {
+        strlcpy(tag_value, ctx->tag, sizeof(tag_value));
+    }
 
-	if (use_fallback_branch) {
-		for (j = 0; j < 3 && !ret; j++) {
-			snprintf(put_url, put_size,
-			    "https://github.com/%s/%s/archive/refs/heads/%s.zip",
-			    ctx->user, ctx->repo,
-			    package_repo_branch[j]);
+    if (use_fallback) {
+        for (idx = 0; idx < MAX_FALLBACK_BRANCH && !found; idx++) {
+            snprintf(put_url,
+                     put_size,
+                     URL_GH_ARCHIVE_BRANCH,
+                     ctx->user,
+                     ctx->repo,
+                     fallback_branches[idx]);
 
-			if (package_url_checking(put_url,
-			    dogconfig.dog_toml_github_tokens)) {
-				ret = 1;
-				if (j == 1) {
-					print("Create master branch "
-					    "(main branch not found)"
-					    "\t\t" DOG_COL_YELLOW "[V]\n");
-				}
-			}
-		}
-		return (ret);
-	}
+            if (package_url_checking(put_url,
+                dogconfig.dog_toml_github_tokens))
+            {
+                found = 1;
+                if (idx == 1) {
+                    print("Create master branch "
+                        "(main branch not found)"
+                        "\t\t" DOG_COL_YELLOW "[V]\n");
+                }
+            }
+        }
+        return (found);
+    }
 
-	pr_info(stdout, "Fetching any archive from %s..", tag_access);
+    pr_info(stdout,
+        "Fetching any archive from %s..", tag_value);
 
-	if (tag_access[0]) {
-		asset_counts = package_gh_release_assets(ctx->user,
-		    ctx->repo, tag_access,
-		    package_assets, 10);
+    if (tag_value[0]) {
+        asset_count = package_gh_release_assets(ctx->user,
+            ctx->repo, tag_value, asset_list, 10);
 
-		if (asset_counts > 0) {
-			
-			if (opr == NULL) {
-				pr_info(stdout,
-					"Installing for?\n"
-					"   Windows (A/a/Enter) : GNU/Linux : (B/b)");
-				print(DOG_COL_CYAN ">" DOG_COL_DEFAULT);
-				char *selecting_os = readline(" ");
-				if (selecting_os[0] == '\0' ||
-					selecting_os[0] == 'A' || selecting_os[0] == 'a')
-				{
-					opr = "windows";
-				} else {
-					opr = "linux";
-				}
-				dog_free(selecting_os);
-			}
+        if (asset_count > 0) {
 
-			package_best_asset = package_fetching_assets(
-			    package_assets, asset_counts, opr);
+            if (opr == NULL) {
+                pr_info(stdout,
+                    "Installing for?\n"
+                    "   Windows (A/a/Enter) : GNU/Linux : (B/b)");
+                print(DOG_COL_CYAN ">" DOG_COL_DEFAULT);
+                char* os_choice = readline(" ");
+                if (os_choice[0] == '\0' ||
+                    os_choice[0] == 'A' || os_choice[0] == 'a')
+                {
+                    opr = "windows";
+                } else {
+                    opr = "linux";
+                }
+                dog_free(os_choice);
+            }
 
-			if (package_best_asset) {
-				strncpy(put_url, package_best_asset,
-				    put_size - 1);
-				ret = 1;
+            selected_asset = package_fetching_assets(
+                asset_list, asset_count, opr);
 
-				if (this_more_archive(package_best_asset)) {
-					;
-				} else if (this_os_archive(package_best_asset)) {
-					;
-				} else {
-					;
-				}
+            if (selected_asset) {
+                strlcpy(put_url, selected_asset, put_size);
+                found = 1;
 
-				pr_info(stdout,
-				    "Found:\n   "
-				    DOG_COL_YELLOW "\033[1m @ \033[0m"
-				    DOG_COL_CYAN "%s\t\t" DOG_COL_YELLOW "[V]\n",
-				    package_best_asset);
+                pr_info(stdout,
+                    "Found:\n   "
+                    DOG_COL_YELLOW "\033[1m @ \033[0m"
+                    DOG_COL_CYAN "%s\t\t" DOG_COL_YELLOW "[V]\n",
+                    selected_asset);
 
-				dog_free(package_best_asset);
-			}
+                dog_free(selected_asset);
+            }
 
-			for (j = 0; j < asset_counts; j++)
-				dog_free(package_assets[j]);
-		}
+            for (idx = 0; idx < asset_count; idx++)
+                dog_free(asset_list[idx]);
+        }
 
-		if (!ret) {
-			const char	*package_arch_format[] = {
-				"https://github.com/%s/%s/archive/refs/tags/%s.tar.gz",
-				"https://github.com/%s/%s/archive/refs/tags/%s.zip"
-			};
+        if (!found) {
+            const char* archive_formats[] = {
+                URL_GH_ARCHIVE_TAG,
+                URL_GH_ARCHIVE_TAG_ZIP
+            };
 
-			for (j = 0; j < 2 && !ret; j++) {
-				snprintf(put_url, put_size, package_arch_format[j],
-				    ctx->user,
-				    ctx->repo,
-				    tag_access);
+            for (idx = 0; idx < 2 && !found; idx++) {
+                snprintf(put_url, put_size, archive_formats[idx],
+                    ctx->user, ctx->repo, tag_value);
 
-				if (package_url_checking(put_url,
-				    dogconfig.dog_toml_github_tokens))
-					ret = 1;
-			}
-		}
-	} else {
-		for (j = 0; j < 2 && !ret; j++) {
-			snprintf(put_url, put_size,
-			    "%s%s/%s/archive/refs/heads/%s.zip",
-			    "https://github.com/",
-			    ctx->user,
-			    ctx->repo,
-			    package_repo_branch[j]);
+                if (package_url_checking(put_url,
+                    dogconfig.dog_toml_github_tokens))
+                    found = 1;
+            }
+        }
+    }
+    else {
+        for (idx = 0; idx < 2 && !found; idx++) {
+            snprintf(put_url, put_size, URL_GH_ARCHIVE_BRANCH,
+                ctx->user, ctx->repo, fallback_branches[idx]);
 
-			if (package_url_checking(put_url,
-			    dogconfig.dog_toml_github_tokens)) {
-				ret = 1;
-				if (j == 1)
-					print("Create master branch "
-					    "(main branch not found)\t\t"
-					    DOG_COL_YELLOW "[V]\n");
-			}
-		}
-	}
+            if (package_url_checking(put_url,
+                dogconfig.dog_toml_github_tokens)) {
+                found = 1;
+                if (idx == 1)
+                    print("Create master branch "
+                        "(main branch not found)\t\t"
+                        DOG_COL_YELLOW "[V]\n");
+            }
+        }
+    }
 
-	return (ret);
+    return (found);
 }
 
-static
-int
-package_try_parsing(const char *raw_file_path, const char *raw_json_path)
+static int
+package_try_parsing(const char* raw_file_path, const char* raw_json_path)
 {
-	char	res_convert_f_path[DOG_PATH_MAX],
-		    res_convert_json_path[DOG_PATH_MAX];
+    char	res_convert_f_path[DOG_PATH_MAX],
+        res_convert_json_path[DOG_PATH_MAX];
 
-	strncpy(res_convert_f_path, raw_file_path,
-	    sizeof(res_convert_f_path));
-	res_convert_f_path[sizeof(res_convert_f_path) - 1] = '\0';
-	path_sep_to_posix(res_convert_f_path);
+    strlcpy(res_convert_f_path,
+            raw_file_path,
+            sizeof(res_convert_f_path));
+    res_convert_f_path[sizeof(res_convert_f_path) - 1] = '\0';
+    path_sep_to_posix(res_convert_f_path);
 
-	strncpy(res_convert_json_path, raw_json_path,
-	    sizeof(res_convert_json_path));
-	res_convert_json_path[sizeof(res_convert_json_path) - 1] = '\0';
-	path_sep_to_posix(res_convert_json_path);
+    strlcpy(res_convert_json_path,
+            raw_json_path,
+            sizeof(res_convert_json_path));
+    res_convert_json_path[sizeof(res_convert_json_path) - 1] = '\0';
+    path_sep_to_posix(res_convert_json_path);
 
-	if (strfind(res_convert_json_path, "pawno", true) ||
-	    strfind(res_convert_json_path, "qawno", true))
-		goto done;
+    if (strfind(res_convert_json_path, "pawno", true) ||
+        strfind(res_convert_json_path, "qawno", true))
+        goto done;
 
 done:
-	return (1);
+    return (1);
 }
 
-static
-void
-package_configure_samp_conf(const char *config_file, const char *fw_line,
-    const char *plugin_name)
+static void
+package_configure_samp_conf(const char* config_file, const char* directive,
+    const char* plugin_name)
 {
-	FILE	*temp_file, *tmp_proc_file;
-	char	 temp_path[DOG_PATH_MAX];
-	char	 ctr_line[DOG_PATH_MAX];
-	int	 int_random_size, t_exist, tr_exist, tr_ln_has_tx;
+    FILE* temp_fp, * orig_fp;
+    char	 temp_path[DOG_PATH_MAX];
+    char	 line_buffer[DOG_PATH_MAX];
+    int	     plugin_exists, directive_exists, line_has_plugin;
 
-	srand((unsigned int)time(NULL) ^ rand());
-	int_random_size = rand() % 10000000;
+    snprintf(temp_path, sizeof(temp_path),
+        ".watchdogs/XXXXX_temp");
 
-	snprintf(temp_path, sizeof(temp_path),
-	    ".watchdogs/000%07d_temp", int_random_size);
+    if (path_exists(temp_path) == 1)
+        remove(temp_path);
 
-	temp_file = fopen(temp_path, "w");
+    temp_fp = fopen(temp_path, "w");
 
-	if (fet_server_env() != false)
-		return;
+    if (fet_server_env() != false)
+        return;
 
-	if (dir_exists(".watchdogs") == 0)
-		MKDIR(".watchdogs");
+    if (dir_exists(".watchdogs") == 0)
+        MKDIR(".watchdogs");
 
-	pr_color(stdout, DOG_COL_GREEN,
-	    "Create Dependencies '%s' into '%s'\t\t" DOG_COL_YELLOW "[V]\n",
-	    plugin_name, config_file);
+    pr_color(stdout, DOG_COL_GREEN,
+        "Create Dependencies '%s' into '%s'\t\t" DOG_COL_YELLOW "[V]\n",
+        plugin_name, config_file);
 
-	tmp_proc_file = fopen(config_file, "r");
+    orig_fp = fopen(config_file, "r");
 
-	if (tmp_proc_file) {
-		t_exist = 0;
-		tr_exist = 0;
-		tr_ln_has_tx = 0;
+    if (orig_fp) {
+        plugin_exists = 0;
+        directive_exists = 0;
+        line_has_plugin = 0;
 
-		while (fgets(ctr_line, sizeof(ctr_line), tmp_proc_file)) {
-			ctr_line[strcspn(ctr_line, "\n")] = 0;
-			if (strstr(ctr_line, plugin_name) != NULL)
-				t_exist = 1;
-			if (strstr(ctr_line, fw_line) != NULL) {
-				tr_exist = 1;
-				if (strstr(ctr_line, plugin_name) != NULL)
-					tr_ln_has_tx = 1;
-			}
-		}
-		fclose(tmp_proc_file);
+        while (fgets(line_buffer, sizeof(line_buffer), orig_fp)) {
+            line_buffer[strcspn(line_buffer, "\n")] = 0;
+            if (strstr(line_buffer, plugin_name) != NULL)
+            plugin_exists = 1;
+            if (strstr(line_buffer, directive) != NULL) {
+            directive_exists = 1;
+            if (strstr(line_buffer, plugin_name) != NULL)
+            line_has_plugin = 1;
+            }
+        }
+        fclose(orig_fp);
 
-		if (t_exist)
-			return;
+        if (plugin_exists)
+            return;
 
-		if (tr_exist && !tr_ln_has_tx) {
-			tmp_proc_file = fopen(config_file, "r");
+        if (directive_exists && !line_has_plugin) {
+            orig_fp = fopen(config_file, "r");
 
-			while (fgets(ctr_line, sizeof(ctr_line), tmp_proc_file)) {
-				char	free_line[DOG_PATH_MAX];
-				strcpy(free_line, ctr_line);
-				free_line[strcspn(free_line, "\n")] =
-				    0;
+            while (fgets(line_buffer, sizeof(line_buffer), orig_fp)) {
+                char	clean_line[DOG_PATH_MAX];
+                strcpy(clean_line, line_buffer);
+                clean_line[strcspn(clean_line, "\n")] = 0;
 
-				if (strstr(free_line, fw_line) != NULL &&
-				    strstr(free_line, plugin_name) == NULL) {
-					fprintf(temp_file,
-					    "%s %s\n", free_line, plugin_name);
-				} else {
-					fputs(ctr_line, temp_file);
-				}
-			}
+                if (strstr(clean_line, directive) != NULL
+                    && strstr(clean_line, plugin_name) == NULL) {
+                    fprintf(temp_fp,
+                        "%s %s\n", clean_line, plugin_name);
+                } else {
+                    fputs(line_buffer, temp_fp);
+                }
+            }
 
-			fclose(tmp_proc_file);
-			fclose(temp_file);
+            fclose(orig_fp);
+            fclose(temp_fp);
 
-			remove(config_file);
-			rename(temp_path, config_file);
+            int rm = remove(config_file);
+            if (rm) {
+                fprintf(stdout,
+                    "failed to remove: %s..", config_file);
+                minimal_debugging();
+            }
+            if (path_access(temp_path) == 1 && path_access(config_file) == 0) {
+                int rn = rename(temp_path, config_file);
+                if (rn) {
+                    fprintf(stdout,
+                        "failed to rename: %s to %s..", temp_path, config_file);
+                    minimal_debugging();
+                }
+            }
+        } else if (!directive_exists) {
+            orig_fp = fopen(config_file, "a");
+            fprintf(orig_fp, "%s %s\n", directive, plugin_name);
+            fclose(orig_fp);
+        }
+    } else {
+        orig_fp = fopen(config_file, "w");
+        fprintf(orig_fp, "%s %s\n", directive, plugin_name);
+        fclose(orig_fp);
+    }
 
-		} else if (!tr_exist) {
-			tmp_proc_file = fopen(config_file, "a");
-			fprintf(tmp_proc_file, "%s %s\n", fw_line, plugin_name);
-			fclose(tmp_proc_file);
-		}
-	} else {
-		tmp_proc_file = fopen(config_file, "w");
-		fprintf(tmp_proc_file, "%s %s\n", fw_line, plugin_name);
-		fclose(tmp_proc_file);
-	}
-
-	return;
+    return;
 }
 
 #define S_ADD_PLUGIN(config_file, fw_line, plugin_name) \
 	package_configure_samp_conf(config_file, fw_line, plugin_name)
 
-static
-void package_configure_omp_conf(const char *config_name,
-    const char *package_name)
+static void
+package_configure_omp_conf(const char* config_name,
+    const char* package_name)
 {
-	FILE	*tmp_proc_file;
-	cJSON	*cJSON_obj, *pawn, *cJSON_key, *dir_item, *size_package_name;
-	char	*buffer, *cJSON_Printed;
-	long	 fle_size;
-	size_t	 file_read;
-	int	 p_exist;
+    FILE* fp;
+    cJSON* json_root, * pc_obj, * plugins_array, * array_item, * new_item;
+    char* buffer, * json_output;
+    long	 file_size;
+    size_t	 bytes_read;
+    int	 plugin_found;
 
-	if (fet_server_env() != true)
-		return;
+    if (fet_server_env() != true)
+        return;
 
-	pr_color(stdout, DOG_COL_GREEN,
-	    "Create Dependencies '%s' into '%s'\t\t" DOG_COL_YELLOW "[V]\n",
-	    package_name, config_name);
+    pr_color(stdout, DOG_COL_GREEN,
+        "Create Dependencies '%s' into '%s'\t\t" DOG_COL_YELLOW "[V]\n",
+        package_name, config_name);
 
-	tmp_proc_file = fopen(config_name, "r");
+    fp = fopen(config_name, "r");
 
-	if (!tmp_proc_file) {
-		cJSON_obj = cJSON_CreateObject();
-	} else {
-		fseek(tmp_proc_file, 0, SEEK_END);
-		fle_size = ftell(tmp_proc_file);
-		fseek(tmp_proc_file, 0, SEEK_SET);
+    if (!fp) {
+        json_root = cJSON_CreateObject();
+    }
+    else {
+        fseek(fp, 0, SEEK_END);
+        file_size = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
 
-		buffer = (char *)dog_malloc(fle_size + 1);
-		if (!buffer) {
-			pr_error(stdout,
-				"Memory allocation failed!");
-			minimal_debugging();
-			fclose(tmp_proc_file);
-			return;
-		}
+        buffer = (char*)dog_malloc(file_size + 1);
+        if (!buffer) {
+            pr_error(stdout,
+                    "Memory allocation failed!");
+            minimal_debugging();
+            fclose(fp);
+            return;
+        }
 
-		file_read = fread(buffer, 1, fle_size, tmp_proc_file);
-		if (file_read != fle_size) {
-			pr_error(stdout,
-				"Failed to read the entire file!");
-			minimal_debugging();
-			dog_free(buffer);
-			fclose(tmp_proc_file);
-			return;
-		}
+        bytes_read = fread(buffer, 1, file_size, fp);
+        if (bytes_read != file_size) {
+            pr_error(stdout,
+                    "Failed to read the entire file!");
+            minimal_debugging();
+            dog_free(buffer);
+            fclose(fp);
+            return;
+        }
 
-		buffer[fle_size] = '\0';
-		fclose(tmp_proc_file);
+        buffer[file_size] = '\0';
+        fclose(fp);
 
-		cJSON_obj = cJSON_Parse(buffer);
-		dog_free(buffer);
+        json_root = cJSON_Parse(buffer);
+        dog_free(buffer);
 
-		if (!cJSON_obj)
-			cJSON_obj = cJSON_CreateObject();
-	}
+        if (!json_root)
+            json_root = cJSON_CreateObject();
+    }
 
-	pawn = cJSON_GetObjectItem(cJSON_obj, "pawn");
-	if (!pawn) {
-		pawn = cJSON_CreateObject();
-		cJSON_AddItemToObject(cJSON_obj, "pawn", pawn);
-	}
+    pc_obj = cJSON_GetObjectItem(json_root, "pawn");
+    if (!pc_obj) {
+        pc_obj = cJSON_CreateObject();
+        cJSON_AddItemToObject(json_root, "pawn", pc_obj);
+    }
 
-	cJSON_key = cJSON_GetObjectItem(pawn, "legacy_plugins");
-	if (!cJSON_key) {
-		cJSON_key = cJSON_CreateArray();
-		cJSON_AddItemToObject(pawn,
-							  "legacy_plugins",
-							  cJSON_key);
-	}
+    plugins_array = cJSON_GetObjectItem(pc_obj, "legacy_plugins");
+    if (!plugins_array) {
+        plugins_array = cJSON_CreateArray();
+        cJSON_AddItemToObject(pc_obj, "legacy_plugins", plugins_array);
+    }
 
-	if (!cJSON_IsArray(cJSON_key)) {
-		cJSON_DeleteItemFromObject(pawn, "legacy_plugins");
-		cJSON_key = cJSON_CreateArray();
-		cJSON_AddItemToObject(pawn,
-							  "legacy_plugins",
-							  cJSON_key);
-	}
+    if (!cJSON_IsArray(plugins_array)) {
+        cJSON_DeleteItemFromObject(pc_obj, "legacy_plugins");
+        plugins_array = cJSON_CreateArray();
+        cJSON_AddItemToObject(pc_obj, "legacy_plugins", plugins_array);
+    }
 
-	p_exist = 0;
-	cJSON_ArrayForEach(dir_item, cJSON_key) {
-		if (cJSON_IsString(dir_item) &&
-		    !strcmp(dir_item->valuestring, package_name)) {
-			p_exist = 1;
-			break;
-		}
-	}
+    plugin_found = 0;
+    cJSON_ArrayForEach(array_item, plugins_array) {
+        if (cJSON_IsString(array_item) &&
+            !strcmp(array_item->valuestring, package_name)) {
+            plugin_found = 1;
+            break;
+        }
+    }
 
-	if (!p_exist) {
-		size_package_name = cJSON_CreateString(package_name);
-		cJSON_AddItemToArray(cJSON_key, size_package_name);
-	}
+    if (!plugin_found) {
+        new_item = cJSON_CreateString(package_name);
+        cJSON_AddItemToArray(plugins_array, new_item);
+    }
 
-	cJSON_Printed = cJSON_Print(cJSON_obj);
-	tmp_proc_file = fopen(config_name, "w");
-	if (tmp_proc_file) {
-		fputs(cJSON_Printed, tmp_proc_file);
-		fclose(tmp_proc_file);
-	}
+    json_output = cJSON_Print(json_root);
+    fp = fopen(config_name, "w");
+    if (fp) {
+        fputs(json_output, fp);
+        fclose(fp);
+    }
 
-	cJSON_Delete(cJSON_obj);
-	dog_free(cJSON_Printed);
+    cJSON_Delete(json_root);
+    dog_free(json_output);
 
-	return;
+    return;
 }
 
 #define M_ADD_PLUGIN(x, y) package_configure_omp_conf(x, y)
 
-static
-void
-package_add_include(const char *input, char *package_name,
-    char *following)
-{
-	FILE	*m_file, *tmp_proc_file;
-	char	*ct_modes, *pos, *insert_at, *line_start, *line_end;
-	char	*last_inc, *last_inc_end, *end;
-	char	 lgth_name[DOG_PATH_MAX];
-	long	 fle_size;
-	size_t	 bytes_read;
-	int	 len;
-
-	if (path_exists(input) == 0)
-		return;
-
-	m_file = fopen(input, "rb");
-	if (!m_file)
-		return;
-
-	fseek(m_file, 0, SEEK_END);
-	fle_size = ftell(m_file);
-	fseek(m_file, 0, SEEK_SET);
-
-	ct_modes = dog_malloc(fle_size + 2);
-	if (!ct_modes) {
-		fclose(m_file);
-		return;
-	}
-
-	bytes_read = fread(ct_modes, 1, fle_size, m_file);
-	if (bytes_read != fle_size) {
-		pr_error(stdout, "Failed to read the entire file!");
-		minimal_debugging();
-		dog_free(ct_modes);
-		fclose(m_file);
-		return;
-	}
-
-	ct_modes[fle_size] = '\0';
-	fclose(m_file);
-
-	strncpy(lgth_name,
-			package_name,
-			sizeof(lgth_name) - 1);
-
-#define _include_trigger "#include"
-#define _include_chr_open '<'
-#define _include_chr_close '>'
-
-	if (strchr(lgth_name, _include_chr_open) && strchr(lgth_name, _include_chr_close)) {
-		char	*open = strchr(lgth_name, _include_chr_open);
-		char	*close = strchr(lgth_name, _include_chr_close);
-		if (open && close) {
-			memmove(lgth_name, open + 1, close - open - 1);
-			lgth_name[close - open - 1] = '\0';
-		}
-	}
-
-	pos = ct_modes;
-	while ((pos = strstr(pos, _include_trigger))) {
-		line_end = strchr(pos, '\n');
-		if (!line_end)
-			line_end = ct_modes + fle_size;
-
-		len = line_end - pos;
-		if (len >= 0x100) // 0x100 = 256
-			len = 0xFF; // 0xFF = 255
-		char	 line[0x100]; // 0x100 = 256
-		strncpy(line, pos, len);
-		line[len] = '\0';
-
-		if (strstr(line, lgth_name)) {
-			dog_free(ct_modes);
-			return;
-		}
-		pos = line_end + 1;
-	}
-
-	insert_at = NULL;
-	pos = ct_modes;
-
-	while ((pos = strstr(pos, following))) {
-		line_start = pos;
-		while (line_start > ct_modes && *(line_start - 1) != '\n')
-			line_start--;
-
-		line_end = strchr(pos, '\n');
-		if (!line_end)
-			line_end = ct_modes + fle_size;
-
-		len = line_end - line_start;
-		if (len >= 0x100) // 0x100 = 256
-			len = 0xFF; // 0xFF = 255
-		char	 line[0x100]; // 0x100 = 256
-		strncpy(line, line_start, len);
-		line[len] = '\0';
-
-		if (strstr(line, following)) {
-			insert_at = line_end;
-			break;
-		}
-		pos = line_end + 1;
-	}
-
-	tmp_proc_file = fopen(input, "w");
-	if (!tmp_proc_file) {
-		dog_free(ct_modes);
-		return;
-	}
-
-	if (insert_at) {
-		fwrite(ct_modes, 1, insert_at - ct_modes, tmp_proc_file);
-
-		if (insert_at > ct_modes && *(insert_at - 1) != '\n')
-			fprintf(tmp_proc_file, "\n");
-
-		fprintf(tmp_proc_file, "%s\n", package_name);
-
-		if (*insert_at) {
-			end = ct_modes + fle_size;
-			while (end > insert_at && (*(end - 1) == '\n' ||
-			    *(end - 1) == '\r' || *(end - 1) == ' ' ||
-			    *(end - 1) == '\t'))
-				end--;
-
-			if (end > insert_at)
-				fwrite(insert_at, 1, end - insert_at,
-					tmp_proc_file);
-			fprintf(tmp_proc_file, "\n");
-		}
-	} else {
-		last_inc_end = NULL;
-		pos = ct_modes;
-
-		while ((pos = strstr(pos, _include_trigger))) {
-			last_inc_end = strchr(pos, '\n');
-			if (!last_inc_end) {
-				last_inc_end
-					= ct_modes + fle_size;
-			}
-			pos = last_inc_end + 1;
-		}
-
-		if (last_inc_end) {
-			fwrite(ct_modes, 1, last_inc_end - ct_modes,
-					tmp_proc_file);
-			fprintf(tmp_proc_file, "\n%s\n", package_name);
-
-			end = ct_modes + fle_size;
-			while (end > last_inc_end && (*(end - 1) == '\n' ||
-			    *(end - 1) == '\r'))
-			{
-				end--;
-			}
-
-			if (end > last_inc_end) {
-				fwrite(last_inc_end, 1, end - last_inc_end,
-				    tmp_proc_file);
-			}
-		} else {
-			fprintf(tmp_proc_file, "%s\n", package_name);
-			fwrite(ct_modes, 1,
-					(size_t)fle_size,
-					tmp_proc_file);
-		}
-	}
-
-	fclose(tmp_proc_file);
-	dog_free(ct_modes);
-}
-
-#define DENCY_ADD_INCLUDES(x, y, z) package_add_include(x, y, z)
-
 static void
-package_include_prints(const char *package_include)
+move_inc_from_dir(const char* src_dir, const char* include_dest)
 {
-	toml_table_t	*dog_toml_server_config;
-	FILE		*tmp_proc_file;
-	char		 dog_error_buffer[DOG_PATH_MAX],
-			 dependencies[DOG_PATH_MAX], _directive[DOG_MAX_PATH];
-	const char	*package_n, *direct_bnames;
-	char		*userinput;
-	static bool	 k = false;
-	static const char *expect_add;
-
-	package_n = fet_filename(package_include);
-	snprintf(dependencies, sizeof(dependencies), "%s", package_n);
-	direct_bnames = fet_basename(dependencies);
-
-	tmp_proc_file = fopen("watchdogs.toml", "r");
-	if (tmp_proc_file) {
-		dog_toml_server_config = toml_parse_file(tmp_proc_file,
-		    dog_error_buffer, sizeof(dog_error_buffer));
-		fclose(tmp_proc_file);
-
-		if (!dog_toml_server_config) {
-			pr_error(stdout,
-			    "failed to parse the watchdogs.toml..: %s",
-			    dog_error_buffer);
-			minimal_debugging();
-			return;
-		}
-
-		toml_table_t *dog_compiler = toml_table_in(dog_toml_server_config,
-		    TOML_TABLE_COMPILER);
-		if (dog_compiler) {
-			toml_datum_t toml_serv_i = toml_string_in(dog_compiler,
-			    "input");
-			if (toml_serv_i.ok) {
-				dogconfig.dog_toml_serv_input =
-				    strdup(toml_serv_i.u.s);
-				dog_free(toml_serv_i.u.s);
-			}
-		}
-		toml_free(dog_toml_server_config);
-	}
-
-	snprintf(_directive, sizeof(_directive), "#include <%s>", direct_bnames);
-
-	if (k == false) {
-		printf(DOG_COL_BCYAN
-		    "Where do you want to Add %s? (enter for: %s)"
-		    DOG_COL_DEFAULT, _directive,
-		    dogconfig.dog_toml_serv_input);
-		userinput = readline(" ");
-		if (userinput[0] == '\0')
-			userinput = strdup(dogconfig.dog_toml_serv_input);
-		expect_add = strdup(userinput);
-		dog_free(userinput);
-		k = true;
-	}
-
-	char	size_userinput[DOG_PATH_MAX] = {0};
-	snprintf(size_userinput, sizeof(size_userinput), "gamemodes/%s.pwn",
-	    expect_add);
-
-	if (path_exists(expect_add) == 0) {
-		FILE	*creat = fopen(size_userinput, "w+");
-		if (creat)
-			fclose(creat);
-	}
-
-	expect_add = strdup(size_userinput);
-
-	if (fet_server_env() == false) {
-		DENCY_ADD_INCLUDES(expect_add, _directive, "#include <a_samp>");
-	} else if (fet_server_env() == true) {
-		DENCY_ADD_INCLUDES(expect_add, _directive, "#include <open.mp>");
-	} else {
-		DENCY_ADD_INCLUDES(expect_add, _directive, "#include <a_samp>");
-	}
-}
-
-static void move_inc_from_dir(const char *src_dir, const char *include_dest)
-{
-    DIR *dir = opendir(src_dir);
+    DIR* dir = opendir(src_dir);
     if (!dir) return;
 
-    struct dirent *ent;
-    char src[DOG_PATH_MAX * 2];
-    char dst[DOG_PATH_MAX * 2];
+    struct dirent* entry;
+    char src_path[DOG_PATH_MAX * 2];
+    char dst_path[DOG_PATH_MAX * 2];
 
-    while ((ent = readdir(dir)) != NULL) {
-        if (dog_dot_or_dotdot(ent->d_name))
+    while ((entry = readdir(dir)) != NULL) {
+        if (dog_dot_or_dotdot(entry->d_name))
             continue;
 
-        char *ext = strrchr(ent->d_name, '.');
+        char* ext = strrchr(entry->d_name, '.');
         if (!ext || strcmp(ext, ".inc") != 0)
             continue;
 
-        snprintf(src, sizeof(src), "%s%s%s",
-                 src_dir, separator, ent->d_name);
-        snprintf(dst, sizeof(dst), "%s%s%s",
-                 include_dest, separator, ent->d_name);
+        snprintf(src_path, sizeof(src_path), "%s%s%s",
+            src_dir, separator, entry->d_name);
+        snprintf(dst_path, sizeof(dst_path), "%s%s%s",
+            include_dest, separator, entry->d_name);
 
-        if (path_access(src) == 1 && rename(src, dst) != 0) {
-#ifdef DOG_WINDOWS
-            char *argv[] = { "move", "/Y", src, dst, NULL };
-#else
-            char *argv[] = { "mv", "-f", src, dst, NULL };
-#endif
-            dog_exec_command(argv);
+        if (path_access(src_path) == 1) {
+            if (rename(src_path, dst_path) != 0) {
+                #ifdef DOG_WINDOWS
+                snprintf(pbuf, sizeof(pbuf),
+                    "cmd.exe /C move /Y %s %s", src_path, dst_path);
+                #else
+                snprintf(pbuf, sizeof(pbuf),
+                    "mv -f %s %s", src_path, dst_path);
+                #endif
+                system(pbuf);
+            }
+
+            package_try_parsing(dst_path, dst_path);
+
+            pr_color(stdout, DOG_COL_YELLOW,
+                " [M] Include %s -> %s\n",
+                entry->d_name, dst_path);
         }
-
-        package_try_parsing(dst, dst);
-        package_include_prints(ent->d_name);
-
-        pr_color(stdout, DOG_COL_YELLOW,
-                 " [M] Include %s -> %s\n",
-                 ent->d_name, dst);
     }
 
     closedir(dir);
 }
 
-static
-void
-dump_file_type(const char *dump_path, char *dump_pattern,
-    char *dump_exclude, char *dump_loc, char *dump_place, int dump_root)
+static void
+dump_file_type(const char* dump_path, char* dump_pattern,
+    char* dump_exclude, char* dump_loc, char* dump_place, int dump_root)
 {
-    const char  *package_names, *basename,
-    			*match_root_keywords;
+    const char* package_names, * basename,
+        * match_root_keywords;
     char         dest_path[DOG_PATH_MAX * 2];
-    char        *basename_lwr;
-    int          found, rate_has_prefix;
+    char* basename_lwr;
+    int          found, has_prefix;
 
-    dog_sef_path_revert();
+    _sef_restore();
 
     found = dog_find_path(dump_path, dump_pattern, dump_exclude);
     ++fdir_counts;
 #if defined(_DBG_PRINT)
     println(stdout, "dump_path: %s dump_pattern: %s dump_exclude: %s",
-    		dump_path, dump_pattern, dump_exclude);
+        dump_path, dump_pattern, dump_exclude);
     println(stdout, "fdir_counts (%d) found path (%d)", fdir_counts, found);
 #endif
 
@@ -1301,29 +1019,29 @@ dump_file_type(const char *dump_path, char *dump_pattern,
             for (int j = 0; basename_lwr[j]; j++)
                 basename_lwr[j] = tolower(basename_lwr[j]);
 
-            rate_has_prefix = 0;
+            has_prefix = 0;
 
             match_root_keywords = dogconfig.dog_toml_root_patterns;
             while (*match_root_keywords) {
                 while (*match_root_keywords == ' ')
                     match_root_keywords++;
 
-                const char *keyword_end  = match_root_keywords;
-                while (*keyword_end  && *keyword_end  != ' ')
-                    keyword_end ++;
+                const char* keyword_end = match_root_keywords;
+                while (*keyword_end && *keyword_end != ' ')
+                    keyword_end++;
 
-                if (keyword_end  > match_root_keywords) {
-                    size_t keyword_len = keyword_end  - match_root_keywords;
+                if (keyword_end > match_root_keywords) {
+                    size_t keyword_len = keyword_end - match_root_keywords;
                     if (strncmp(basename_lwr,
                         match_root_keywords,
                         keyword_len) == 0)
                     {
-                        ++rate_has_prefix;
+                        ++has_prefix;
                         break;
                     }
                 }
 
-                match_root_keywords = (*keyword_end ) ? keyword_end  + 1 : keyword_end ;
+                match_root_keywords = (*keyword_end) ? keyword_end + 1 : keyword_end;
             }
             dog_free(basename_lwr);
 
@@ -1331,79 +1049,86 @@ dump_file_type(const char *dump_path, char *dump_pattern,
 
             if (dump_place[0] != '\0') {
                 snprintf(dest_path, sizeof(dest_path), "%s%s%s%s%s",
-                         dump_loc, separator, dump_place, separator,
-                         package_names);
+                    dump_loc, separator, dump_place, separator,
+                    package_names);
 
                 char dir_part[DOG_PATH_MAX];
                 snprintf(dir_part, sizeof(dir_part), "%s%s%s",
-                         dump_loc, separator, dump_place);
+                    dump_loc, separator, dump_place);
                 if (dir_exists(dir_part) == 0) {
                     dog_mkdir_recursive(dir_part);
                 }
-            } else if (rate_has_prefix) {
+            }
+            else if (has_prefix) {
                 snprintf(dest_path, sizeof(dest_path), "%s%s%s",
-                         dump_loc, separator, package_names);
-            } else {
+                    dump_loc, separator, package_names);
+            }
+            else {
                 snprintf(dest_path, sizeof(dest_path), "%s%s%s%s",
-                         dump_loc, separator, separator, package_names);
+                    dump_loc, separator, separator, package_names);
 
                 char plugin_dir[DOG_PATH_MAX * 2];
                 snprintf(plugin_dir, sizeof(plugin_dir), "%s%s",
-                         dump_loc, separator);
+                    dump_loc, separator);
                 if (dir_exists(plugin_dir) == 0) {
                     dog_mkdir_recursive(plugin_dir);
                 }
             }
 
             int move_success = 0;
-		#ifdef DOG_WINDOWS
+            #ifdef DOG_WINDOWS
             if (MoveFileExA(dogconfig.dog_sef_found_list[i], dest_path,
-                           MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED)) {
+                MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED)) {
                 move_success = 1;
-            } else {
-                tmp_buf[0] = '\0';
-                snprintf(tmp_buf, sizeof(tmp_buf), "\"%s\" \"%s\" >nul 2>&1 && del \"%s\"",
-                         dogconfig.dog_sef_found_list[i], dest_path,
-                         dogconfig.dog_sef_found_list[i]);
-                char *argv[] = { "copy", "/Y", tmp_buf, NULL };
-                move_success = dog_exec_command(argv);
             }
-		#else
+            else {
+                pbuf[0] = '\0';
+                snprintf(pbuf, sizeof(pbuf),
+                    "copy /Y \"%s\" \"%s\" >nul 2>&1 && del \"%s\"",
+                    dogconfig.dog_sef_found_list[i], dest_path,
+                    dogconfig.dog_sef_found_list[i]);
+                move_success = system(pbuf);
+            }
+            #else
             if (rename(dogconfig.dog_sef_found_list[i], dest_path) == 0) {
                 move_success = 1;
-            } else {
+            }
+            else {
                 pid_t pid = fork();
                 if (pid == 0) {
                     execlp("mv", "mv", "-f",
-                           dogconfig.dog_sef_found_list[i],
-                           dest_path,
-                           NULL);
+                        dogconfig.dog_sef_found_list[i],
+                        dest_path,
+                        NULL);
                     _exit(127);
                 }
                 waitpid(pid, NULL, 0);
                 move_success = 1;
             }
-		#endif
+            #endif
             if (move_success) {
                 if (dump_place[0] != '\0') {
                     pr_color(stdout, DOG_COL_CYAN,
                         " [M] Plugins %s -> %s%s%s\n",
                         basename, dump_loc, separator, dump_place);
-                } else if (rate_has_prefix) {
+                }
+                else if (has_prefix) {
                     pr_color(stdout, DOG_COL_CYAN,
                         " [M] Plugins %s -> %s\n",
                         basename, dump_loc);
-                } else {
+                }
+                else {
                     pr_color(stdout, DOG_COL_CYAN,
                         " [M] Plugins %s -> %s%s?\n",
                         basename, dump_loc, separator);
                 }
 #if defined (_DBG_PRINT)
-				pr_info(stdout,
-					"basename: %s dump_loc: %s separator: %s",
-					basename, dump_loc, separator);
+                pr_info(stdout,
+                    "basename: %s dump_loc: %s separator: %s",
+                    basename, dump_loc, separator);
 #endif
-            } else {
+            }
+            else {
                 pr_error(stdout, "Failed to move: %s", basename);
             }
 
@@ -1416,12 +1141,12 @@ dump_file_type(const char *dump_path, char *dump_pattern,
 
             if (fet_server_env() == false &&
                 strfind(dogconfig.dog_toml_server_config,
-                	".cfg", true))
+                    ".cfg", true))
                 S_ADD_PLUGIN(dogconfig.dog_toml_server_config,
                     "plugins", basename);
             else if (fet_server_env() == true &&
                 strfind(dogconfig.dog_toml_server_config,
-                	".json", true))
+                    ".json", true))
                 M_ADD_PLUGIN(dogconfig.dog_toml_server_config,
                     basename);
         }
@@ -1431,205 +1156,445 @@ done:
     return;
 }
 
-static
-void
-package_cjson_additem(cJSON *p1, int p2, cJSON *p3)
+static int package_has_inc_files(const char* dir_path)
 {
-	if (cJSON_IsString(cJSON_GetArrayItem(p1, p2)))
-		cJSON_AddItemToArray(p3,
-		    cJSON_CreateString(cJSON_GetArrayItem(p1, p2)->valuestring));
+    DIR* dir = opendir(dir_path);
+    if (!dir) {
+        return (0);
+    }
+
+    struct    dirent* entry;
+    struct    stat    st;
+    char              full_path[DOG_PATH_MAX * 3];
+    int               found = 0;
+
+    while ((entry = readdir(dir)) != NULL && !found) {
+        if (dog_dot_or_dotdot(entry->d_name)) {
+            continue;
+        }
+
+        snprintf(full_path, sizeof(full_path), "%s%s%s",
+            dir_path, separator, entry->d_name);
+
+        if (stat(full_path, &st) != 0) {
+            continue;
+        }
+
+        if (S_ISDIR(st.st_mode)) {
+            found = package_has_inc_files(full_path);
+        } else {
+            char* ext = strrchr(entry->d_name, '.');
+            if (ext && strcmp(ext, ".inc") == 0) {
+                found = 1;
+            }
+        }
+    }
+
+    closedir(dir);
+    return found;
 }
 
-static
-void package_move_files(const char *package_dir, const char *package_loc)
+static int
+check_for_dogkeeproot(const char* dir_path)
+{
+    DIR* dir = opendir(dir_path);
+    if (!dir) {
+        return (0);
+    }
+
+    struct   dirent* entry;
+    struct   stat    st;
+    char             full_path[DOG_PATH_MAX * 3];
+    int               found = 0;
+
+    while ((entry = readdir(dir)) != NULL && !found) {
+        if (dog_dot_or_dotdot(entry->d_name)) {
+            continue;
+        }
+
+        if (strcmp(entry->d_name, ".dogkeepnormal") == 0) {
+            snprintf(full_path, sizeof(full_path), "%s%s%s",
+                dir_path, separator, entry->d_name);
+
+            if (stat(full_path, &st) == 0 && S_ISREG(st.st_mode)) {
+                found = 1;
+            }
+            continue;
+        }
+
+        snprintf(full_path, sizeof(full_path), "%s%s%s",
+            dir_path, separator, entry->d_name);
+
+        if (stat(full_path, &st) != 0) {
+            continue;
+        }
+
+        if (S_ISDIR(st.st_mode)) {
+            found = check_for_dogkeeproot(full_path);
+        }
+    }
+
+    closedir(dir);
+    return found;
+}
+
+static void
+process_inc_folder(const char* folder_path)
+{
+    DIR* dir = opendir(folder_path);
+    if (!dir) {
+        return;
+    }
+
+    struct   dirent* entry;
+    struct   stat    st;
+    char             full_path[DOG_PATH_MAX * 3];
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (dog_dot_or_dotdot(entry->d_name)) {
+            continue;
+        }
+
+        snprintf(full_path, sizeof(full_path), "%s%s%s",
+            folder_path, separator, entry->d_name);
+
+        if (stat(full_path, &st) != 0) {
+            continue;
+        }
+
+        if (S_ISDIR(st.st_mode)) {
+            process_inc_folder(full_path);
+        }
+        else {
+            char* ext = strrchr(entry->d_name, '.');
+            if (ext && strcmp(ext, ".inc") == 0) {
+                package_try_parsing(full_path, full_path);
+            }
+        }
+    }
+
+    closedir(dir);
+}
+
+static void
+process_all_inc_files(const char* folder_path, const char* include_dest)
+{
+    DIR* dir = opendir(folder_path);
+    if (!dir) {
+        return;
+    }
+
+    struct dirent* entry;
+    struct stat st;
+    char full_path[DOG_PATH_MAX * 3];
+    char dest_file[DOG_PATH_MAX * 3];
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (dog_dot_or_dotdot(entry->d_name)) {
+            continue;
+        }
+
+        snprintf(full_path, sizeof(full_path), "%s%s%s",
+            folder_path, separator, entry->d_name);
+
+        if (stat(full_path, &st) != 0) {
+            continue;
+        }
+
+        if (S_ISDIR(st.st_mode)) {
+            process_all_inc_files(full_path, include_dest);
+        }
+        else {
+            char* ext = strrchr(entry->d_name, '.');
+            if (ext && strcmp(ext, ".inc") == 0) {
+                snprintf(dest_file, sizeof(dest_file), "%s%s%s",
+                    include_dest, separator, entry->d_name);
+
+                if (path_access(full_path) == 1) {
+                    if (rename(full_path, dest_file) != 0) {
+                        pbuf[0] = '\0';
+#ifdef DOG_WINDOWS
+                        snprintf(pbuf, sizeof(pbuf),
+                            "cmd.exe /C move /Y \"%s\" \"%s\" >nul 2>&1",
+                            full_path, dest_file);
+#else
+                        snprintf(pbuf, sizeof(pbuf),
+                            "mv -f \"%s\" \"%s\" >/dev/null 2>&1",
+                            full_path, dest_file);
+#endif
+                        system(pbuf);
+                    }
+
+                    package_try_parsing(dest_file, dest_file);
+
+                    pr_color(stdout, DOG_COL_YELLOW,
+                        " [M] Include %s -> %s (from subfolder)\n",
+                        entry->d_name, dest_file);
+                }
+            }
+        }
+    }
+
+    closedir(dir);
+}
+
+static void
+package_move_files(const char* package_dir, const char* package_loc)
 {
     char    the_path[DOG_PATH_MAX * 2],
-			includes[DOG_PATH_MAX],
-		    plugins[DOG_PATH_MAX * 2], components[DOG_PATH_MAX * 2],
-		    subdir_path[DOG_PATH_MAX * 2],
-			include_dest[1024], dest_file[1024 * 3];
+        includes[DOG_PATH_MAX],
+        plugins[DOG_PATH_MAX * 2], components[DOG_PATH_MAX * 2],
+        subdir_path[DOG_PATH_MAX * 2],
+        include_dest[1024], dest_file[1024 * 3],
+        dest_dir[1024 * 3];
     struct            stat dir_st;
-    struct  dirent   *n_items ;
-    struct  dirent   *package_subdir_item;
-    DIR              *try_package_dir;
-    DIR              *subdir;
-    
-	#ifdef DOG_WINDOWS
-	    snprintf(plugins, sizeof(plugins), "%s\\plugins", package_dir);
-	    snprintf(components, sizeof(components), "%s\\components", package_dir);
-	    snprintf(includes, sizeof(includes), "pawno\\include");
-	#else
-	    snprintf(plugins, sizeof(plugins), "%s/plugins", package_dir);
-	    snprintf(components, sizeof(components), "%s/components", package_dir);
-	    snprintf(includes, sizeof(includes), "pawno/include");
-	#endif
+    struct  dirent* entry;
+    struct  dirent* subentry;
+    DIR* package_dir_handle;
+    DIR* subdir_handle;
 
-    int _ret = fet_server_env();
-    if (_ret == 1) {
+    char    folders_to_move[100][DOG_PATH_MAX];
+    int     folder_count = 0;
+    int     has_special_include = 0;
+    int     has_dogkeeproot = 0;
+
+    char keeproot_path[DOG_PATH_MAX * 2];
+    snprintf(keeproot_path, sizeof(keeproot_path), "%s%s.dogkeepnormal",
+        package_dir, separator);
+
+    if (path_access(keeproot_path) == 1) {
+        has_dogkeeproot = 1;
+        pr_color(stdout, DOG_COL_GREEN,
+            " [K] Found .dogkeepnormal "
+            "in root - installing all .inc files directly\n");
+    }
+
+#ifdef DOG_WINDOWS
+    snprintf(plugins, sizeof(plugins), "%s\\plugins", package_dir);
+    snprintf(components, sizeof(components), "%s\\components", package_dir);
+    snprintf(includes, sizeof(includes), "pawno\\include");
+#else
+    snprintf(plugins, sizeof(plugins), "%s/plugins", package_dir);
+    snprintf(components, sizeof(components), "%s/components", package_dir);
+    snprintf(includes, sizeof(includes), "pawno/include");
+#endif
+
+    int server_type = fet_server_env();
+    if (server_type == false) {
         snprintf(includes, sizeof(includes), "pawno/include");
     } else {
         snprintf(includes, sizeof(includes), "qawno/include");
     }
 
     snprintf(include_dest, sizeof(include_dest), "%s%s%s",
-             package_loc, separator, includes);
-    
+        package_loc, separator, includes);
+
     if (dir_exists(include_dest) == 0) {
         dog_mkdir_recursive(include_dest);
     }
 
-    try_package_dir = opendir(package_dir);
-    if (!try_package_dir) {
+    char pawno_include[DOG_PATH_MAX * 2];
+    snprintf(pawno_include, sizeof(pawno_include), "%s%spawno%sinclude",
+        package_dir, separator, separator);
+
+    char qawno_include[DOG_PATH_MAX * 2];
+    snprintf(qawno_include, sizeof(qawno_include), "%s%sqawno%sinclude",
+        package_dir, separator, separator);
+
+    if (dir_exists(pawno_include)) {
+        has_special_include = 1;
+        move_inc_from_dir(pawno_include, include_dest);
+    }
+
+    if (dir_exists(qawno_include)) {
+        has_special_include = 1;
+        move_inc_from_dir(qawno_include, include_dest);
+    }
+
+    package_dir_handle = opendir(package_dir);
+    if (!package_dir_handle) {
         pr_error(stdout, "Failed to open directory: %s", package_dir);
         return;
     }
 
-    while ((n_items = readdir(try_package_dir)) != NULL) {
-        if (dog_dot_or_dotdot(n_items->d_name)) {
+    while ((entry = readdir(package_dir_handle)) != NULL) {
+        if (dog_dot_or_dotdot(entry->d_name)) {
             continue;
         }
 
         snprintf(the_path, sizeof(the_path), "%s%s%s",
-                 package_dir, separator, n_items->d_name);
+            package_dir, separator, entry->d_name);
 
         if (stat(the_path, &dir_st) != 0) {
             continue;
         }
 
         if (S_ISDIR(dir_st.st_mode)) {
-            if (
-                strcmp(n_items->d_name,
-                	"components") == 0 ||
-                strcmp(n_items->d_name,
-                	"plugins") == 0) {
+            if (strcmp(entry->d_name, "components") == 0 ||
+                strcmp(entry->d_name, "plugins") == 0 ||
+                strcmp(entry->d_name, "pawno") == 0 ||
+                strcmp(entry->d_name, "qawno") == 0) {
                 continue;
             }
-            
+
             snprintf(subdir_path, sizeof(subdir_path), "%s%s%s",
-                     package_dir, separator, n_items->d_name);
-            
-            subdir = opendir(subdir_path);
-            if (!subdir) {
-                continue;
+                package_dir, separator, entry->d_name);
+
+            int has_dogkeeproot_recursive = check_for_dogkeeproot(subdir_path);
+
+            if (has_dogkeeproot_recursive) {
+                pr_color(stdout, DOG_COL_GREEN,
+                    " [K] Found .dogkeepnormal in %s - processing files directly\n",
+                    entry->d_name);
+
+                process_all_inc_files(subdir_path, include_dest);
             }
-            
-            while ((package_subdir_item = readdir(subdir)) != NULL) {
-                if (dog_dot_or_dotdot(package_subdir_item->d_name)) {
-                    continue;
-                }
-                
-                char *ext = NULL;
-                ext = strrchr(package_subdir_item->d_name, '.');
-                if (!ext || strcmp(ext, ".inc") != 0) {
-                    continue;
-                }
+            else if (!has_dogkeeproot && package_has_inc_files(subdir_path) && folder_count < 100) {
+                strlcpy(folders_to_move[folder_count], subdir_path,
+                    sizeof(folders_to_move[folder_count]));
+                folder_count++;
 
-                char src_file[DOG_PATH_MAX * 3];
-                snprintf(src_file, sizeof(src_file), "%s%s%s",
-                         subdir_path, separator, package_subdir_item->d_name);
-                
-                snprintf(dest_file, sizeof(dest_file), "%s%s%s",
-                         include_dest, separator, package_subdir_item->d_name);
-                
-                if (path_access(src_file) == 1 && rename(src_file, dest_file) != 0) {
-                    tmp_buf[0] = '\0';
-	#ifdef DOG_WINDOWS
-		            snprintf(tmp_buf, sizeof(tmp_buf),
-		                    "\"%s\" \"%s\"",
-		                    src_file, dest_file);
-		            char *moving[] = { "move", "/Y", tmp_buf, ">nul", "2>&1", NULL };
-	#else
-		            snprintf(tmp_buf, sizeof(tmp_buf),
-		                    "\"%s\" \"%s\"",
-		                    src_file, dest_file);
-		            char *moving[] = { "mv", "-f", tmp_buf, ">/dev/null", "2>&1", NULL };
-	#endif
-            		dog_exec_command(moving);
-                }
-                
-                package_try_parsing(dest_file, dest_file);
-                package_include_prints(package_subdir_item->d_name);
-                
-                pr_color(stdout, DOG_COL_YELLOW,
-                        " [M] Include %s -> %s\n",
-                        package_subdir_item->d_name, dest_file);
+                pr_color(stdout, DOG_COL_GREEN,
+                    " [D] Found include folder: %s\n", entry->d_name);
             }
-            
-            closedir(subdir);
-            continue;
         }
-
-        char *ext = NULL;
-        ext = strrchr(n_items->d_name, '.');
-        if (!ext || strcmp(ext, ".inc") != 0) {
-            continue;
-        }
-
-        snprintf(dest_file, sizeof(dest_file), "%s%s%s",
-                 include_dest, separator, n_items->d_name);
-        
-        if (path_access(the_path) == 1 && rename(the_path, dest_file) != 0) {
-            tmp_buf[0] = '\0';
-	#ifdef DOG_WINDOWS
-            snprintf(tmp_buf, sizeof(tmp_buf),
-                    "\"%s\" \"%s\"",
-                    the_path, dest_file);
-            char *moving[] = { "move", "/Y", tmp_buf, ">nul", "2>&1" };
-
-	#else
-            snprintf(tmp_buf, sizeof(tmp_buf),
-                    "\"%s\" \"%s\"",
-                    the_path, dest_file);
-            char *moving[] = { "mv", "-f", tmp_buf, ">/dev/null", "2>&1" };
-	#endif
-            dog_exec_command(moving);
-        }
-        
-        package_try_parsing(dest_file, dest_file);
-        package_include_prints(n_items->d_name);
-        
-        pr_color(stdout, DOG_COL_YELLOW,
-                " [M] Include %s -> %s\n",
-                n_items->d_name, dest_file);
     }
 
-    closedir(try_package_dir);
+    closedir(package_dir_handle);
+
+    if (!has_special_include && !has_dogkeeproot) {
+        for (int i = 0; i < folder_count; i++) {
+            char* folder_name = strrchr(folders_to_move[i], separator[0]);
+            if (folder_name) {
+                folder_name++;
+            } else {
+                folder_name = folders_to_move[i];
+            }
+
+            snprintf(dest_dir, sizeof(dest_dir), "%s%s%s",
+                include_dest, separator, folder_name);
+
+            if (dir_exists(dest_dir)) {
+#ifdef DOG_WINDOWS
+                snprintf(pbuf, sizeof(pbuf),
+                    "cmd.exe /C rmdir /S /Q \"%s\" >nul 2>&1", dest_dir);
+#else
+                snprintf(pbuf, sizeof(pbuf),
+                    "rm -rf \"%s\" >/dev/null 2>&1", dest_dir);
+#endif
+                system(pbuf);
+            }
+
+#ifdef DOG_WINDOWS
+            snprintf(pbuf, sizeof(pbuf),
+                "cmd.exe /C move /Y \"%s\" \"%s\" >nul 2>&1",
+                folders_to_move[i], include_dest);
+#else
+            snprintf(pbuf, sizeof(pbuf),
+                "mv -f \"%s\" \"%s\" >/dev/null 2>&1",
+                folders_to_move[i], include_dest);
+#endif
+
+            if (system(pbuf) == 0) {
+                pr_color(stdout, DOG_COL_YELLOW,
+                    " [M] Folder %s -> %s\n", folder_name, dest_dir);
+
+                char new_folder_path[DOG_PATH_MAX * 3];
+                snprintf(new_folder_path, sizeof(new_folder_path), "%s%s%s",
+                    include_dest, separator, folder_name);
+
+                process_inc_folder(new_folder_path);
+            }
+            else {
+                pr_error(stdout, " Failed to move folder %s\n", folder_name);
+            }
+        }
+    }
+
+    package_dir_handle = opendir(package_dir);
+    if (package_dir_handle) {
+        while ((entry = readdir(package_dir_handle)) != NULL) {
+            if (dog_dot_or_dotdot(entry->d_name)) {
+                continue;
+            }
+
+            snprintf(the_path, sizeof(the_path), "%s%s%s",
+                package_dir, separator, entry->d_name);
+
+            if (stat(the_path, &dir_st) != 0) {
+                continue;
+            }
+
+            if (S_ISDIR(dir_st.st_mode)) {
+                if (has_dogkeeproot &&
+                    strcmp(entry->d_name, "components") != 0 &&
+                    strcmp(entry->d_name, "plugins") != 0 &&
+                    strcmp(entry->d_name, "pawno") != 0 &&
+                    strcmp(entry->d_name, "qawno") != 0) {
+
+                    snprintf(subdir_path, sizeof(subdir_path), "%s%s%s",
+                        package_dir, separator, entry->d_name);
+
+                    process_all_inc_files(subdir_path, include_dest);
+                }
+                continue;
+            }
+
+            char* ext = NULL;
+            ext = strrchr(entry->d_name, '.');
+            if (!ext || strcmp(ext, ".inc") != 0) {
+                continue;
+            }
+
+            if (has_special_include && !has_dogkeeproot) {
+                pr_color(stdout, DOG_COL_CYAN,
+                    " [S] Skipping root include %s (using pawno/qawno structure)\n",
+                    entry->d_name);
+                continue;
+            }
+
+            snprintf(dest_file, sizeof(dest_file), "%s%s%s",
+                include_dest, separator, entry->d_name);
+
+            if (path_access(the_path) == 1) {
+                if (rename(the_path, dest_file) != 0) {
+                    pbuf[0] = '\0';
+#ifdef DOG_WINDOWS
+                    snprintf(pbuf, sizeof(pbuf),
+                        "cmd.exe /C move /Y \"%s\" \"%s\" >nul 2>&1",
+                        the_path, dest_file);
+#else
+                    snprintf(pbuf, sizeof(pbuf),
+                        "mv -f \"%s\" \"%s\" >/dev/null 2>&1",
+                        the_path, dest_file);
+#endif
+                    system(pbuf);
+                }
+
+                package_try_parsing(dest_file, dest_file);
+
+                pr_color(stdout, DOG_COL_YELLOW,
+                    " [M] Include %s -> %s\n",
+                    entry->d_name, dest_file);
+            }
+        }
+        closedir(package_dir_handle);
+    }
 
     if (dir_exists(plugins)) {
         char plugin_dest[DOG_PATH_MAX];
         snprintf(plugin_dest, sizeof(plugin_dest), "%s%splugins",
-                 package_loc, separator);
+            package_loc, separator);
 
         if (dir_exists(plugin_dest) == 0) {
             dog_mkdir_recursive(plugin_dest);
         }
 
-		if (strcmp(opr, "windows") == 0)
-        	dump_file_type(plugins, "*.dll", NULL, plugin_dest, "", 0);
-		else if (strcmp(opr, "linux") == 0)
-        	dump_file_type(plugins, "*.so", NULL, plugin_dest, "", 0);
+        if (strcmp(opr, "windows") == 0)
+            dump_file_type(plugins, "*.dll", NULL, plugin_dest, "", 0);
+        else if (strcmp(opr, "linux") == 0)
+            dump_file_type(plugins, "*.so", NULL, plugin_dest, "", 0);
     }
-
-	if (dir_exists(include_dest) == 0) {
-	    dog_mkdir_recursive(include_dest);
-	}
-	
-	char pawno_inc[DOG_PATH_MAX * 2];
-	snprintf(pawno_inc, sizeof(pawno_inc),
-	         "%s%spawno%sinclude",
-	         package_dir, separator, separator);
-
-	if (dir_exists(pawno_inc)) {
-	    move_inc_from_dir(pawno_inc, include_dest);
-	}
-	char qawno_inc[DOG_PATH_MAX * 2];
-	snprintf(qawno_inc, sizeof(qawno_inc),
-	         "%s%sqawno%sinclude",
-	         package_dir, separator, separator);
-
-	if (dir_exists(qawno_inc)) {
-	    move_inc_from_dir(qawno_inc, include_dest);
-	}
 
     print("\n");
     destroy_arch_dir(package_dir);
@@ -1637,253 +1602,253 @@ void package_move_files(const char *package_dir, const char *package_loc)
     return;
 }
 
-static
-void
-dog_apply_depends(const char *depends_name, const char *depends_location)
+static void
+dog_apply_depends(const char* depends_name, const char* depends_location)
 {
-	char	s_dependencies[DOG_PATH_MAX],
-		package_dir[DOG_PATH_MAX];
-	char	size_depends_location[DOG_PATH_MAX * 2];
-	char	*extension;
+    char	dep_name[DOG_PATH_MAX],
+        package_dir[DOG_PATH_MAX];
+    char	full_dest_path[DOG_PATH_MAX * 2];
+    char* extension;
 
-	snprintf(s_dependencies,
-		sizeof(s_dependencies), "%s", depends_name);
-
-#if defined(_DBG_PRINT)
-	println(stdout, "s_dependencies: %s", s_dependencies);
-#endif
-
-	if ((extension = strstr(s_dependencies, ".tar.gz")) != NULL)
-		*extension = '\0';
-	else if ((extension = strstr(s_dependencies, ".tar")) != NULL)
-		*extension = '\0';
-	else if ((extension = strstr(s_dependencies, ".zip")) != NULL)
-		*extension = '\0';
-
-	snprintf(package_dir, sizeof(package_dir), "%s", s_dependencies);
+    snprintf(dep_name, sizeof(dep_name), "%s", depends_name);
 
 #if defined(_DBG_PRINT)
-	println(stdout, "dency dir: %s", package_dir);
+    println(stdout, "dep_name: %s", dep_name);
 #endif
 
-	if (fet_server_env() == false) {
-		snprintf(size_depends_location, sizeof(size_depends_location),
-		    "%s/pawno/include", depends_location);
-		if (dir_exists(size_depends_location) == 0)
-			dog_mkdir_recursive(size_depends_location);
+    if ((extension = strstr(dep_name, ".tar.gz")) != NULL)
+        *extension = '\0';
+    else if ((extension = strstr(dep_name, ".tar")) != NULL)
+        *extension = '\0';
+    else if ((extension = strstr(dep_name, ".zip")) != NULL)
+        *extension = '\0';
 
-		snprintf(size_depends_location, sizeof(size_depends_location),
-		    "%s/plugins", depends_location);
-		if (dir_exists(size_depends_location) == 0)
-			dog_mkdir_recursive(size_depends_location);
+    snprintf(package_dir, sizeof(package_dir), "%s", dep_name);
 
-	} else if (fet_server_env() == true) {
-		snprintf(size_depends_location, sizeof(size_depends_location),
-		    "%s/qawno/include", depends_location);
-		if (dir_exists(size_depends_location) == 0)
-			dog_mkdir_recursive(size_depends_location);
+#if defined(_DBG_PRINT)
+    println(stdout, "package dir: %s", package_dir);
+#endif
 
-		snprintf(size_depends_location, sizeof(size_depends_location),
-		    "%s/plugins", depends_location);
-		if (dir_exists(size_depends_location) == 0)
-			dog_mkdir_recursive(size_depends_location);
+    if (fet_server_env() == false) {
+        snprintf(full_dest_path, sizeof(full_dest_path),
+            "%s/pawno/include", depends_location);
+        if (dir_exists(full_dest_path) == 0)
+            dog_mkdir_recursive(full_dest_path);
 
-		snprintf(size_depends_location, sizeof(size_depends_location),
-		    "%s/components", depends_location);
-		if (dir_exists(size_depends_location) == 0)
-			dog_mkdir_recursive(size_depends_location);
-	}
+        snprintf(full_dest_path, sizeof(full_dest_path),
+            "%s/plugins", depends_location);
+        if (dir_exists(full_dest_path) == 0)
+            dog_mkdir_recursive(full_dest_path);
 
-	package_move_files(package_dir, depends_location);
+    }
+    else if (fet_server_env() == true) {
+        snprintf(full_dest_path, sizeof(full_dest_path),
+            "%s/qawno/include", depends_location);
+        if (dir_exists(full_dest_path) == 0)
+            dog_mkdir_recursive(full_dest_path);
+
+        snprintf(full_dest_path, sizeof(full_dest_path),
+            "%s/plugins", depends_location);
+        if (dir_exists(full_dest_path) == 0)
+            dog_mkdir_recursive(full_dest_path);
+
+        snprintf(full_dest_path, sizeof(full_dest_path),
+            "%s/components", depends_location);
+        if (dir_exists(full_dest_path) == 0)
+            dog_mkdir_recursive(full_dest_path);
+    }
+
+    package_move_files(package_dir, depends_location);
 }
 
 void
-dog_install_depends(const char *packages, const char *branch, const char *where)
+dog_install_depends(const char* packages, const char* branch, const char* where)
 {
-	char			 buffer[1024] = {0}, package_url[1024] = {0},
-				 package_name[DOG_PATH_MAX] = {0};
-	char			*procure_buffer = NULL, *fet_pwd = NULL,
-				*locations = NULL;
-	static char *init_location = NULL;
-	const char		*dependencies[MAX_DEPENDS] = {0};
-	struct _repositories	 repo;
-	int			 package_counts = 0, i;
-	static int   location_ready = false;
+    char			 buffer[1024] = { 0 }, package_url[1024] = { 0 },
+        package_name[DOG_PATH_MAX] = { 0 };
+    char* token = NULL, * current_dir = NULL,
+        * target_dir = NULL;
+    static char* initial_location = NULL;
+    const char* dependencies[MAX_DEPENDS] = { 0 };
+    struct _repositories	 repo;
+    int			 dep_count = 0, i;
+    static int   location_ready = false;
 #ifdef DOG_WINDOWS
-	WIN32_FIND_DATAA ffd;
-	HANDLE           hFind;
-	char             search[] = "*";
+    WIN32_FIND_DATAA ffd;
+    HANDLE           hFind;
+    char             search[] = "*";
 #endif
-	memset(dependencies, 0, sizeof(dependencies));
+    memset(dependencies, 0, sizeof(dependencies));
 
-	installing_package = true;
+    installing_package = true;
 
-	if (!packages || !*packages) {
-		pr_color(stdout, DOG_COL_RED, "");
-		print("no valid dependencies to install!\t\t[X]\n");
-		goto done;
-	}
+    if (!packages || !*packages) {
+        pr_color(stdout, DOG_COL_RED, "");
+        print("no valid dependencies to install!\t\t[X]\n");
+        goto done;
+    }
 
-	if (strlen(packages) >= sizeof(buffer)) {
-		pr_color(stdout, DOG_COL_RED, "");
-		print("packages too long!\t\t[X]\n");
-		goto done;
-	}
+    if (strlen(packages) >= sizeof(buffer)) {
+        pr_color(stdout, DOG_COL_RED, "");
+        print("packages too long!\t\t[X]\n");
+        goto done;
+    }
 
-	snprintf(buffer, sizeof(buffer), "%s", packages);
+    snprintf(buffer, sizeof(buffer), "%s", packages);
 
-	procure_buffer = strtok(buffer, " ");
-	while (procure_buffer && package_counts < MAX_DEPENDS) {
-		dependencies[package_counts++] = procure_buffer;
-		procure_buffer = strtok(NULL, " ");
-	}
+    token = strtok(buffer, " ");
+    while (token && dep_count < MAX_DEPENDS) {
+        dependencies[dep_count++] = token;
+        token = strtok(NULL, " ");
+    }
 
-	if (!package_counts) {
-		pr_color(stdout, DOG_COL_RED, "");
-		print("no valid dependencies to install!\t\t[X]\n");
-		goto done;
-	}
+    if (!dep_count) {
+        pr_color(stdout, DOG_COL_RED, "");
+        print("no valid dependencies to install!\t\t[X]\n");
+        goto done;
+    }
 
-	for (i = 0; i < package_counts; i++) {
-		if (!package_parse_repo(dependencies[i], &repo)) {
-			pr_color(stdout, DOG_COL_RED, "");
-			printf("invalid repo format: %s\t\t[X]\n",
-			    dependencies[i]);
-			continue;
-		}
+    for (i = 0; i < dep_count; i++) {
+        if (!package_parse_repo(dependencies[i], &repo)) {
+            pr_color(stdout, DOG_COL_RED, "");
+            printf("invalid repo format: %s\t\t[X]\n",
+                dependencies[i]);
+            continue;
+        }
 
-		if (!strcmp(repo.host, "github")) {
-			if (!package_handle_repo(&repo, package_url,
-			    sizeof(package_url), branch)) {
-				pr_color(stdout, DOG_COL_RED, "");
-				printf("repo not found: %s\t\t[X]\n",
-				    dependencies[i]);
-				continue;
-			}
-		} else {
-			package_build_repo_url(&repo, 0,
-			    package_url, sizeof(package_url));
-			if (!package_url_checking(package_url,
-			    dogconfig.dog_toml_github_tokens)) {
-				pr_color(stdout, DOG_COL_RED, "");
-				printf("repo not found: %s\t\t[X]\n",
-				    dependencies[i]);
-				continue;
-			}
-		}
+        if (!strcmp(repo.host, "github")) {
+            if (!package_handle_repo(&repo, package_url,
+                sizeof(package_url), branch)) {
+                pr_color(stdout, DOG_COL_RED, "");
+                printf("repo not found: %s\t\t[X]\n",
+                    dependencies[i]);
+                continue;
+            }
+        }
+        else {
+            package_build_repo_url(&repo, 0,
+                package_url, sizeof(package_url));
+            if (!package_url_checking(package_url,
+                dogconfig.dog_toml_github_tokens)) {
+                pr_color(stdout, DOG_COL_RED, "");
+                printf("repo not found: %s\t\t[X]\n",
+                    dependencies[i]);
+                continue;
+            }
+        }
 
-		if (strrchr(package_url, _PATH_CHR_SEP_POSIX) &&
-		    *(strrchr(package_url, _PATH_CHR_SEP_POSIX) + 1)) {
-			snprintf(package_name, sizeof(package_name), "%s",
-			    strrchr(package_url, _PATH_CHR_SEP_POSIX) + 1);
+        if (strrchr(package_url, _PATH_CHR_SEP_POSIX) &&
+            *(strrchr(package_url, _PATH_CHR_SEP_POSIX) + 1)) {
+            snprintf(package_name, sizeof(package_name), "%s",
+                strrchr(package_url, _PATH_CHR_SEP_POSIX) + 1);
 
-			if (!strend(package_name, ".tar.gz", true) &&
-			    !strend(package_name, ".tar", true) &&
-			    !strend(package_name, ".zip", true))
-				snprintf(package_name + strlen(package_name),
-				    sizeof(package_name) - strlen(package_name),
-				    ".zip");
-		} else {
-			snprintf(package_name, sizeof(package_name),
-			    "%s.tar.gz", repo.repo);
-		}
+            if (!strend(package_name, ".tar.gz", true) &&
+                !strend(package_name, ".tar", true) &&
+                !strend(package_name, ".zip", true))
+                snprintf(package_name + strlen(package_name),
+                    sizeof(package_name) - strlen(package_name),
+                    ".zip");
+        }
+        else {
+            snprintf(package_name, sizeof(package_name),
+                "%s.tar.gz", repo.repo);
+        }
 
-		if (!*package_name) {
-			pr_color(stdout, DOG_COL_RED, "");
-			printf("invalid repo name: %s\t\t[X]\n",
-			    package_url);
-			continue;
-		}
+        if (!*package_name) {
+            pr_color(stdout, DOG_COL_RED, "");
+            printf("invalid repo name: %s\t\t[X]\n",
+                package_url);
+            continue;
+        }
 
-		installing_package = true;
+        installing_package = true;
 
-		dog_download_file(package_url, package_name);
-		if (where == NULL || where[0] == '\0') {
-			if (!location_ready) {
-				printf("\n"
-					   ".."
-					   "LIST OF DIRECTORY: "
-					   "%s", dog_procure_pwd());
-				print("\n");
+        dog_download_file(package_url, package_name);
+        if (where == NULL || where[0] == '\0') {
+            if (!location_ready) {
+                printf("\n"
+                    ".."
+                    "LIST OF DIRECTORY: "
+                    "%s", dog_procure_pwd());
+                print("\n");
 
-				#ifdef DOG_LINUX
-				int tree_ret = -1;
-				{
-					char *tree[] = { "tree", ">", "/dev/null 2>&1", NULL };
-					tree_ret = dog_exec_command(tree);
-				}
-				if (!tree_ret) {
-					char *tree[] = { "tree", NULL };
-					dog_exec_command(tree);
-				}
-				else {
-					DIR *d = opendir(".");
-					if (d) {
-						struct dirent *de;
-						struct stat st;
-						char path[DOG_PATH_MAX];
+#ifdef DOG_LINUX
+                int tree_ret = -1;
+                tree_ret = system("tree > /dev/null 2>&1");
+                if (!tree_ret) {
+                    system("tree .");
+                }
+                else {
+                    DIR* d = opendir(".");
+                    if (d) {
+                        struct dirent* de;
+                        struct stat st;
+                        char path[DOG_PATH_MAX];
 
-						while ((de = readdir(d)) != NULL) {
-							if (de->d_name[0] == '.')
-								continue;
+                        while ((de = readdir(d)) != NULL) {
+                            if (de->d_name[0] == '.')
+                                continue;
 
-							snprintf(path, sizeof(path), "%s", de->d_name);
-							if (lstat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
-								printf("%s\n", de->d_name);
-							}
-						}
-						closedir(d);
-					}
-				}
-				#else
-				hFind = FindFirstFileA(search, &ffd);
-				if (hFind != INVALID_HANDLE_VALUE) {
-					do {
-						if ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
-							strcmp(ffd.cFileName, ".") != 0 &&
-							strcmp(ffd.cFileName, "..") != 0) {
-							printf("%s\n", ffd.cFileName);
-						}
-					} while (FindNextFileA(hFind, &ffd));
-					FindClose(hFind);
-				}
-				#endif
+                            snprintf(path, sizeof(path), "%s", de->d_name);
+                            if (lstat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
+                                printf("%s\n", de->d_name);
+                            }
+                        }
+                        closedir(d);
+                    }
+                }
+#else
+                hFind = FindFirstFileA(search, &ffd);
+                if (hFind != INVALID_HANDLE_VALUE) {
+                    do {
+                        if ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
+                            strcmp(ffd.cFileName, ".") != 0 &&
+                            strcmp(ffd.cFileName, "..") != 0) {
+                            printf("%s\n", ffd.cFileName);
+                        }
+                    } while (FindNextFileA(hFind, &ffd));
+                    FindClose(hFind);
+                }
+#endif
 
-				print("\n");
+                print("\n");
 
-				printf(DOG_COL_BCYAN
-				    "Where do you want to install %s? "
-				    "(enter for: %s)" DOG_COL_DEFAULT,
-				    package_name, dog_procure_pwd());
+                printf(DOG_COL_BCYAN
+                    "Where do you want to install %s? "
+                    "(enter for: %s)" DOG_COL_DEFAULT,
+                    package_name, dog_procure_pwd());
 
-				locations = readline(" ");
-				if (locations[0] == '\0' || locations[0] == '.') {
-					fet_pwd = dog_procure_pwd();
-					init_location = strdup(fet_pwd);
-					if (fet_pwd)
-						dog_apply_depends(package_name,
-							fet_pwd);
-					dog_free(locations);
-				} else {
-					if (dir_exists(locations) == 0)
-						dog_mkdir_recursive(locations);
-					init_location = strdup(locations);
-					dog_apply_depends(package_name,
-					    locations);
-					dog_free(locations);
-				}
+                target_dir = readline(" ");
+                if (target_dir[0] == '\0' || target_dir[0] == '.') {
+                    current_dir = dog_procure_pwd();
+                    initial_location = strdup(current_dir);
+                    if (current_dir)
+                        dog_apply_depends(package_name,
+                            current_dir);
+                    dog_free(target_dir);
+                }
+                else {
+                    if (dir_exists(target_dir) == 0)
+                        dog_mkdir_recursive(target_dir);
+                    initial_location = strdup(target_dir);
+                    dog_apply_depends(package_name,
+                        target_dir);
+                    dog_free(target_dir);
+                }
 
-				location_ready = true;
-			} else {
-				dog_apply_depends(package_name, init_location);
-			}
-		} else {
-			if (dir_exists(where) == 0)
-				dog_mkdir_recursive(where);
-			dog_apply_depends(package_name, where);
-		}
-	}
+                location_ready = true;
+            }
+            else {
+                dog_apply_depends(package_name, initial_location);
+            }
+        }
+        else {
+            if (dir_exists(where) == 0)
+                dog_mkdir_recursive(where);
+            dog_apply_depends(package_name, where);
+        }
+    }
 
 done:
-	return;
+    return;
 }

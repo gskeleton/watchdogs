@@ -7,10 +7,10 @@
 
 typedef struct {
     char *container_output                     ;
-    char pawn_direct_path    [DOG_PATH_MAX];
-    char pawn_size_file_name [DOG_PATH_MAX];
-    char pawn_size_input_path[DOG_PATH_MAX];
-    char pawn_size_temp      [DOG_PATH_MAX];
+    char pc_direct_path    [DOG_PATH_MAX];
+    char pc_size_file_name [DOG_PATH_MAX];
+    char pc_size_input_path[DOG_PATH_MAX];
+    char pc_size_temp      [DOG_PATH_MAX];
 } io_compilers;
 
 typedef enum {
@@ -39,7 +39,7 @@ extern const CompilerOption object_opt[];
 #ifdef DOG_WINDOWS
 
 typedef struct {
-	char *pawn_input;
+	char *pc_input;
 	STARTUPINFO *startup_info;
 	PROCESS_INFORMATION *process_info;
 	HANDLE hFile;
@@ -47,21 +47,21 @@ typedef struct {
 	struct timespec *post_end;
 	const char *windows_redist_err;
 	const char *windows_redist_err2;
-} pawn_thread_data_t;
+} pc_thread_data_t;
 
 #endif
 
 extern struct
 timespec pre_start,post_end;
-extern char *pawn_full_includes;
-extern char pawn_include_path[DOG_PATH_MAX];
-extern bool pawn_is_error,
-    pawn_missing_stdlib,
-    pawn_debug_options,
-    pawn_opt_debug,
-    pawn_input_info,
-    pawn_opt_clean,
-    pawn_opt_fast,
+extern char *pc_full_includes;
+extern char pc_include_path[DOG_PATH_MAX];
+extern bool pc_is_error,
+    pc_missing_stdlib,
+    pc_debug_options,
+    pc_opt_debug,
+    pc_input_info,
+    pc_opt_clean,
+    pc_opt_fast,
     process_file_success;
 
 int

@@ -11,16 +11,34 @@ static void unit_restore(void) {
 
         signal(SIGINT, SIG_DFL);
         
-        dog_sef_path_revert();
+        _sef_restore();
         dog_configure_toml();
         
         sigint_handler
             = !sigint_handler;
-        pawn_is_error
-            = !pawn_is_error;
+        pc_is_error
+            = !pc_is_error;
         unit_selection_stat
             = !unit_selection_stat;
 }
+
+#ifdef DOG_WINDOWS
+void enable_ansi()
+{
+        HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (hOut == INVALID_HANDLE_VALUE)
+            return;
+
+        DWORD dwMode = 0;
+        if (!GetConsoleMode(hOut, &dwMode))
+            return;
+
+        if (!(dwMode & ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
+            SetConsoleMode(hOut, dwMode |
+                ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+        }
+}
+#endif
 
 void _unit_debugger(int multi_debug,
             const char *function,
@@ -28,8 +46,13 @@ void _unit_debugger(int multi_debug,
 
         static bool unit_refresh = false;
         if (!unit_refresh) {
+            #ifdef DOG_WINDOWS
+            enable_ansi();
+            #endif
             unit_refresh = !unit_refresh;
             clear_history();
+            rl_on_new_line();
+            rl_redisplay();
             dog_console_title(NULL);
             crypto_crc32_init_table();
         }
@@ -88,7 +111,7 @@ void _unit_debugger(int multi_debug,
                     dogconfig.dog_ptr_omp, dogconfig.dog_is_samp, dogconfig.dog_is_omp,
                     dogconfig.dog_toml_serv_input, dogconfig.dog_toml_serv_output,
                     dogconfig.dog_toml_server_binary, dogconfig.dog_toml_server_config, dogconfig.dog_toml_server_logs,
-                    dog_masked_text(5, dogconfig.dog_toml_github_tokens), dogconfig.dog_toml_all_flags, dogconfig.dog_toml_packages);
+                    dog_masked_text(5, dogconfig.dog_toml_github_tokens), dogconfig.dog_toml_full_opt, dogconfig.dog_toml_packages);
                     
             printf("STDC: %d\n", __STDC__);
             printf("STDC_HOSTED: %d\n", __STDC_HOSTED__);

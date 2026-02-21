@@ -3,16 +3,16 @@
 #include "../compiler.h"
 #include "process.h"
 
-char    pawn_input[DOG_MAX_PATH] = { 0 };	/* Compiler command input buffer */
-char   *pawn_unix_token = NULL;	/* Unix token pointer for strtok */
-char   *pawn_unix_args[DOG_MAX_PATH] = { NULL };	/* Argument array for exec */
+char    pc_input[DOG_MAX_PATH] = { 0 };	/* Compiler command input buffer */
+char   *pc_unix_token = NULL;	/* Unix token pointer for strtok */
+char   *pc_unix_args[DOG_MAX_PATH] = { NULL };	/* Argument array for exec */
 #ifdef DOG_WINDOWS
-PROCESS_INFORMATION _PROCESS_INFO;	/* Windows process information */
-STARTUPINFO         _STARTUPINFO;	/* Windows startup information */
-SECURITY_ATTRIBUTES _ATTRIBUTES;	/* Windows security attributes */
+PROCESS_INFORMATION _PROCESS_INFO = {0};	/* Windows process information */
+STARTUPINFO         _STARTUPINFO  = {0};	/* Windows startup information */
+SECURITY_ATTRIBUTES _ATTRIBUTES   = {0};	/* Windows security attributes */
 #endif
 
-long pawn_get_milisec() {
+long pc_get_milisec() {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return
@@ -20,9 +20,9 @@ long pawn_get_milisec() {
     	ts.tv_nsec / 1000000;
 }
 
-void pawn_stage_trying(const char *stage, int ms) {
-	long start = pawn_get_milisec();
-	while (pawn_get_milisec() - start < ms) {
+void pc_stage_trying(const char *stage, int ms) {
+	long start = pc_get_milisec();
+	while (pc_get_milisec() - start < ms) {
 		printf("\r%s....", stage);
 		fflush(stdout);
 	}
@@ -70,12 +70,12 @@ void dog_serv_init(char *input_path, char *pawncc_path) {
 	}
 
     print(      "** Thinking all tasks..\n");
-	static bool pawn_pipe_info = false;
-	if (pawn_pipe_info == false) {
-		pawn_pipe_info = !pawn_pipe_info;
-		pawn_stage_trying(".. implicit include file", 60);
-		pawn_stage_trying(".. user include file(s)", 60);
-		pawn_stage_trying(".. user's script", 60);
+	static bool pc_pipe_info = false;
+	if (pc_pipe_info == false) {
+		pc_pipe_info = !pc_pipe_info;
+		pc_stage_trying(".. implicit include file", 60);
+		pc_stage_trying(".. user include file(s)", 60);
+		pc_stage_trying(".. user's script", 60);
 	} else {
 		static const char *amx_stage_lines[] = {
 			"  o implicit include file\n"
@@ -96,16 +96,52 @@ void dog_serv_init(char *input_path, char *pawncc_path) {
     fflush(stdout);
 }
 
+#ifdef DOG_LINUX
+void configure_line_parsing(void) {
+    char* p = pc_input;
+    int arg_count = 0;
+    char current_token[DOG_MAX_PATH]
+    = { 0 };
+    int token_pos = 0;
+    int inside_quotes = 0;
+    while (*p) {
+        if (*p == '"') {
+            inside_quotes = !inside_quotes;
+            p++;
+            continue;
+        }
+        if (*p == ' ' && !inside_quotes) {
+            if (token_pos > 0) {
+                current_token[token_pos] = '\0';
+                pc_unix_args[arg_count++]
+                    = strdup(current_token);
+                token_pos = 0;
+            }
+            p++;
+            continue;
+        }
+        current_token[token_pos++]
+            = *p++;
+    }
+    if (token_pos > 0) {
+        current_token[token_pos] = '\0';
+        pc_unix_args[arg_count++]
+            = strdup(current_token);
+    }
+    pc_unix_args[arg_count] = NULL;
+}
+#endif
+
 #ifdef DOG_WINDOWS
 	// Thread function for fast compilation using _beginthreadex
 static unsigned __stdcall
-pawn_thread_func(void *arg) {
-	pawn_thread_data_t *data = (pawn_thread_data_t *)arg;
+pc_thread_func(void *arg) {
+	pc_thread_data_t *data = (pc_thread_data_t *)arg;
 	BOOL win32_process_success;
 
 	/* Create Windows process for compiler execution */
 	win32_process_success = CreateProcessA(
-		NULL, data->pawn_input,
+		NULL, data->pc_input,
 		NULL, NULL,
 		TRUE,
 		CREATE_NO_WINDOW |
@@ -200,26 +236,19 @@ pawn_thread_func(void *arg) {
 }
 #endif
 
-int dog_exec_pawn_process(char *pawncc_path,
+int dog_exec_pc_process(char *pawncc_path,
 							  char *input_path,
 							  char *output_path) {
 
-    if (binary_condition_check(pawncc_path) == false) {
+    if (binary_check(pawncc_path) == false) {
         return (-2);
     }
-
-	if (false != pawn_opt_clean) {
-		pr_info(stdout,
-			"Place #pragma option -Z+ at "
-			"the top of %s if needed or if "
-			"you're running into unexpected errors.", input_path);
-	}
 	
     print(DOG_COL_YELLOW "-----------------------------\n" DOG_COL_DEFAULT);
 
-	pawn_unix_token = NULL;
-	memset(pawn_input, 0, sizeof(pawn_input));
-	memset(pawn_unix_args, 0, sizeof(pawn_unix_args));
+	pc_unix_token = NULL;
+	memset(pc_input, 0, sizeof(pc_input));
+	memset(pc_unix_args, 0, sizeof(pc_unix_args));
 
 	int         result_configure = 0;
 	#ifdef DOG_LINUX
@@ -237,8 +266,8 @@ int dog_exec_pawn_process(char *pawncc_path,
 	/* 5 */								"/"
 	/* 7 newline */				        "\n";
 
-	if (pawn_full_includes == NULL)
-		pawn_full_includes =
+	if (pc_full_includes == NULL)
+		pc_full_includes =
       strdup("-ipawno/include -iqawno/include -igamemodes");
 
 	dog_serv_init(pawncc_path, input_path);
@@ -247,20 +276,20 @@ int dog_exec_pawn_process(char *pawncc_path,
     normalize_spaces(pawncc_path);
     normalize_spaces(input_path);
     normalize_spaces(output_path);
-    normalize_spaces(dogconfig.dog_toml_all_flags);
-    normalize_spaces(pawn_full_includes);
-    normalize_spaces(pawn_include_path);
+    normalize_spaces(dogconfig.dog_toml_full_opt);
+    normalize_spaces(pc_full_includes);
+    normalize_spaces(pc_include_path);
 	
 	/* Build compiler command line string */
-	result_configure = snprintf(pawn_input,
-		sizeof(pawn_input), "%s \"%s\" \"-o%s\" %s %s %s",
+	result_configure = snprintf(pc_input,
+		sizeof(pc_input), "%s \"%s\" \"-o%s\" %s %s %s",
 		/// ./.\path/path/pawncc a.pwn -oa.amx -d:3 -i=pawno/include
 		pawncc_path, // pawncc
 		input_path, // input
 		output_path, // output
-		dogconfig.dog_toml_all_flags, // flag
-		pawn_full_includes, // includes
-		pawn_include_path); // includes
+		dogconfig.dog_toml_full_opt, // flag
+		pc_full_includes, // includes
+		pc_include_path); // includes
     
 	/* Initialize log file path based on platform */
 	#ifdef DOG_WINDOWS
@@ -270,17 +299,10 @@ int dog_exec_pawn_process(char *pawncc_path,
 	#endif
 
 	#ifdef DOG_WINDOWS
-		ZeroMemory(&_STARTUPINFO,
-			sizeof(_STARTUPINFO));
 		_STARTUPINFO.cb = sizeof(_STARTUPINFO);
-
-		ZeroMemory(&_ATTRIBUTES, sizeof(_ATTRIBUTES));
 		_ATTRIBUTES.nLength = sizeof(_ATTRIBUTES);
 		_ATTRIBUTES.bInheritHandle = TRUE;
 		_ATTRIBUTES.lpSecurityDescriptor = NULL;
-
-		ZeroMemory(&_PROCESS_INFO,
-			sizeof(_PROCESS_INFO));
 
 		HANDLE hFile = CreateFileA(
 			COMPILER_LOG,
@@ -304,17 +326,17 @@ int dog_exec_pawn_process(char *pawncc_path,
 		_STARTUPINFO.hStdInput = GetStdHandle(
 			STD_INPUT_HANDLE);
 
-		if (pawn_input_info == true) {
+		if (pc_input_info == true) {
 		#ifdef DOG_ANDROID
-			println(stdout, "** %s", pawn_input);
+			println(stdout, "** %s", pc_input);
 		#else
-			dog_console_title(pawn_input);
-			println(stdout, "** %s", pawn_input);
+			dog_console_title(pc_input);
+			println(stdout, "** %s", pc_input);
 		#endif
 		}
 
 		if (result_configure < 0 ||
-			result_configure >= sizeof(pawn_input)) {
+			result_configure >= sizeof(pc_input)) {
 			pr_error(stdout,
 				"ret_compiler too long!");
 			minimal_debugging();
@@ -322,13 +344,13 @@ int dog_exec_pawn_process(char *pawncc_path,
 		}
 
 		/* Create Windows process for compiler execution */
-		if (pawn_opt_fast == true) {
+		if (pc_opt_fast == true) {
 			/* Use _beginthreadex for fast compilation */
-			pawn_thread_data_t thread_data;
+			pc_thread_data_t thread_data;
 			HANDLE thread_handle;
 			unsigned thread_id;
 
-			thread_data.pawn_input        = pawn_input;
+			thread_data.pc_input            = pc_input;
 			thread_data.startup_info          = &_STARTUPINFO;
 			thread_data.process_info          = &_PROCESS_INFO;
 			thread_data.hFile                 = hFile;
@@ -340,7 +362,7 @@ int dog_exec_pawn_process(char *pawncc_path,
 			thread_handle = (HANDLE)_beginthreadex(
 				NULL,
 				0,
-				pawn_thread_func,
+				pc_thread_func,
 				&thread_data,
 				0,
 				&thread_id);
@@ -358,7 +380,7 @@ int dog_exec_pawn_process(char *pawncc_path,
 			/* Standard CreateProcess approach */
 			BOOL win32_process_success;
 			win32_process_success = CreateProcessA(
-				NULL, pawn_input,
+				NULL, pc_input,
 				NULL, NULL,
 				TRUE,
 				CREATE_NO_WINDOW |
@@ -454,69 +476,39 @@ int dog_exec_pawn_process(char *pawncc_path,
 		}
 	#else
 		if (result_configure < 0 ||
-			result_configure >= sizeof(pawn_input)) {
+			result_configure >= sizeof(pc_input)) {
 			pr_error(stdout,
 				"ret_compiler too long!");
 			minimal_debugging();
 			return (-2);
 		}
 
-		if (pawn_input_info == true) {
+		if (pc_input_info == true) {
 		#ifdef DOG_ANDROID
-			println(stdout, "@ %s", pawn_input);
+			println(stdout, "@ %s", pc_input);
 		#else
-			dog_console_title(pawn_input);
-			if (strlen(pawn_input) > 120)
-				println(stdout, "@ %s", pawn_input);
+			dog_console_title(pc_input);
+			if (strlen(pc_input) > 120)
+				println(stdout, "@ %s", pc_input);
 		#endif
 		}
 
 		/* Command line parsing for Unix-like systems */
-		char *tmp_input = pawn_input;
-		int arg_count = 0;
-		char current_token[DOG_MAX_PATH]
-			= {0};
-		int token_pos = 0;
-		int inside_quotes = 0;
-		while (*tmp_input) {
-			if (*tmp_input == '"') {
-				inside_quotes = !inside_quotes;
-				tmp_input++;
-				continue;
-			}
-			if (*tmp_input == ' ' && !inside_quotes) {
-				if (token_pos > 0) {
-					current_token[token_pos] = '\0';
-					pawn_unix_args[arg_count++]
-						= strdup(current_token);
-					token_pos = 0;
-				}
-				tmp_input++;
-				continue;
-			}
-			current_token[token_pos++]
-				= *tmp_input++;
-		}
-		if (token_pos > 0) {
-			current_token[token_pos] = '\0';
-			pawn_unix_args[arg_count++]
-				= strdup(current_token);
-		}
-		pawn_unix_args[arg_count] = NULL;
+        configure_line_parsing();
 
 		#ifdef DOG_ANDROID
 		/* Android-specific process creation using fork/vfork */
 			static bool vfork_mode = false;
-			if (pawn_opt_fast == 1) {
+			if (pc_opt_fast == 1) {
 				vfork_mode = true;
 			}
-			pid_t pawn_process_id;
+			pid_t pc_process_id;
 			if (vfork_mode == false) {
-				pawn_process_id = fork();
+				pc_process_id = fork();
 			} else {
-				pawn_process_id = vfork();
+				pc_process_id = vfork();
 			}
-			if (pawn_process_id == 0) {
+			if (pc_process_id == 0) {
 				int logging_file = open(
 					COMPILER_LOG,
 					O_WRONLY | O_CREAT | O_TRUNC, 0644);
@@ -527,22 +519,22 @@ int dog_exec_pawn_process(char *pawncc_path,
 				} else {
 					process_file_success = true;
 				}
-				execv(pawn_unix_args[0], pawn_unix_args);
+				execv(pc_unix_args[0], pc_unix_args);
 				fprintf(stderr, "execv failed: %s\n", strerror(errno));
 				_exit(127);
-			} else if (pawn_process_id > 0) {
+			} else if (pc_process_id > 0) {
 				int process_status;
 				int process_timeout_occurred = 0;
 				clock_gettime(CLOCK_MONOTONIC, &pre_start);
 				/* Poll for process completion with timeout (4096 iterations) */
 				for (int k = 0; k < 0x1000; k++) {
 					int proc_result = waitpid(
-						pawn_process_id,
+						pc_process_id,
 						&process_status,
 						WNOHANG);
 					if (proc_result == 0) {
 						usleep(100000);	/* 100ms sleep between polls */
-					} else if (proc_result == pawn_process_id) {
+					} else if (proc_result == pc_process_id) {
 						break;
 					} else {
 						pr_error(stdout, "waitpid error");
@@ -551,15 +543,15 @@ int dog_exec_pawn_process(char *pawncc_path,
 					}
 					/* Terminate process if timeout exceeded */
 					if (k == 0x1000 - 1) {
-						kill(pawn_process_id, SIGTERM);
+						kill(pc_process_id, SIGTERM);
 						sleep(2);
-						kill(pawn_process_id, SIGKILL);
+						kill(pc_process_id, SIGKILL);
 						pr_error(stdout,
 							"process execution timeout! (%d seconds)",
 							0x1000);
 						minimal_debugging();
 						waitpid(
-							pawn_process_id,
+							pc_process_id,
 							&process_status,
 							0);
 						process_timeout_occurred = 1;
@@ -614,15 +606,15 @@ int dog_exec_pawn_process(char *pawncc_path,
 			}
 
 			/* Configure signal handling for spawned process */
-			posix_spawnattr_t spawn_attr;
-			posix_spawnattr_init(&spawn_attr);
+			posix_spawnattr_t spc_attr;
+			posix_spawnattr_init(&spc_attr);
 
 			/* Set signal mask to block SIGCHLD */
 			sigset_t sigmask;
 			sigemptyset(&sigmask);
 			sigaddset(&sigmask, SIGCHLD);
 
-			posix_spawnattr_setsigmask(&spawn_attr,
+			posix_spawnattr_setsigmask(&spc_attr,
 				&sigmask);
 
 			/* Set default signal actions */
@@ -632,33 +624,33 @@ int dog_exec_pawn_process(char *pawncc_path,
 			sigaddset(&sigdefault, SIGINT);
 			sigaddset(&sigdefault, SIGTERM);
 
-			posix_spawnattr_setsigdefault(&spawn_attr,
+			posix_spawnattr_setsigdefault(&spc_attr,
 				&sigdefault);
 
 			/* Apply signal mask and default settings */
 			short flags = POSIX_SPAWN_SETSIGMASK |
 				POSIX_SPAWN_SETSIGDEF;
 
-			posix_spawnattr_setflags(&spawn_attr, flags);
+			posix_spawnattr_setflags(&spc_attr, flags);
 
-			pid_t pawn_process_id;
-			int process_spawn_result = posix_spawn(
-				&pawn_process_id,
-				pawn_unix_args[0],
+			pid_t pc_process_id;
+			int process_spc_result = posix_spawn(
+				&pc_process_id,
+				pc_unix_args[0],
 				&process_file_actions,
-				&spawn_attr,
-				pawn_unix_args,
+				&spc_attr,
+				pc_unix_args,
 				environ);
 
 			if (posix_logging_file != -1) {
 				close(posix_logging_file);
 			}
 
-			posix_spawnattr_destroy(&spawn_attr);
+			posix_spawnattr_destroy(&spc_attr);
 			posix_spawn_file_actions_destroy(
 				&process_file_actions);
 
-			if (process_spawn_result == 0) {
+			if (process_spc_result == 0) {
 				int process_status;
 				int process_timeout_occurred = 0;
 				clock_gettime(CLOCK_MONOTONIC,
@@ -666,12 +658,12 @@ int dog_exec_pawn_process(char *pawncc_path,
 				for (int k = 0; k < 0x1000; k++) {
 					int proc_result = -1;
 					proc_result = waitpid(
-						pawn_process_id,
+						pc_process_id,
 						&process_status, WNOHANG);
 					if (proc_result == 0)
 						usleep(50000);	/* 50ms sleep between polls */
 					else if (proc_result ==
-						pawn_process_id) {
+						pc_process_id) {
 						break;
 					} else {
 						pr_error(stdout,
@@ -681,17 +673,17 @@ int dog_exec_pawn_process(char *pawncc_path,
 					}
 					/* Terminate on timeout */
 					if (k == 0x1000 - 1) {
-						kill(pawn_process_id,
+						kill(pc_process_id,
 							SIGTERM);
 						sleep(2);
-						kill(pawn_process_id,
+						kill(pc_process_id,
 							SIGKILL);
 						pr_error(stdout,
 							"posix_spawn process execution timeout! (%d seconds)",
 							0x1000);
 						minimal_debugging();
 						waitpid(
-							pawn_process_id,
+							pc_process_id,
 							&process_status, 0);
 						process_timeout_occurred =
 							1;
@@ -732,16 +724,16 @@ int dog_exec_pawn_process(char *pawncc_path,
 			} else {
 				pr_error(stdout,
 					"posix_spawn failed: %s",
-					strerror(process_spawn_result));
-				if (strfind(strerror(process_spawn_result), "Exec format error", true))
+					strerror(process_spc_result));
+				if (strfind(strerror(process_spc_result), "Exec format error", true))
 					pr_error(stdout, "^ The compiler executable is not compatible with your system.");
-				if (strfind(strerror(process_spawn_result), "Permission denied", true))
+				if (strfind(strerror(process_spc_result), "Permission denied", true))
 					pr_error(stdout, "^ You do not have permission to execute the compiler executable.");
-				if (strfind(strerror(process_spawn_result), "No such file or directory", true))
+				if (strfind(strerror(process_spc_result), "No such file or directory", true))
 					pr_error(stdout, "^ The compiler executable does not exist.");
-				if (strfind(strerror(process_spawn_result), "Not a directory", true))
+				if (strfind(strerror(process_spc_result), "Not a directory", true))
 					pr_error(stdout, "^ The compiler executable is not a directory.");
-				if (strfind(strerror(process_spawn_result), "Is a directory", true))
+				if (strfind(strerror(process_spc_result), "Is a directory", true))
 					pr_error(stdout, "^ The compiler executable is a directory.");
 				minimal_debugging();
 			}

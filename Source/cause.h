@@ -6,65 +6,6 @@ typedef struct {
         char *cs_i;
 } causeExplanation;
 
-#define HELP_PICK1 \
-"You have checked that the file exists, but lowercase and uppercase letters are an issue in Linux?\n"
-#define HELP_PICK2 \
-"* Linux filesystem is not free case-sensitive like Windows.\n"
-#define HELP_PICK3 \
-"** You need to fix it with renaming any files and folders in gamemodes/ and changing #include name to lowercase only.\n"
-#define HELP_PICK4 \
-"as follows:\n   gamemodes\n   ├── main.pwn\n   └── TEST\n   └── test.inc\n"
-#define HELP_PICK5 \
-"- #include \"TEST.inc\" -> #include \"test.inc\"\n & renaming file TEST.inc -> test.inc\n"
-#define HELP_PICK6 \
-"first: backup your \"gamemodes\" folder to \"swp_gamemodes\" and copy \"swp_gamemodes\" to \"gamemodes\"\n"
-#define HELP_PICK7 \
-"shell (bash) operation:\n"
-#define HELP_PICK8 \
-"linux native:\n"
-#define HELP_PICK9 \
-"   bash -c ' \
-basepath=\"gamemodes\"; \
-find \"$basepath\" -type f \\( -name \"*.pwn\" -o -name \"*.inc\" \\) | \
-while IFS= read -r p; do \
-  sed -i -E \"s|(#include[[:space:]]+\\\")([^\\\"]+)(\\\")|\\1\\L\\2\\3|g\" \"$p\"; \
-done; \
-find \"$basepath\" -type f \\( -name \"*.pwn\" -o -name \"*.inc\" \\) | \
-while IFS= read -r p; do \
-  d=$(dirname \"$p\"); \
-  b=$(basename \"$p\" | tr \"A-Z\" \"a-z\"); \
-  [ \"$p\" != \"$d/$b\" ] && mv -- \"$p\" \"$d/$b\"; \
-done; \
-find \"$basepath\" -depth | \
-while IFS= read -r p; do \
-  [ \"$p\" = \"$basepath\" ] && continue; \
-  d=$(dirname \"$p\"); \
-  b=$(basename \"$p\" | tr \"A-Z\" \"a-z\"); \
-  [ \"$p\" != \"$d/$b\" ] && mv -- \"$p\" \"$d/$b\"; \
-done'"
-#define HELP_PICK01 \
-"termux (android - please change the 'GAMEMODE_FOLDER_NAME' to folder name of your gamemode in downloads/):\n"
-#define HELP_PICK02 \
-"   bash -c ' \
-basepath=\"../storage/downloads/GAMEMODE_FOLDER_NAME/gamemodes\"; \
-find \"$basepath\" -type f \\( -name \"*.pwn\" -o -name \"*.inc\" \\) | \
-while IFS= read -r p; do \
-  sed -i -E \"s|(#include[[:space:]]+\\\")([^\\\"]+)(\\\")|\\1\\L\\2\\3|g\" \"$p\"; \
-done; \
-find \"$basepath\" -type f \\( -name \"*.pwn\" -o -name \"*.inc\" \\) | \
-while IFS= read -r p; do \
-  d=$(dirname \"$p\"); \
-  b=$(basename \"$p\" | tr \"A-Z\" \"a-z\"); \
-  [ \"$p\" != \"$d/$b\" ] && mv -- \"$p\" \"$d/$b\"; \
-done; \
-find \"$basepath\" -depth | \
-while IFS= read -r p; do \
-  [ \"$p\" = \"$basepath\" ] && continue; \
-  d=$(dirname \"$p\"); \
-  b=$(basename \"$p\" | tr \"A-Z\" \"a-z\"); \
-  [ \"$p\" != \"$d/$b\" ] && mv -- \"$p\" \"$d/$b\"; \
-done'"
-
 #define COMPILER_DT_PICK000001 "expected token"
 #define COMPILER_DT_PICK000002 "only a single statement"
 #define COMPILER_DT_PICK000003 "declaration of a local variable must appear in a compound block"
@@ -245,6 +186,6 @@ done'"
 #define COMPILER_DT_SEL0000421 "It looks like there’s a mismatch between the forward declaration and the public function, possibly a typo? For instance, it's written as OnplayerClickMap when it should be OnPlayerClickMap here."
 #define COMPILER_DT_SEL0000091 "Have you made sure you're using the latest SA-MP or open.mp stdlib? Get them here: https://github.com/pawn-lang/samp-stdlib : https://github.com/pawn-lang/pawn-stdlib"
 
-void cause_pawn_expl(const char *log_file,const char *dog_output,int debug);
+void cause_pc_expl(const char *log_file,const char *dog_output,int debug);
 
 #endif

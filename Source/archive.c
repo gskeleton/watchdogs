@@ -137,7 +137,7 @@ compress_to_archive(const char *archive_path,
 			continue;
 		}
 
-		if (!file_regular(archive_path)) {
+        if (!S_ISREG(fd_stat.st_mode)) {
 			if (S_ISDIR(fd_stat.st_mode)) {
 				close(fd);
 				ret = -2;
@@ -292,14 +292,6 @@ dog_path_recursive(struct archive *archive, const char *root, const char *path)
 		if (fstat(fd, &fd_stat) != 0) {
 			pr_error(stdout, "fstat failed..: %s..: %s",
 			    full_path, strerror(errno));
-			minimal_debugging();
-			close(fd);
-			return (-1);
-		}
-
-		if (!file_regular(full_path)) {
-			pr_warning(stdout, "the %s is not a regular file!..",
-			    full_path);
 			minimal_debugging();
 			close(fd);
 			return (-1);

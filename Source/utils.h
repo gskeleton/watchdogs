@@ -169,6 +169,10 @@
 # define TMUX_LIB_AMD64_PATH "/data/data/com.termux/amd64/usr/lib"
 # define TMUX_LIB_AMD32_PATH "/data/data/com.termux/amd32/usr/lib"
 
+#ifndef DOG_WINDOWS
+extern char **environ;
+#endif
+
 typedef struct {
     char * dog_os_type           ;
     char * dog_is_samp           ;
@@ -184,7 +188,7 @@ typedef struct {
     char * dog_toml_server_binary;
     char * dog_toml_server_config;
     char * dog_toml_server_logs  ;
-    char * dog_toml_all_flags    ;
+    char * dog_toml_full_opt    ;
     char * dog_toml_root_patterns;
     char * dog_toml_packages     ;
     char * dog_toml_serv_input   ;
@@ -275,7 +279,7 @@ size_t w_strlcat(char *dst, const char *src, size_t size);
 
 # endif
 
-void dog_sef_path_revert(void);
+void _sef_restore(void);
 
 extern const char* dog_find_near_command(const char *ptr_command,
     const char *__commands[], size_t num_cmds, int *out_distance);
@@ -298,7 +302,7 @@ int path_access(const char *path);
 int file_regular(const char *path);
 int file_same_file(const char *a, const char *b);
 int dog_dot_or_dotdot(const char *name);
-int binary_condition_check(char *path);
+int binary_check(char *path);
 
 void path_sep_to_posix(char *path);
 const char *lookup_path_sep(const char *sep_path);
@@ -308,7 +312,7 @@ char * fet_basename(const char *path);
 char *dog_procure_pwd(void);
 char* dog_masked_text(int reveal, const char *text);
 int dog_mkdir_recursive(const char *path);
-int dog_exec_command(char *const argv[]);
+int dog_user_command(char *const argv[]);
 
 void dog_printfile(const char *path);
 bool dog_console_title(const char *__title);
