@@ -64,46 +64,139 @@ pawncc_handle_termux_installation(void)
 
 	installing_pawncc = true;
 
+	#ifdef DOG_LINUX
+	struct utsname u;
+	if (uname(&u) != 0) {
+		perror("uname");
+		return 1;
+	}
+	const char
+		*machine = u.machine;
+	#else
+	const char
+		*machine = "unknown";
+	#endif
+
 	if (sel == 'A' || sel == 'a') {
 		if (path_exists("pawncc-termux-311.zip"))
 			remove("pawncc-termux-311.zip");
 		if (path_exists("pawncc-termux-311"))
 			remove("pawncc-termux-311");
-		dog_download_file(
-		    "https://github.com/gskeleton/compiler/releases/download/3.10.11/pawncc-termux.zip",
-		    "pawncc-termux-311.zip");
+		if (strcmp(machine, "aarch64") == 0) {
+			pr_info(stdout, "Downloading PawnCC for aarch64..");
+			dog_download_file(
+			"https://github.com/gskeleton/compiler/releases/download/v3.10.11/arm64-v8a.zip",
+			"pawncc-termux-311.zip"
+			);
+		} else if (strcmp(machine, "armv7l") == 0) {
+			pr_info(stdout, "Downloading PawnCC for armv7l..");
+			dog_download_file(
+			"https://github.com/gskeleton/compiler/releases/download/v3.10.11/armeabi-v7a.zip",
+			"pawncc-termux-311.zip"
+			);
+		} else {
+			pr_info(stdout, "Downloading PawnCC for aarch64..");
+			dog_download_file(
+			"https://github.com/gskeleton/compiler/releases/download/v3.10.11/arm64-v8a.zip",
+			"pawncc-termux-311.zip"
+			);
+		}
 	} else if (sel == 'B' || sel == 'b') {
 		if (path_exists("pawncc-termux-310.zip"))
 			remove("pawncc-termux-310.zip");
 		if (path_exists("pawncc-termux-310"))
 			remove("pawncc-termux-310");
-		dog_download_file(
-		    "https://github.com/gskeleton/compiler/releases/download/3.10.10/pawncc-termux.zip",
-		    "pawncc-termux-310.zip");
+		if (strcmp(machine, "aarch64") == 0) {
+			pr_info(stdout, "Downloading PawnCC for aarch64..");
+			dog_download_file(
+			"https://github.com/gskeleton/compiler/releases/download/v3.10.10/arm64-v8a.zip",
+			"pawncc-termux-310.zip"
+			);
+		} else if (strcmp(machine, "armv7l") == 0) {
+			pr_info(stdout, "Downloading PawnCC for armv7l..");
+			dog_download_file(
+			"https://github.com/gskeleton/compiler/releases/download/v3.10.10/armeabi-v7a.zip",
+			"pawncc-termux-310.zip"
+			);
+		} else {
+			pr_info(stdout, "Downloading PawnCC for aarch64..");
+			dog_download_file(
+			"https://github.com/gskeleton/compiler/releases/download/v3.10.10/arm64-v8a.zip",
+			"pawncc-termux-310.zip"
+			);
+		}
 	} else if (sel == 'C' || sel == 'c') {
 		if (path_exists("pawncc-termux-39.zip"))
 			remove("pawncc-termux-39.zip");
 		if (path_exists("pawncc-termux-39"))
 			remove("pawncc-termux-39");
-		dog_download_file(
-		    "https://github.com/gskeleton/compiler/releases/download/3.10.9/pawncc-termux.zip",
-		    "pawncc-termux-39.zip");
+		if (strcmp(machine, "aarch64") == 0) {
+			pr_info(stdout, "Downloading PawnCC for aarch64..");
+			dog_download_file(
+			"https://github.com/gskeleton/compiler/releases/download/v3.10.9/arm64-v8a.zip",
+			"pawncc-termux-39.zip"
+			);
+		} else if (strcmp(machine, "armv7l") == 0) {
+			pr_info(stdout, "Downloading PawnCC for armv7l..");
+			dog_download_file(
+			"https://github.com/gskeleton/compiler/releases/download/v3.10.9/armeabi-v7a.zip",
+			"pawncc-termux-39.zip"
+			);
+		} else {
+			pr_info(stdout, "Downloading PawnCC for aarch64..");
+			dog_download_file(
+			"https://github.com/gskeleton/compiler/releases/download/v3.10.9/arm64-v8a.zip",
+			"pawncc-termux-39.zip"
+			);
+		}
 	} else if (sel == 'D' || sel == 'd') {
 		if (path_exists("pawncc-termux-38.zip"))
 			remove("pawncc-termux-38.zip");
 		if (path_exists("pawncc-termux-38"))
 			remove("pawncc-termux-38");
-		dog_download_file(
-		    "https://github.com/gskeleton/compiler/releases/download/3.10.8/pawncc-termux.zip",
-		    "pawncc-termux-38.zip");
+		if (strcmp(machine, "aarch64") == 0) {
+			pr_info(stdout, "Downloading PawnCC for aarch64..");
+			dog_download_file(
+			"https://github.com/gskeleton/compiler/releases/download/v3.10.8/arm64-v8a.zip",
+			"pawncc-termux-38.zip"
+			);
+		} else if (strcmp(machine, "armv7l") == 0) {
+			pr_info(stdout, "Downloading PawnCC for armv7l..");
+			dog_download_file(
+			"https://github.com/gskeleton/compiler/releases/download/v3.10.8/armeabi-v7a.zip",
+			"pawncc-termux-38.zip"
+			);
+		} else {
+			pr_info(stdout, "Downloading PawnCC for aarch64..");
+			dog_download_file(
+			"https://github.com/gskeleton/compiler/releases/download/v3.10.8/arm64-v8a.zip",
+			"pawncc-termux-38.zip"
+			);
+		}
 	} else if (sel == 'E' || sel == 'e') {
 		if (path_exists("pawncc-termux-37.zip"))
 			remove("pawncc-termux-37.zip");
 		if (path_exists("pawncc-termux-37"))
 			remove("pawncc-termux-37");
-		dog_download_file(
-		    "https://github.com/gskeleton/compiler/releases/download/3.10.7/pawncc-termux.zip",
-		    "pawncc-termux-37.zip");
+		if (strcmp(machine, "aarch64") == 0) {
+			pr_info(stdout, "Downloading PawnCC for aarch64..");
+			dog_download_file(
+			"https://github.com/gskeleton/compiler/releases/download/v3.10.7/arm64-v8a.zip",
+			"pawncc-termux-37.zip"
+			);
+		} else if (strcmp(machine, "armv7l") == 0) {
+			pr_info(stdout, "Downloading PawnCC for armv7l..");
+			dog_download_file(
+			"https://github.com/gskeleton/compiler/releases/download/v3.10.7/armeabi-v7a.zip",
+			"pawncc-termux-37.zip"
+			);
+		} else {
+			pr_info(stdout, "Downloading PawnCC for aarch64..");
+			dog_download_file(
+			"https://github.com/gskeleton/compiler/releases/download/v3.10.7/arm64-v8a.zip",
+			"pawncc-termux-37.zip"
+			);
+		}
 	}
 
 	return (0);
@@ -117,18 +210,11 @@ pawncc_handle_standard_installation(const char *platform)
 		"PawnCC 3.10.10  - new",
 		"PawnCC 3.10.9   - new",
 		"PawnCC 3.10.8   - stable",
-		"PawnCC 3.10.7   - stable",
-		"PawnCC 3.10.6   - older",
-		"PawnCC 3.10.5   - older",
-		"PawnCC 3.10.4   - older",
-		"PawnCC 3.10.3   - older",
-		"PawnCC 3.10.2   - older"
+		"PawnCC 3.10.7   - stable"
 	};
-	const char	 keys[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G',
-	    'H', 'I', 'J'};
+	const char	 keys[] = {'A', 'B', 'C', 'D', 'E'};
 	const char	*vernums[] = {
-		"3.10.11", "3.10.10", "3.10.9", "3.10.8", "3.10.7",
-		"3.10.6", "3.10.5", "3.10.4", "3.10.3", "3.10.2"
+		"3.10.11", "3.10.10", "3.10.9", "3.10.8", "3.10.7"
 	};
 
 	if (strcmp(platform, "linux") != 0 &&
@@ -138,24 +224,28 @@ pawncc_handle_standard_installation(const char *platform)
 	}
 
 	char	 sel = library_options_list("Select PawnCC Version",
-	    versions, keys, 10);
+	    versions, keys, 5);
 	if (!sel)
 		return (0);
 
 	int	 idx = -1;
-	if (sel >= 'A' && sel <= 'J')
+	if (sel >= 'A' && sel <= 'E')
 		idx = sel - 'A';
-	else if (sel >= 'a' && sel <= 'j')
+	else if (sel >= 'a' && sel <= 'e')
 		idx = sel - 'a';
-	if (idx < 0 || idx >= 10)
+	if (idx < 0 || idx >= 5)
 		return (0);
 
 	const char	*library_repo_base;
-	if (strcmp(vernums[idx], "3.10.11") == 0)
-		library_repo_base =
-		    "https://github.com/openmultiplayer/compiler";
-	else
-		library_repo_base = "https://github.com/pawn-lang/compiler";
+	if (strfind(platform, "linux", true) == true) { 
+		library_repo_base = "https://github.com/gskeleton/compiler_linux";
+	} else if (strfind(platform, "windows", true) == true) {
+		if (strcmp(vernums[idx], "3.10.11") == 0)
+			library_repo_base =
+				"https://github.com/openmultiplayer/compiler";
+		else
+			library_repo_base = "https://github.com/pawn-lang/compiler";
+	}
 
 	const char	*archive_ext =
 	    (strcmp(platform, "linux") == 0) ? "tar.gz" : "zip";

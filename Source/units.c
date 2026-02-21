@@ -226,7 +226,8 @@ checkout_unit_rule(void)
         const char *argsc[] = { NULL, NULL, NULL,
             NULL, NULL, NULL, NULL, NULL, NULL, NULL };
         pr_info(stdout,
-            "After compiling the script, type running to start your server");
+            "After compiling the script, type "
+            DOG_COL_YELLOW "running " DOG_COL_DEFAULT "to start your server..");
         dog_exec_compiler(argsc[0], argsc[1], argsc[2],
             argsc[3], argsc[4], argsc[5], argsc[6], argsc[7],
             argsc[8], argsc[9]);

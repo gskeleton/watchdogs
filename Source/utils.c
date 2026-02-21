@@ -2699,10 +2699,32 @@ skip_:
 				return (0);
 			#endif
 			#if defined(DOG_ANDROID)
-				dog_download_file(
-				"https://github.com/gskeleton/compiler/releases/download/3.10.7/pawncc-termux.zip",
-				"pawncc-termux-37.zip"
-				);
+				struct utsname u;
+
+				if (uname(&u) != 0) {
+					perror("uname");
+					return 1;
+				}
+				if (strcmp(u.machine, "aarch64") == 0) {
+					pr_info(stdout, "Downloading PawnCC for aarch64..");
+					dog_download_file(
+					"https://github.com/gskeleton/compiler/releases/download/v3.10.7/arm64-v8a.zip",
+					"pawncc-termux-37.zip"
+					);
+				} else if (strcmp(u.machine, "armv7l") == 0) {
+					pr_info(stdout, "Downloading PawnCC for armv7l..");
+					dog_download_file(
+					"https://github.com/gskeleton/compiler/releases/download/v3.10.7/armeabi-v7a.zip",
+					"pawncc-termux-37.zip"
+					);
+				} else {
+					pr_info(stdout, "Downloading PawnCC for aarch64..");
+					dog_download_file(
+					"https://github.com/gskeleton/compiler/releases/download/v3.10.7/arm64-v8a.zip",
+					"pawncc-termux-37.zip"
+					);
+				}
+
 				return (0);
 			#elif !defined(DOG_ANDROID) && defined(DOG_LINUX)
 				dog_download_file(

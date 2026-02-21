@@ -333,14 +333,6 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 			rate_flag_notice = true;
 		}
 
-		#ifdef DOG_ANDROID
-			tmp_buf[0] = '\0';
-			snprintf(tmp_buf, sizeof(tmp_buf), "%s -w:200-",
-				dogconfig.dog_toml_all_flags);
-			dog_free(dogconfig.dog_toml_all_flags);
-			dogconfig.dog_toml_all_flags = strdup(tmp_buf);
-		#endif
-
 		printf(DOG_COL_DEFAULT);
 
         if (new_compile_args_val[0] == '\0')

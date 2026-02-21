@@ -36,7 +36,7 @@ void
 		else {
 			if (cacert_notice != true) {
 				pr_color(stdout, DOG_COL_GREEN,
-				    "cURL: can't locate cacert.pem - "
+				    " * cURL: can't locate cacert.pem - "
 				    "SSL verification may fail.\n");
 				cacert_notice = true;
 			}
@@ -60,7 +60,7 @@ void
 			curl_easy_setopt(curl, CURLOPT_CAINFO, ca2);
 		else {
 			pr_color(stdout, DOG_COL_GREEN,
-			    "cURL: can't locate cacert.pem - "
+			    " * cURL: can't locate cacert.pem - "
 			    "SSL verification may fail.\n");
 		}
 	} else if (platform_specific == 2) {
@@ -72,7 +72,7 @@ void
 		else {
 			if (cacert_notice != true) {
 				pr_color(stdout, DOG_COL_GREEN,
-				    "cURL: can't locate cacert.pem - "
+				    " * cURL: can't locate cacert.pem - "
 				    "SSL verification may fail.\n");
 				cacert_notice = true;
 			}
