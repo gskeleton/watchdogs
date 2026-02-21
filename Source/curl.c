@@ -422,9 +422,8 @@ static int setup_linux_library(void)
 	return (0);
 	#endif
 	const char *libpawnc_path = NULL;
-	char        libpawnc_src[DOG_PATH_MAX];
 	char        dest_path[DOG_PATH_MAX];
-	char        _hexdump[sizeof(libpawnc_src) + 28];
+	char        _hexdump[DOG_PATH_MAX + 28];
 	size_t      i;
 	int         found_lib;
 
@@ -448,9 +447,9 @@ static int setup_linux_library(void)
 		if (strstr(
 		    dogconfig.dog_sef_found_list[i],
 		    "libpawnc.so")) {
-			strncpy(libpawnc_src,
+			strncpy(tmp_buf,
 			    dogconfig.dog_sef_found_list[i],
-			    sizeof(libpawnc_src));
+			    DOG_PATH_MAX);
 			break;
 		}
 	}
@@ -469,7 +468,7 @@ static int setup_linux_library(void)
 	snprintf(dest_path, sizeof(dest_path),
 	    "%s/libpawnc.so", libpawnc_path);
 
-    if (path_exists(libpawnc_src))
+    if (path_exists(tmp_buf))
     {
         int na_hexdump = 404;
         {
@@ -489,9 +488,9 @@ static int setup_linux_library(void)
         }
         if (!na_hexdump) {
             pr_info(stdout,
-            	"Fetching %s binary hex..", libpawnc_src);
+            	"Fetching %s binary hex..", tmp_buf);
             snprintf(_hexdump, sizeof(_hexdump),
-				"'hexdump -C -n 128 %s'", libpawnc_src);
+				"'hexdump -C -n 128 %s'", tmp_buf);
             char *argv[] = {
 				"sh",
 				"-c",
@@ -506,7 +505,7 @@ static int setup_linux_library(void)
         }
     }
 
-    dog_sef_wmv(libpawnc_src, dest_path);
+    dog_sef_wmv(tmp_buf, dest_path);
 
 	return (0);
 }
