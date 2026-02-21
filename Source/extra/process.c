@@ -242,6 +242,14 @@ int dog_exec_compiler_process(char *pawncc_path,
       strdup("-ipawno/include -iqawno/include -igamemodes");
 
 	dog_serv_init(pawncc_path, input_path);
+
+    /* Normalize Whitespace */
+    normalize_spaces(pawncc_path);
+    normalize_spaces(input_path);
+    normalize_spaces(output_path);
+    normalize_spaces(dogconfig.dog_toml_all_flags);
+    normalize_spaces(compiler_full_includes);
+    normalize_spaces(compiler_include_path);
 	
 	/* Build compiler command line string */
 	result_configure = snprintf(compiler_input,
@@ -253,7 +261,7 @@ int dog_exec_compiler_process(char *pawncc_path,
 		dogconfig.dog_toml_all_flags, // flag
 		compiler_full_includes, // includes
 		compiler_include_path); // includes
-
+    
 	/* Initialize log file path based on platform */
 	#ifdef DOG_WINDOWS
 	#define COMPILER_LOG ".watchdogs\\compiler.log"
