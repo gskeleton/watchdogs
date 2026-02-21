@@ -500,13 +500,16 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 								" ", sizeof(posix_fzf_finder));
 						}
 					}
-
-					strlcat(posix_fzf_finder,
-						"-type f "
-						"\\( -name \"*.pwn\" "
-						"-o -name \"*.p\" \\) "
-						"2>/dev/null",
-						sizeof(posix_fzf_finder));
+                    
+                    strlcat(posix_fzf_finder,
+                        "-type f "
+                        "\\( -name \"*.pwn\" "
+                        "-o -name \"*.p\" "
+                        "-o -name \"*.pawn\" \\) "
+                        "! -path \"*pawno*\" "
+                        "! -path \"*qawno*\" "
+                        "2>/dev/null",
+                        sizeof(posix_fzf_finder));
 
 					memset(tmp_buf,
 						0, sizeof(tmp_buf));
