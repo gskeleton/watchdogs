@@ -472,25 +472,24 @@ int binary_condition_check(char *path) {
 	    return false;
 	}
 
-    memset(tmp_buf, 0, sizeof(tmp_buf));
-    
-	ssize_t bytes_read = read(fd, tmp_buf, sizeof(tmp_buf));
-	if (bytes_read < 0) {
-	    pr_error(stderr, "read failed");
-	    minimal_debugging();
-	    close(fd);
-	    return false;
-	}
+    unsigned char buffer[512];
+    ssize_t bytes_read = read(fd, buffer, sizeof(buffer));
+    if (bytes_read < 0) {
+        pr_error(stderr, "read failed");
+        minimal_debugging();
+        close(fd);
+        return false;
+    }
 
 	int non_printable = 0;
 
 	for (ssize_t i = 0; i < bytes_read; i++) {
-	    if (tmp_buf[i] == 0) {
+	    if (buffer[i] == 0) {
 	        close(fd);
 	        return true;
 	    }
-	    if (tmp_buf[i] < 7 ||
-			(tmp_buf[i] > 14 && tmp_buf[i] < 32)) {
+	    if (buffer[i] < 7 ||
+			(buffer[i] > 14 && buffer[i] < 32)) {
 	        non_printable++;
 	    }
 	}
