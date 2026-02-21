@@ -38,7 +38,6 @@ static bool    compiler_time_issue = false;
 static bool    compiler_target_exists = false;
 char          *compiler_full_includes = NULL;
 static char    compiler_temp[DOG_PATH_MAX + 28] = { 0 };
-static char    compiler_mb[128] = { 0 };
 static char    tmp_parsing[DOG_PATH_MAX] = { 0 };
 char           compiler_include_path[DOG_PATH_MAX] = { 0 };
 static char    appended_flags[456] = { 0 };
@@ -170,7 +169,6 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 	memset(&dog_compiler_sys, 0, sizeof(io_compilers));
 	memset(tmp_parsing, 0, sizeof(tmp_parsing));
 	memset(compiler_temp, 0, sizeof(compiler_temp));
-	memset(compiler_mb, 0, sizeof(compiler_mb));
 	memset(compiler_include_path, 0,
 	    sizeof(compiler_include_path));
 	memset(tmp_buf, 0, sizeof(tmp_buf));
@@ -779,10 +777,10 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 				"r");
 			if (tmp_proc_file) {
 				bool has_err = false;
-				while (fgets(compiler_mb,
-					sizeof(compiler_mb),
+				while (fgets(tmp_buf,
+					sizeof(tmp_buf),
 					tmp_proc_file)) {
-					if (strfind(compiler_mb,
+					if (strfind(tmp_buf,
 						"error", true)) {
 						has_err = false;
 						break;
@@ -1135,15 +1133,15 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 		compiler_done2:
 				tmp_proc_file = fopen(
 					".watchdogs/compiler.log", "r");
-				memset(compiler_mb, 0, sizeof(compiler_mb));
+				memset(tmp_buf, 0, sizeof(tmp_buf));
 				if (tmp_proc_file) {
 					bool has_err = false;
 					while (fgets(
-						compiler_mb,
-						sizeof(compiler_mb),
+						tmp_buf,
+						sizeof(tmp_buf),
 						tmp_proc_file)) {
 						if (strfind(
-							compiler_mb,
+							tmp_buf,
 							"error", true)) {
 							has_err = true;
 							break;
@@ -1200,7 +1198,7 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 		if (tmp_proc_file)
 			fclose(tmp_proc_file);
 
-		memset(compiler_mb, 0, sizeof(compiler_mb));
+		memset(tmp_buf, 0, sizeof(tmp_buf));
 
 		tmp_proc_file = fopen(".watchdogs/compiler.log", "rb");
 
@@ -1213,11 +1211,11 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 		  stdlib_fail=false;
 
 		while (fgets(
-				compiler_mb,
-				sizeof(compiler_mb),
+				tmp_buf,
+				sizeof(tmp_buf),
 			tmp_proc_file) != NULL)
 			{
-			if (strfind(compiler_mb, "error",
+			if (strfind(tmp_buf, "error",
 				true) != false) {
 					switch(compiler_retry_stat)
 					{
@@ -1241,13 +1239,13 @@ dog_exec_compiler(const char *args, const char *compile_args_val,
 						goto _compiler_retry_stat;
 					}
 				}
-		    if((strfind(compiler_mb, "a_samp" ,true)
+		    if((strfind(tmp_buf, "a_samp" ,true)
 		    	== 1 &&
-		    	strfind(compiler_mb, "cannot read from file", true)
+		    	strfind(tmp_buf, "cannot read from file", true)
 		    	== 1) ||
-		        (strfind(compiler_mb, "open.mp", true)
+		        (strfind(tmp_buf, "open.mp", true)
 		        == 1 &&
-		        strfind(compiler_mb, "cannot read from file", true)
+		        strfind(tmp_buf, "cannot read from file", true)
 		        == 1))
 		    {
 	        	stdlib_fail = !stdlib_fail;
