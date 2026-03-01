@@ -5,7 +5,6 @@
 #include  "replicate.h"
 #include  "cause.h"
 
-/* External array of compiler error/warning explanations */
 extern causeExplanation ccs[];
 
 static const char* dog_find_warn_err(const char* line)
@@ -80,7 +79,7 @@ static void pc_detailed(const char* dog_output, int debug,
             fwrite(outbuf, 1, len, stdout);
     }
 
-    putchar('\n');
+    (void)putchar('\n');
 
     /* Show compiler version */
     len = snprintf(outbuf, sizeof(outbuf),
@@ -106,30 +105,37 @@ void cause_pc_expl(const char* log_file, const char* dog_output, int debug)
     long int header_size = 0, code_size = 0, data_size = 0, stack_size = 0, total_size = 0;
     char pc_line[DOG_MORE_MAX_PATH] = { 0 }, pc_ver[64] = { 0 };
 
-    /* Parse compiler log line by line */
     while (fgets(pc_line, sizeof(pc_line), _log_file)) {
 
-        /* Skip header lines */
         if (dog_strcase(pc_line, "Warnings.") ||
             dog_strcase(pc_line, "Warning.") ||
             dog_strcase(pc_line, "Errors.") ||
             dog_strcase(pc_line, "Error."))
             continue;
 
-        /* Extract AMX file statistics */
-        if (dog_strcase(pc_line, "Header size:")) {
+        if (dog_strcase(pc_line, "Header size:") ||
+            strstr(pc_line, "* Header size") != NULL)
+        {
             header_size = strtol(strchr(pc_line, ':') + 1, NULL, 10);
             continue;
-        } else if (dog_strcase(pc_line, "Code size:")) {
+        } else if (dog_strcase(pc_line, "Code size:") ||
+            strstr(pc_line, "* Code size") != NULL)
+        {
             code_size = strtol(strchr(pc_line, ':') + 1, NULL, 10);
             continue;
-        } else if (dog_strcase(pc_line, "Data size:")) {
+        } else if (dog_strcase(pc_line, "Data size:") ||
+            strstr(pc_line, "* Data size") != NULL)
+        {
             data_size = strtol(strchr(pc_line, ':') + 1, NULL, 10);
             continue;
-        } else if (dog_strcase(pc_line, "Stack/heap size:")) {
+        } else if (dog_strcase(pc_line, "Stack/heap size:") ||
+            strstr(pc_line, "* Stack/heap size") != NULL)
+        {
             stack_size = strtol(strchr(pc_line, ':') + 1, NULL, 10);
             continue;
-        } else if (dog_strcase(pc_line, "Total requirements:")) {
+        } else if (dog_strcase(pc_line, "Total requirements:") ||
+            strstr(pc_line, "* Total requirements") != NULL)
+        {
             total_size = strtol(strchr(pc_line, ':') + 1, NULL, 10);
             continue;
         } else if (dog_strcase(pc_line, "Pawn Compiler ")) {
@@ -141,7 +147,6 @@ void cause_pc_expl(const char* log_file, const char* dog_output, int debug)
             continue;
         }
 
-        /* Display compiler output line */
         int len = snprintf(pbuf, sizeof(pbuf),
             DOG_COL_BWHITE "%s" DOG_COL_DEFAULT, pc_line);
         fwrite(pbuf, 1, len, stdout);
@@ -153,34 +158,51 @@ void cause_pc_expl(const char* log_file, const char* dog_output, int debug)
         if (dog_strcase(pc_line, "error"))
             ++error_count;
 
-        /* Find and display explanation for this message */
         const char* description = dog_find_warn_err(pc_line);
         if (description) {
             const char* found = NULL;
             int column = 0;
-            /* Calculate column position for arrow alignment */
             for (int i = 0; ccs[i].cs_t; ++i) {
                 if ((found = strstr(pc_line, ccs[i].cs_t))) {
-                    const char* colon = strchr(pc_line, ':');
+                    const char* colon;
+                    /*
+                     * foo/too.pwn: fooo
+                          [do here]
+                     */
+                    if (strchr(pc_line, '/'))
+                        colon = strchr(pc_line, '/');
+                    /*
+                     * foo\too.pwn: fooo
+                          [do here]
+                     */
+                    else if (strchr(pc_line, '\\'))
+                        colon = strchr(pc_line, '\\');
+                    /*
+                     * too.pwn: fooo
+                          [do here]
+                     */
+                    else
+                        colon = strchr(pc_line, '.');
                     if (colon)
                         column = colon - pc_line;
                     break;
                 }
             }
-            /* Add spacing for arrow alignment */
-            for (int i = 0; i < column; ++i)
-                putchar(' ');
+
+            int w;
+            for (w = 0; w < column; ++w)
+                (void)putchar(' ');
             
             pbuf[0] = '\0';
             len = snprintf(pbuf, sizeof(pbuf),
-                DOG_COL_CYAN ": %s \n" DOG_COL_DEFAULT, description);
+                DOG_COL_CYAN "[%s] \n" DOG_COL_DEFAULT, description);
             fwrite(pbuf, 1, len, stdout);
             fflush(stdout);
         }
     }
 
     fclose(_log_file);
-    /* Display final compilation summary */
+
     pc_detailed(dog_output, debug, warning_count, error_count,
         pc_ver, header_size, code_size,
         data_size, stack_size, total_size);

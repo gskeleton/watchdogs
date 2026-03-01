@@ -192,7 +192,7 @@ void crypto_print_hex(const unsigned char *buf, size_t len, int null_terminator)
           printf("%02x", buf[i]);
       }
       if (null_terminator != 0)
-          putchar('\n');
+          (void)putchar('\n');
 }
 
 /* Convert binary data to hexadecimal string representation */

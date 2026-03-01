@@ -12,7 +12,7 @@ static void unit_restore(void) {
     _sef_restore();
     dog_configure_toml();
 
-    signal(SIGINT, SIG_DFL);
+    (void)signal(SIGINT, SIG_DFL);
     sigint_handler
         = !sigint_handler;
     pc_is_error
@@ -33,8 +33,7 @@ void enable_ansi()
         return;
 
     if (!(dwMode & ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
-        SetConsoleMode(hOut, dwMode |
-            ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+        (void)SetConsoleMode(hOut, dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
     }
 }
 #endif
@@ -52,7 +51,7 @@ void _unit_debugger(int multi_debug,
         clear_history();
         rl_on_new_line();
         rl_redisplay();
-        dog_console_title(NULL);
+        (void)dog_console_title(NULL);
         crypto_crc32_init_table();
     }
 

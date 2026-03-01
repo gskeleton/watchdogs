@@ -22,7 +22,7 @@ bool           pc_input_info = false;
 bool           pc_debug_options = false;
 static bool    pc_time_issue = false;
 char*          pc_full_includes = NULL;
-static bool    applied_opt = false;
+static bool    init_applied_opt = false;
 static char    pc_temp[DOG_PATH_MAX + 28] = { 0 };
 static char    pbuf[DOG_MAX_PATH * 2];
 static char    parsing[DOG_PATH_MAX] = { 0 };
@@ -38,22 +38,22 @@ bool           process_file_success = false;
 
 static void pc_show_tip(void) {
 	static const char* tip_options =
-		DOG_COL_BCYAN
-		" o [--watchdogs/--detailed/-w] * Enable detailed watchdog output\n"
-		DOG_COL_BCYAN
-		" o [--debug/-d]                * Enable debugger options\n"
-		DOG_COL_BCYAN
-		" o [--prolix/-p]               * Enable verbose compilation\n"
-		DOG_COL_BCYAN
-		" o [--assembler/-a]            * Show assembler output\n"
-		DOG_COL_BCYAN
-		" o [--compact/-m]              * Use compact encoding\n"
-		DOG_COL_BCYAN
-		" o [--compat/-c]               * Active cross path separator\n"
-		DOG_COL_BCYAN
-		" o [--fast/-f]                 * Enable faster compilation mode\n"
-		DOG_COL_BCYAN
-		" o [--clean/-n]                * Enable safe mode or clean mode\n";
+	DOG_COL_BCYAN
+	" o [--watchdogs/--detailed/-w] * Enable detailed watchdog output\n"
+	DOG_COL_BCYAN
+	" o [--debug/-d]                * Enable debugger options\n"
+	DOG_COL_BCYAN
+	" o [--prolix/-p]               * Enable verbose compilation\n"
+	DOG_COL_BCYAN
+	" o [--assembler/-a]            * Show assembler output\n"
+	DOG_COL_BCYAN
+	" o [--compact/-m]              * Use compact encoding\n"
+	DOG_COL_BCYAN
+	" o [--compat/-c]               * Active cross path separator\n"
+	DOG_COL_BCYAN
+	" o [--fast/-f]                 * Enable faster compilation mode\n"
+	DOG_COL_BCYAN
+	" o [--clean/-n]                * Enable safe mode or clean mode\n";
 	fwrite(tip_options, 1, strlen(tip_options), stdout);
 	print_restore_color();
 	return;
@@ -72,7 +72,8 @@ static int configure_retry_stat(void) {
 		pbuf[0] = '\0';
 		(void)snprintf(pbuf, sizeof(pbuf),
 			"%s %s %s %s %s",
-			dogconfig.dog_toml_full_opt, MAX_PLAYERS, MAX_VEHICLES, MAX_ACTORS, MAX_OBJECTS);
+			dogconfig.dog_toml_full_opt,
+			MAX_PLAYERS, MAX_VEHICLES, MAX_ACTORS, MAX_OBJECTS);
 		dog_free(dogconfig.dog_toml_full_opt);
 		dogconfig.dog_toml_full_opt = strdup(pbuf);
 		break;
@@ -103,7 +104,8 @@ static int configure_retry_stat(void) {
 		pbuf[0] = '\0';
 		(void)snprintf(pbuf, sizeof(pbuf),
 			"%s %s %s %s %s",
-			dogconfig.dog_toml_full_opt, MAX_PLAYERS, MAX_VEHICLES, MAX_ACTORS, MAX_OBJECTS);
+			dogconfig.dog_toml_full_opt,
+			MAX_PLAYERS, MAX_VEHICLES, MAX_ACTORS, MAX_OBJECTS);
 		dog_free(dogconfig.dog_toml_full_opt);
 		dogconfig.dog_toml_full_opt = strdup(pbuf);
 	}
@@ -113,8 +115,10 @@ static int configure_retry_stat(void) {
 static void collect_option_bitmask(void) {
 
 	unsigned int __set_bit = 0;
-	char *p, *ptr;
-	int i;
+	size_t  len, extra_len;
+	char    *pos, *ptr, *options, *new_options;
+	int     i;
+
 	pbuf[0] = '\0';
 	ptr = pbuf;
 
@@ -126,15 +130,15 @@ static void collect_option_bitmask(void) {
 		static bool notice = false;
 		if (!notice) {
 			notice = true;
-			putchar('\n');
+			(void) putchar('\n');
 			pc_show_tip();
-			putchar('\n');
+			(void) putchar('\n');
 		}
 	}
 
-	if (applied_opt == false) {
-		applied_opt = true;
-	} else if (applied_opt == true) {
+	if (init_applied_opt == false) {
+		init_applied_opt = true;
+	} else if (init_applied_opt == true) {
 		return;
 	}
 
@@ -161,13 +165,14 @@ static void collect_option_bitmask(void) {
 		"-d:0 ", "-d:1 ", "-d:2 ", "-d:3 ",
 		"-d=0 ", "-d=1 ", "-d=2 ", "-d=3 "
 	};
-	const int f_value = 12;
+	static const int f_value = 12;
+	options = dogconfig.dog_toml_full_opt;
 	for (i = 0; i < f_value; i++) {
-		char* options = dogconfig.dog_toml_full_opt;
-		while ((p = strstr(options, f[i])) != NULL) {
+		while ((pos = strstr(options, f[i])) != NULL) {
 			size_t len = strlen(f[i]);
-			(void)memmove(p, p + len, strlen(p + len) + 1);
-			options = p;
+			(void)memmove(pos,
+						  pos + len, strlen(pos + len) + 1);
+			options = pos;
 			if (len == 0)
 				break;
 			options += 1;
@@ -177,12 +182,24 @@ static void collect_option_bitmask(void) {
 next:
 	/* Compiler option flags mapping */
 	static const CompilerOption object_opt[] = {
-		{ BIT_FLAG_DEBUG, " -d:2 ", 5 },
-		{ BIT_FLAG_ASSEMBLER, " -a ", 4 },
-		{ BIT_FLAG_COMPAT, " -Z:+ ", 5 },
-		{ BIT_FLAG_PROLIX, " -v:2 ", 5 },
-		{ BIT_FLAG_COMPACT, " -C:+ ", 5 },
-		{ BIT_FLAG_TIME, " -d:3 ", 5 },
+		{
+		BIT_FLAG_DEBUG,     " -d:2 ", 5
+		},
+		{
+		BIT_FLAG_ASSEMBLER, " -a ",   4
+		},
+		{
+		BIT_FLAG_COMPAT,    " -Z:+ ", 5
+		},
+		{
+		BIT_FLAG_PROLIX,    " -v:2 ", 5
+		},
+		{
+		BIT_FLAG_COMPACT,   " -C:+ ", 5
+		},
+		{
+		BIT_FLAG_TIME,      " -d:3 ", 5
+		},
 		{ 0, NULL, 0 }
 	};
 
@@ -200,11 +217,8 @@ next:
 
 	/* Append collected flags to options */
 	if (strlen(pbuf) > 0) {
-		applied_opt = true;
+		init_applied_opt = !init_applied_opt;
 
-		size_t len;
-		size_t extra_len;
-		char* new_options;
 		len = strlen(dogconfig.dog_toml_full_opt);
 		extra_len = strlen(pbuf);
 
@@ -293,11 +307,11 @@ static void configure_parent_dir(char* path) {
 	/* Add ../ prefix */
 	if (wpos + 3 < sizeof(parsing)) {
 		#ifdef DOG_LINUX
-		(void)bcopy(parsing, parsing + 3, wpos);
+		(void) bcopy(parsing, parsing + 3, wpos);
 		#else
-		(void)memmove(parsing, parsing + 3, wpos);
+		(void) memmove(parsing, parsing + 3, wpos);
 		#endif
-		(void)memcpy(parsing, "../", 3);
+		(void) memcpy(parsing, "../", 3);
 		wpos += 3;
 		parsing[wpos] = '\0';
 	}
@@ -319,10 +333,8 @@ done:
 	{
 		char* p = strstr(pc_temp, "gamemodes/");
 		char* p2 = strstr(pc_temp, "gamemodes\\");
-		if (p)
-			*p = '\0';
-		if (p2)
-			*p2 = '\0';
+		if (p) *p = '\0';
+		if (p2) *p2 = '\0';
 	}
 
 	/* Build include path string */
@@ -356,9 +368,9 @@ done:
 }
 
 static int compiler_show_fzf_file_selector(void) {
-	pr_color(stdout, DOG_COL_YELLOW,
-		DOG_COL_BYELLOW
+	print(DOG_COL_BYELLOW
 		"          [COMPILER TARGET]\n");
+	print_restore_color();
 	print("  -------------------------------------\n");
 	pbuf[0] = '\0';
 	int len = snprintf(pbuf, sizeof(pbuf),
@@ -530,7 +542,7 @@ static void compiler_state_init(void) {
 	pctx->flag_clean = false;
 	pctx->flag_fast = false;
 
-	applied_opt = false;
+	init_applied_opt = false;
 
 	/* Clear buffers */
 	pctx->direct_path[0] = '\0';
@@ -783,7 +795,7 @@ skip_parent:
 
 		/* Process compiler output */
 		if (path_exists(".watchdogs/compiler.log")) {
-			putchar('\n');
+			(void)putchar('\n');
 			char* ca = NULL;
 			ca = dogconfig.dog_toml_serv_output;
 			bool cb = 0;
@@ -836,7 +848,7 @@ skip_parent:
 		elapsed_time = ((double)(post_end.tv_sec - pre_start.tv_sec)) +
 					   ((double)(post_end.tv_nsec - pre_start.tv_nsec)) / 1e9;
 
-		putchar('\n');
+		(void)putchar('\n');
 
 		if (!pc_is_error)
 			print("** Completed Tasks.\n");
@@ -1156,7 +1168,7 @@ skip_parent:
 			/* Process compiler output */
 			if (path_exists(
 				".watchdogs/compiler.log")) {
-				putchar('\n');
+				(void)putchar('\n');
 				char* ca = NULL;
 				ca = pc_temp2;
 				bool cb = 0;
@@ -1219,7 +1231,7 @@ skip_parent:
 			elapsed_time = ((double)(post_end.tv_sec - pre_start.tv_sec)) +
 						   ((double)(post_end.tv_nsec - pre_start.tv_nsec)) / 1e9;
 
-			putchar('\n');
+			(void)putchar('\n');
 
 			if (!pc_is_error)
 				print("** Completed Tasks.\n");

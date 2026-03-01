@@ -216,6 +216,8 @@ dog_server_crash_check(void)
         sampvoice_port = NULL;
     }
 
+    print("Done.\n");
+
     separator_print();
 }
 
@@ -226,7 +228,7 @@ static void
 separator_print(void)
 {
     char out[64];
-    int n;
+    int  n;
 
     n = snprintf(out, sizeof(out),
         "--------------------------------------------------------------\n");

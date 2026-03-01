@@ -264,7 +264,7 @@ static void display_compiler_command(void) {
 #ifdef DOG_ANDROID
         println(stdout, "** %s", pc_input);
 #else
-        dog_console_title(pc_input);
+        (void)dog_console_title(pc_input);
         println(stdout, "** %s", pc_input);
 #endif
     }
@@ -797,10 +797,14 @@ void dog_exec_linux_server(char* binary) {
         int child_status;
         waitpid(process_id, &child_status, 0);
         if (WIFEXITED(child_status)) {
-            fprintf(stdout, "process exited with code %d\n", WEXITSTATUS(child_status));
+            fprintf(stdout,
+                "process exited with code %d\n",
+                WEXITSTATUS(child_status));
         }
         else if (WIFSIGNALED(child_status)) {
-            fprintf(stdout, "process killed by signal %d\n", WTERMSIG(child_status));
+            fprintf(stdout,
+                "process killed by signal %d\n",
+                WTERMSIG(child_status));
         }
 
         _exit(127);
@@ -809,12 +813,11 @@ void dog_exec_linux_server(char* binary) {
         close(stdout_pipe[1]);
         close(stderr_pipe[1]);
 
-        int stdout_fd;
-        int stderr_fd;
+    #define MAX(a,b) ((a) > (b) ? (a) : (b))
+        int stdout_fd = stdout_pipe[0];
+        int stderr_fd = stderr_pipe[0];
         ssize_t br;
-        stdout_fd = stdout_pipe[0];
-        stderr_fd = stderr_pipe[0];
-        int max_fd = (stdout_fd > stderr_fd ? stdout_fd : stderr_fd) + 1;
+        int max_fd = MAX(stdout_fd, stderr_fd) + 1;
 
         fd_set readfds;
 

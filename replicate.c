@@ -1895,7 +1895,7 @@ static void package_move_files(const char* package_dir,
                 0);
     }
 
-    putchar('\n');
+    (void)putchar('\n');
     destroy_arch_dir(package_dir);
 }
 
@@ -2098,7 +2098,7 @@ dog_install_depends(const char* packages, const char* branch, const char* where)
                     ".."
                     "LIST OF DIRECTORY: "
                     "%s", dog_procure_pwd());
-                putchar('\n');
+                (void)putchar('\n');
 
 #ifdef DOG_LINUX
                 /* Show directory listing on Linux */
@@ -2141,7 +2141,7 @@ dog_install_depends(const char* packages, const char* branch, const char* where)
                 }
 #endif
 
-                putchar('\n');
+                (void)putchar('\n');
 
                 /* Prompt for installation directory */
                 printf(DOG_COL_BCYAN

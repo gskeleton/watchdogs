@@ -340,22 +340,28 @@ dog_install_server(const char* platform)
 	/* Termux-specific server installation */
 	if (strcmp(platform, "termux") == 0) {
 		const char* items[] = {
-			"OMPTMUX (open.mp termux) v1.5.8.3079",
+			"commit: 5701ff8 for aarch64",
+			"commit: 5701ff8 for arm32"
 		};
-		const char	 keys[] = { 'A' };
+		const char	 keys[] = { 'A', 'B' };
 
 		char	 sel = library_options_list("Select Server Version",
-			items, keys, 1);
+			items, keys, 2);
 		if (!sel)
 			return (0);
 
 		if (sel == 'A' || sel == 'a') {
-			if (path_exists("omptmux.zip"))
-				remove("omptmux.zip");
+			if (path_exists("omptermux.zip"))
+				remove("omptermux.zip");
 			dog_download_file(
-				"https://github.com/novusr/omptmux/"
-				"releases/download/v1.5.8.3079/open.mp-termux-aarch64.zip",
-				"omptmux.zip");
+				"https://github.com/gskeleton/omptermux/archive/refs/heads/aarch64.zip",
+				"omptermux.zip");
+		} else if (sel == 'B' || sel == 'b') {
+			if (path_exists("omptermux.zip"))
+				remove("omptermux.zip");
+			dog_download_file(
+				"https://github.com/gskeleton/omptermux/archive/refs/heads/arm32.zip",
+				"omptermux.zip");
 		}
 		goto done;
 	}

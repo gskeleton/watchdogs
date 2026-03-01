@@ -445,11 +445,11 @@ int dog_mkdir_recursive(const char *path)
 
 int is_binary_file(char *path) {
 	
-	int            fd;
-	ssize_t        i,bytes_read;
-	int            n_printable = 0;
-	struct         stat st;
     unsigned char  buffer[512];
+	int      fd;
+	ssize_t  i,bytes_read;
+	int      n_printable = 0;
+	struct   stat st;
 
 	#ifdef DOG_WINDOWS
 	fd = open(path, O_RDONLY | O_BINARY);
@@ -524,10 +524,11 @@ void print_restore_color(void) {
 
 void println(FILE *stream, const char *format, ...) {
 	va_list    args;
+
 	va_start(args, format);
 	print_restore_color();
 	vfprintf(stream, format, args);
-	putchar('\n');
+	(void)putchar('\n');
 	print_restore_color();
 	va_end(args);
 	fflush(stream);
@@ -539,6 +540,7 @@ printf_colour(FILE *stream,
 			  const char *format, ...)
 {
 	va_list    args;
+
 	va_start(args, format);
 	print_restore_color();
 	printf("%s", color);
@@ -551,6 +553,7 @@ printf_colour(FILE *stream,
 void
 printf_info(FILE *stream, const char *format, ...) {
 	va_list    args;
+
 	va_start(args, format);
 	print_restore_color();
 	print(DOG_COL_YELLOW);
@@ -558,7 +561,7 @@ printf_info(FILE *stream, const char *format, ...) {
 	print_restore_color();
 	print(": ");
 	vfprintf(stream, format, args);
-	putchar('\n');
+	(void)putchar('\n');
 	va_end(args);
 	fflush(stream);
 }
@@ -566,6 +569,7 @@ printf_info(FILE *stream, const char *format, ...) {
 void
 printf_warning(FILE *stream, const char *format, ...) {
 	va_list    args;
+
 	va_start(args, format);
 	print_restore_color();
 	print(DOG_COL_GREEN);
@@ -573,7 +577,7 @@ printf_warning(FILE *stream, const char *format, ...) {
 	print_restore_color();
 	print(": ");
 	vfprintf(stream, format, args);
-	putchar('\n');
+	(void)putchar('\n');
 	va_end(args);
 	fflush(stream);
 }
@@ -581,6 +585,7 @@ printf_warning(FILE *stream, const char *format, ...) {
 void
 printf_error(FILE *stream, const char *format, ...) {
 	va_list    args;
+
 	va_start(args, format);
 	print_restore_color();
 	print(DOG_COL_RED);
@@ -588,7 +593,7 @@ printf_error(FILE *stream, const char *format, ...) {
 	print_restore_color();
 	print(": ");
 	vfprintf(stream, format, args);
-	putchar('\n');
+	(void)putchar('\n');
 	va_end(args);
 	fflush(stream);
 }

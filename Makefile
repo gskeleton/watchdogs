@@ -50,7 +50,7 @@ init:
 		apt -o Acquire::Queue-Mode=access -o Acquire::Retries=3 update -y && \
 		export DEBIAN_FRONTEND=noninteractive \
 		apt -o Dpkg::Use-Pty=0 install -y --no-install-recommends \
-			unstable-repo x11-repo coreutils binutils procps clang curl tree fzf \
+			unstable-repo x11-repo ndk-sysroot coreutils binutils procps clang curl tree fzf \
 			libarchive readline; \
 	elif echo "$$UNAME_S" | grep -qi "Linux"; then \
 		if command -v apt >/dev/null 2>&1; then \

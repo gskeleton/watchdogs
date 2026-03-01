@@ -259,7 +259,7 @@ checkout_unit_rule(void)
         rate_stdlib == false)
     {
         rate_stdlib = !rate_stdlib;
-        putchar('\n');
+        (void)putchar('\n');
         if (fet_server_env()==false) {
             pr_info(stdout,
                 "can't found sa-mp stdlib.. "
@@ -391,7 +391,7 @@ __command__(char *unit_pre_command)
     clock_gettime(CLOCK_MONOTONIC, &cmd_start);
     
     if (strncmp(ptr_command, "help", strlen("help")) == 0) {
-        dog_console_title("Watchdogs | @ help");
+        (void)dog_console_title("Watchdogs | @ help");
         char *args = ptr_command + strlen("help");
         while (*args == ' ') ++args;
         unit_show_help(args);
@@ -599,7 +599,7 @@ __command__(char *unit_pre_command)
             for (int i = 0; i < AES_BLOCK_SIZE; i++)
                 printf("%02X", out[i]);
 
-            putchar('\n');
+            (void)putchar('\n');
         }
 
         ret_code = -1;
@@ -642,7 +642,7 @@ __command__(char *unit_pre_command)
         goto cleanup;
         
     } else if (strncmp(ptr_command, "replicate", strlen("replicate")) == 0) {
-        dog_console_title("Watchdogs | @ replicate depends");
+        (void)dog_console_title("Watchdogs | @ replicate depends");
         char *args = ptr_command + strlen("replicate");
         while (*args == ' ') ++args;
         
@@ -762,7 +762,7 @@ __command__(char *unit_pre_command)
         goto cleanup;
         
     } else if (strcmp(ptr_command, "gamemode") == 0) {
-        dog_console_title("Watchdogs | @ gamemode");
+        (void)dog_console_title("Watchdogs | @ gamemode");
         
         unit_selection_state = true;
         
@@ -806,7 +806,7 @@ __command__(char *unit_pre_command)
         goto cleanup;
         
     } else if (strcmp(ptr_command, "pawncc") == 0) {
-        dog_console_title("Watchdogs | @ pawncc");
+        (void)dog_console_title("Watchdogs | @ pawncc");
         
         unit_selection_state = true;
         
@@ -850,7 +850,7 @@ __command__(char *unit_pre_command)
         goto cleanup;
         
     } else if (strcmp(ptr_command, "debug") == 0) {
-        dog_console_title("Watchdogs | @ debug");
+        (void)dog_console_title("Watchdogs | @ debug");
         dog_stop_server_tasks();
         unit_ret_main("812C397D");
         ret_code = -1;
@@ -863,7 +863,7 @@ __command__(char *unit_pre_command)
         
     } else if (strncmp(ptr_command, "compile", strlen("compile")) == 0 &&
                !isalpha((unsigned char)ptr_command[strlen("compile")])) {
-        dog_console_title("Watchdogs | @ compile | logging file: .watchdogs/compiler.log");
+        (void)dog_console_title("Watchdogs | @ compile | logging file: .watchdogs/compiler.log");
         
         char *args = ptr_command + strlen("compile");
         while (*args == ' ') args++;
@@ -885,7 +885,7 @@ __command__(char *unit_pre_command)
         goto cleanup;
         
     } else if (strncmp(ptr_command, "decompile", strlen("decompile")) == 0) {
-        dog_console_title("Watchdogs | @ decompile");
+        (void)dog_console_title("Watchdogs | @ decompile");
 
         char *args = ptr_command + strlen("decompile");
         while (*args == ' ') args++;
@@ -972,22 +972,26 @@ __command__(char *unit_pre_command)
                 {
                     *dot_amx = '\0';
                 }
-            char s_args[DOG_PATH_MAX];
-            (void)snprintf(s_args, sizeof(s_args), "%s.asm", args2);
+            pbuf[0] = '\0';
+            (void)snprintf(pbuf, sizeof(pbuf), "%s.asm", args2);
             dog_free(args2);
             char s_argv[DOG_PATH_MAX * 3];
             #ifdef DOG_LINUX
                 char *executor = "sh -c";
-                (void)snprintf(s_argv, sizeof(s_argv),
-                    "%s '%s %s %s'", executor, dogconfig.dog_sef_found_list[0], a_args, s_args);
+                (void)snprintf(s_argv, sizeof(s_argv), "%s '%s %s %s'",
+                    executor,
+                    dogconfig.dog_sef_found_list[0],
+                    a_args, pbuf);
             #else
                 char *executor = "cmd.exe /C";
-                (void)snprintf(s_argv, sizeof(s_argv),
-                    "%s %s %s %s", executor, dogconfig.dog_sef_found_list[0], a_args, s_args);
+                (void)snprintf(s_argv, sizeof(s_argv), "%s %s %s %s",
+                    executor,
+                    dogconfig.dog_sef_found_list[0],
+                    a_args, pbuf);
             #endif
             int ret = system(s_argv);
-            if (!ret) println(stdout, "%s", s_args);
-            dog_console_title(s_argv);
+            if (!ret) println(stdout, "%s", pbuf);
+            (void)dog_console_title(s_argv);
         } else {
             print("\033[1;31merror:\033[0m pawndisasm/pawncc (our compiler) not found\n"
                 "  \033[2mhelp:\033[0m install it before continuing\n");
@@ -998,7 +1002,7 @@ __command__(char *unit_pre_command)
         goto cleanup;
 
     } else if (strncmp(ptr_command, "pawnruns", strlen("pawnruns")) == 0) {
-        dog_console_title("Watchdogs | @ pawnruns");
+        (void)dog_console_title("Watchdogs | @ pawnruns");
 
         bool empty_args = false;
 
@@ -1093,18 +1097,22 @@ __command__(char *unit_pre_command)
                 goto cleanup;
             }
 
-            char s_argv[DOG_PATH_MAX * 3];
+            pbuf[0] = '\0';
             #ifdef DOG_LINUX
                 char *executor = "sh -c";
-                (void)snprintf(s_argv, sizeof(s_argv),
-                    "%s '%s %s'", executor, dogconfig.dog_sef_found_list[0], a_args);
+                (void)snprintf(pbuf, sizeof(pbuf), "%s '%s %s'",
+                    executor,
+                    dogconfig.dog_sef_found_list[0],
+                    a_args);
             #else
                 char *executor = "cmd.exe /C";
-                (void)snprintf(s_argv, sizeof(s_argv),
-                    "%s %s %s", executor, dogconfig.dog_sef_found_list[0], a_args);
+                (void)snprintf(pbuf, sizeof(pbuf), "%s %s %s",
+                    executor,
+                    dogconfig.dog_sef_found_list[0],
+                    a_args);
             #endif
-            int ret = system(s_argv);
-            dog_console_title(s_argv);
+            int ret = system(pbuf);
+            (void)dog_console_title(pbuf);
         } else {
             print("\033[1;31merror:\033[0m pawnruns/pawncc (our compiler) not found\n"
                 "  \033[2mhelp:\033[0m install it before continuing\n");
@@ -1115,12 +1123,12 @@ __command__(char *unit_pre_command)
         goto cleanup;
 
     } else if (strcmp(ptr_command, "running") == 0) {
+        static bool init_load_cfg = false;
+        sigint_handler = 0;
         dog_stop_server_tasks();
         
-        sigint_handler = 0;
-
-        char* binary = dogconfig.dog_toml_server_binary;
-        char* config = dogconfig.dog_toml_server_config;
+        char *binary = dogconfig.dog_toml_server_binary,
+             *config = dogconfig.dog_toml_server_config;
 
         if (!path_access(binary)) {
             pr_error(stdout, "can't locate SA-MP/open.mp binary file!");
@@ -1137,6 +1145,10 @@ __command__(char *unit_pre_command)
             ret_code = -1;
             goto cleanup;
         }
+        if (init_load_cfg == false) {
+            init_load_cfg = true;
+            dog_printfile(config);
+        }
         if (path_exists(dogconfig.dog_toml_server_logs) == 1) {
             remove(dogconfig.dog_toml_server_logs);
         }
@@ -1148,11 +1160,11 @@ __command__(char *unit_pre_command)
                 "CTRL + C to stop. | \"debug\" to debugging",
                 config);
         
-    #ifdef DOG_ANDROID
-        println(stdout, "%s", title);
-    #else
-        dog_console_title(title);
-    #endif
+        #ifdef DOG_ANDROID
+            println(stdout, "%s", title);
+        #else
+            (void)dog_console_title(title);
+        #endif
         
         struct sigaction sa;
         if (path_access("announce") == 1)
@@ -1174,9 +1186,10 @@ __command__(char *unit_pre_command)
         dog_exec_linux_server(binary);
         #endif
         
-        print(DOG_COL_DEFAULT "\n");
+        print(DOG_COL_DEFAULT);
+        putchar('\n');
 
-        signal(SIGINT, SIG_DFL);
+        (void)signal(SIGINT, SIG_DFL);
         sigint_handler
             = !sigint_handler;
 
@@ -1192,7 +1205,7 @@ __command__(char *unit_pre_command)
         goto cleanup;
         
     } else if (strncmp(ptr_command, "compiles", strlen("compiles")) == 0) {
-        dog_console_title("Watchdogs | @ compiles");
+        (void)dog_console_title("Watchdogs | @ compiles");
         
         char *args = ptr_command + strlen("compiles");
         while (*args == ' ') ++args;
@@ -1216,13 +1229,13 @@ __command__(char *unit_pre_command)
         goto cleanup;
         
     } else if (strcmp(ptr_command, "stop") == 0) {
-        dog_console_title("Watchdogs | @ stop");
+        (void)dog_console_title("Watchdogs | @ stop");
         dog_stop_server_tasks();
         ret_code = -1;
         goto cleanup;
         
     } else if (strcmp(ptr_command, "restart") == 0) {
-        dog_console_title("Watchdogs | @ restart");
+        (void)dog_console_title("Watchdogs | @ restart");
         dog_stop_server_tasks();
         unit_ret_main("running");
         ret_code = -1;
@@ -1257,7 +1270,7 @@ __command__(char *unit_pre_command)
         for (int i = 0; i < variation_count; i++) {
             printf("=== TRACKING ACCOUNTS: %s ===\n", variations[i]);
             tracking_username(curl, variations[i]);
-            putchar('\n');
+            (void)putchar('\n');
         }
         
         curl_easy_cleanup(curl);
@@ -1334,7 +1347,7 @@ __command__(char *unit_pre_command)
         goto cleanup;
         
     } else if (strcmp(ptr_command, command_similar) != 0 && dist <= 2) {
-        dog_console_title("Watchdogs | @ undefined");
+        (void)dog_console_title("Watchdogs | @ undefined");
         println(stdout, "watchdogs: '%s' is not valid watchdogs command. See 'help'.", ptr_command);
         println(stdout, "   but did you mean '%s'?", command_similar);
         goto trying;
@@ -1406,7 +1419,7 @@ loop_main:
         goto loop_main;
     } else if (ret == 2) {
         clock_gettime(CLOCK_MONOTONIC, &cmd_end);
-        dog_console_title("Terminal.");
+        (void)dog_console_title("Terminal.");
         
         clear_history();
         

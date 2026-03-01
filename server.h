@@ -25,7 +25,7 @@ struct sigaction {
  */
 #ifndef _sigaction_stub
 static inline int _sigaction_stub(int sig, const struct sigaction *act, struct sigaction *oldac __UNUSED__) {
-        signal(sig, act->sa_handler);
+        (void)signal(sig, act->sa_handler);
         return 0;
 }
 #endif
