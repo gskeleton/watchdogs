@@ -6,7 +6,6 @@
 #include "debug.h"
 #include "server.h"
 
-static char sbuf[0x400];
 int sigint_handler = 0;
 static char* sampvoice_port = NULL;
 static int rate_sampvoice_server = 0;

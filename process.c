@@ -19,7 +19,7 @@ static SECURITY_ATTRIBUTES _ATTRIBUTES = { 0 };	/* Windows security attributes *
 #endif
 
 static
-long pc_get_milisec() {
+long pc_get_milisec(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return

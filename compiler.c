@@ -12,9 +12,7 @@ io_compilers   all_pc_field;
 io_compilers* pctx = &all_pc_field;
 
 /* Timing variables for compilation duration */
-struct
-	timespec pre_start = { 0 },
-	post_end = { 0 };
+struct timespec pre_start = { 0 }, post_end = { 0 };
 static double  elapsed_time;
 static FILE*   fp = NULL;
 bool           pc_missing_stdlib = false;
@@ -122,8 +120,8 @@ static void collect_option_bitmask(void) {
 
 	/* Show tip if no flags specified */
 	if (!(pctx->flag_detailed || pctx->flag_assembly || pctx->flag_compat ||
-		pctx->flag_compact  || pctx->flag_prolix  || pctx->flag_debug  ||
-		pctx->flag_clean    || pctx->flag_fast))
+		pctx->flag_compact    || pctx->flag_prolix   || pctx->flag_debug  ||
+		pctx->flag_clean      || pctx->flag_fast))
 	{
 		static bool notice = false;
 		if (!notice) {
@@ -163,7 +161,8 @@ static void collect_option_bitmask(void) {
 		"-d:0 ", "-d:1 ", "-d:2 ", "-d:3 ",
 		"-d=0 ", "-d=1 ", "-d=2 ", "-d=3 "
 	};
-	for (i = 0; i < 12; i++) {
+	const int f_value = 12;
+	for (i = 0; i < f_value; i++) {
 		char* options = dogconfig.dog_toml_full_opt;
 		while ((p = strstr(options, f[i])) != NULL) {
 			size_t len = strlen(f[i]);
@@ -210,7 +209,7 @@ next:
 		extra_len = strlen(pbuf);
 
 		new_options = dog_realloc(dogconfig.dog_toml_full_opt,
-								len + extra_len + 1);
+								  len + extra_len + 1);
 
 		if (!new_options) {
 			pr_error(stdout,
@@ -231,16 +230,10 @@ static void normalize_path(char* path) {
 	char* p;
 	#ifdef DOG_LINUX
 	/* Convert Windows backslashes to POSIX forward slashes */
-	for (p = path; *p; p++) {
-		if (*p == _PATH_CHR_SEP_WIN32)
-			*p = _PATH_CHR_SEP_POSIX;
-	}
+	path_sep_to_posix(path);
 	#else
 	/* Convert POSIX forward slashes to Windows backslashes */
-	for (p = path; *p; p++) {
-		if (*p == _PATH_CHR_SEP_POSIX)
-			*p = _PATH_CHR_SEP_WIN32;
-	}
+	path_sep_to_win32(path);
 	#endif
 
 	return;
@@ -448,17 +441,17 @@ static int compiler_show_fzf_file_selector(void) {
 		#ifdef DOG_LINUX
 		#ifndef DOG_ANDROID
 		#define FZF_COMMAND "%s | fzf " \
-					"--height 40%% --reverse " \
-					"--prompt 'Select file to compile: ' " \
-					"--preview 'if [ -f {} ]; then " \
-					"echo \"=== Preview ===\"; " \
-					"head -n 20 {}; " \
-					"echo \"=== Path ===\"; " \
-					"realpath {}; fi'"
+			"--height 40%% --reverse " \
+			"--prompt 'Select file to compile: ' " \
+			"--preview 'if [ -f {} ]; then " \
+			"echo \"=== Preview ===\"; " \
+			"head -n 20 {}; " \
+			"echo \"=== Path ===\"; " \
+			"realpath {}; fi'"
 		#else
 		#define FZF_COMMAND "%s | fzf " \
-					"--height 40%% --reverse " \
-					"--prompt 'Select file to compile: ' "
+			"--height 40%% --reverse " \
+			"--prompt 'Select file to compile: ' "
 		#endif
 		#endif
 		pbuf[0] = '\0';
@@ -551,12 +544,13 @@ static void compiler_state_init(void) {
 }
 
 int
-dog_exec_compiler(const char* args, char* compile_args_val,
+dog_exec_compiler(const char* __UNUSED__  args, char* compile_args_val,
 	const char* second_arg, const char* four_arg, const char* five_arg,
 	const char* six_arg, const char* seven_arg, const char* eight_arg,
 	const char* nine_arg, const char* ten_arg)
 {
-	size_t	       fet_sef_ent, len;
+	size_t	       fet_sef_ent;
+	int            len;
 	fet_sef_ent = sizeof(dogconfig.dog_sef_found_list) /
 		sizeof(dogconfig.dog_sef_found_list[0]);
 
@@ -695,24 +689,24 @@ skip_parent:
 			tree_ret = system("tree > /dev/null 2>&1");
 			if (!tree_ret) {
 				if (path_exists(ANDROID_SHARED_DOWNLOADS_PATH)) {
-					system(
+					(void)system(
 						"tree "
 						"-P \"*.p\" "
 						"-P \"*.pawn\" "
 						"-P \"*.pwn\" "
 						ANDROID_SHARED_DOWNLOADS_PATH);
 				} else {
-					system("tree -P \"*.p\" -P \"*.pawn\" -P \"*.pwn\" .");
+					(void)system("tree -P \"*.p\" -P \"*.pawn\" -P \"*.pwn\" .");
 				}
 			} else {
 			#ifdef DOG_LINUX
 				if (path_exists(ANDROID_SHARED_DOWNLOADS_PATH) == 1) {
-					system("ls " ANDROID_SHARED_DOWNLOADS_PATH  " -R");
+					(void)system("ls " ANDROID_SHARED_DOWNLOADS_PATH  " -R");
 				} else {
-					system("ls . -R");
+					(void)system("ls . -R");
 				}
 			#else
-				system("dir . -s");
+				(void)system("dir . -s");
 			#endif
 			}
 		}

@@ -2105,7 +2105,7 @@ dog_install_depends(const char* packages, const char* branch, const char* where)
                 int tree_ret = -1;
                 tree_ret = system("tree > /dev/null 2>&1");
                 if (!tree_ret) {
-                    system("tree .");
+                    (void)system("tree .");
                 }
                 else {
                     DIR* d = opendir(".");

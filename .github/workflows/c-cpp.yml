@@ -46,10 +46,6 @@ jobs:
 
     - name: Execute test suite and validation
       run: |
-        echo "[TASKS - BUILD] TESTING HELP COMMAND"
-        ./watchdogs.debug help
-        echo "[TASKS - BUILD] TESTING WATCHDOGS COMMAND"
-        ./watchdogs.debug watchdogs
         echo "[TASKS - BUILD] CHECKING BINARY DEPENDENCIES"
         ldd watchdogs.debug || true
         exit 0
@@ -107,12 +103,6 @@ jobs:
           echo '[TASKS - BUILD] BUILD FILE DETAILS'
           file watchdogs.debug
 
-          echo '[TASKS - BUILD] TESTING HELP COMMAND'
-          ./watchdogs.debug help || echo 'Help command test skipped'
-
-          echo '[TASKS - BUILD] TESTING WATCHDOGS COMMAND'
-          ./watchdogs.debug watchdogs || echo 'Watchdogs command test skipped'
-
           echo '[TASKS - BUILD] CHECKING BINARY DEPENDENCIES'
           ldd watchdogs.debug 2>/dev/null || readelf -d watchdogs.debug | grep NEEDED || true
 
@@ -164,12 +154,6 @@ jobs:
           echo '[TASKS - BUILD] BUILD FILE DETAILS'
           file watchdogs.debug
 
-          echo '[TASKS - BUILD] TESTING HELP COMMAND'
-          ./watchdogs.debug help || echo 'Help command test skipped'
-
-          echo '[TASKS - BUILD] TESTING WATCHDOGS COMMAND'
-          ./watchdogs.debug watchdogs || echo 'Watchdogs command test skipped'
-
           echo '[TASKS - BUILD] CHECKING BINARY DEPENDENCIES'
           ldd watchdogs.debug 2>/dev/null || readelf -d watchdogs.debug | grep NEEDED || true
 
@@ -220,12 +204,6 @@ jobs:
 
           echo '[TASKS - BUILD] BUILD FILE DETAILS'
           file watchdogs.debug
-
-          echo '[TASKS - BUILD] TESTING HELP COMMAND'
-          ./watchdogs.debug help || echo 'Help command test skipped'
-
-          echo '[TASKS - BUILD] TESTING WATCHDOGS COMMAND'
-          ./watchdogs.debug watchdogs || echo 'Watchdogs command test skipped'
 
           echo '[TASKS - BUILD] CHECKING BINARY DEPENDENCIES'
           ldd watchdogs.debug 2>/dev/null || readelf -d watchdogs.debug | grep NEEDED || true

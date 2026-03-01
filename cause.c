@@ -101,8 +101,8 @@ void cause_pc_expl(const char* log_file, const char* dog_output, int debug)
         return;
 
     /* Initialize counters */
-    char pbuf[DOG_MAX_PATH] = { 0 };
-    long warning_count = 0, error_count = 0;
+    char pbuf[DOG_PATH_MAX] = { 0 };
+    int warning_count = 0, error_count = 0;
     long int header_size = 0, code_size = 0, data_size = 0, stack_size = 0, total_size = 0;
     char pc_line[DOG_MORE_MAX_PATH] = { 0 }, pc_ver[64] = { 0 };
 
@@ -120,24 +120,19 @@ void cause_pc_expl(const char* log_file, const char* dog_output, int debug)
         if (dog_strcase(pc_line, "Header size:")) {
             header_size = strtol(strchr(pc_line, ':') + 1, NULL, 10);
             continue;
-        }
-        else if (dog_strcase(pc_line, "Code size:")) {
+        } else if (dog_strcase(pc_line, "Code size:")) {
             code_size = strtol(strchr(pc_line, ':') + 1, NULL, 10);
             continue;
-        }
-        else if (dog_strcase(pc_line, "Data size:")) {
+        } else if (dog_strcase(pc_line, "Data size:")) {
             data_size = strtol(strchr(pc_line, ':') + 1, NULL, 10);
             continue;
-        }
-        else if (dog_strcase(pc_line, "Stack/heap size:")) {
+        } else if (dog_strcase(pc_line, "Stack/heap size:")) {
             stack_size = strtol(strchr(pc_line, ':') + 1, NULL, 10);
             continue;
-        }
-        else if (dog_strcase(pc_line, "Total requirements:")) {
+        } else if (dog_strcase(pc_line, "Total requirements:")) {
             total_size = strtol(strchr(pc_line, ':') + 1, NULL, 10);
             continue;
-        }
-        else if (dog_strcase(pc_line, "Pawn Compiler ")) {
+        } else if (dog_strcase(pc_line, "Pawn Compiler ")) {
             /* Extract compiler version */
             char* p = strstr(pc_line, " ");
             while (*p && !isdigit(*p)) p++;

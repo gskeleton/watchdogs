@@ -168,16 +168,6 @@ void unit_show_help(const char *command)
         { NULL, NULL, NULL, NULL }
     };
 
-    auto int equals(const char *a, const char *b) {
-        while (*a && *b) {
-            if (tolower((unsigned char)*a) !=
-                tolower((unsigned char)*b))
-                return 0;
-            a++; b++;
-        }
-        return *a == *b;
-    }
-
     if (command == NULL || *command == '\0') {
         printf("Usage: help <command>\n\n");
         printf("Commands:\n\n");
@@ -227,15 +217,15 @@ void unit_show_dog(void) {
             "                        `v88;  ;88v'   `v88;  ;88v'\n"
             "                         \\77xx77/       \\77xx77/\n"
             "                        `::::'         `::::'\n\n"
-            "                                            -----------------------------------------        \n"
-            "      ;printf(\"Hello, World\")               |  plugin installer                     |        \n"
-            "                                            v          v                            |        \n"
-            "pawncc | compile | gamemode | running | compiles | replicate | restart | stop       |        \n"
-            "  ^        ^          ^          ^ -----------------------       ^         ^        v        \n"
-            "  -------  ---------   ------------------                |       |         | compile n run  \n"
-            "        v          |                    |                |       v         --------          \n"
-            " setup compiler    v                    v                v  restart server        |          \n"
-            "          compile the server  install the gamemode  deploy the server      terminate server  \n";
+            "                                                   \n"
+            "      ;printf(\"Hello, World\")    compile n run   |  plugin installer\n"
+            "                                          v            v\n"
+            "pawncc | compile | gamemode | running | compiles | replicate | restart | stop\n"
+            "  ^        ^          ^          ^ -----------------------       ^         ^\n"
+            "  -------  ---------   ------------------                |       |         |\n"
+            "        v          |                    |                |       v         --------\n"
+            " setup compiler    v                    v                v  restart server        |\n"
+            "          compile the server  install the gamemode  deploy the server      terminate server\n";
         #else
         static const char *dog_ascii =
             "\n          \\/%%#z.     \\/.%%#z./   /,z#%%\\/\n"
@@ -914,15 +904,9 @@ __command__(char *unit_pre_command)
         
         char *a_args = strdup(args);
         #ifdef DOG_LINUX
-        for (p = a_args; *p; p++) {
-                if (*p == _PATH_CHR_SEP_WIN32)
-                    *p = _PATH_CHR_SEP_POSIX;
-            }
+        path_sep_to_posix(a_args);
         #else
-        for (p = a_args; *p; p++) {
-                if (*p == _PATH_CHR_SEP_POSIX)
-                    *p = _PATH_CHR_SEP_WIN32;
-            }
+        path_sep_to_win32(a_args);
         #endif
         
         if (path_exists(a_args) == 0) {
@@ -1047,15 +1031,9 @@ __command__(char *unit_pre_command)
         char *p;
     pawnruns_next:
         #ifdef DOG_LINUX
-        for (p = a_args; *p; p++) {
-                if (*p == _PATH_CHR_SEP_WIN32)
-                    *p = _PATH_CHR_SEP_POSIX;
-            }
+        path_sep_to_posix(a_args);
         #else
-        for (p = a_args; *p; p++) {
-                if (*p == _PATH_CHR_SEP_POSIX)
-                    *p = _PATH_CHR_SEP_WIN32;
-            }
+        path_sep_to_win32(a_args);
         #endif
 
         if (path_exists(a_args) == 0) {

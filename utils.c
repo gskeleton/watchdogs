@@ -7,7 +7,7 @@
 #include  "utils.h"
 
 static char
-	pbuf[DOG_MAX_PATH * 2];
+	pbuf[DOG_MAX_PATH];
 
 const char	*unit_command_list[] = {
 	"help", "exit",
@@ -256,6 +256,17 @@ path_sep_to_posix(char *path)
 	for (pos = path; *pos; pos++) {
 		if (*pos == _PATH_CHR_SEP_WIN32)
 			*pos = _PATH_CHR_SEP_POSIX;
+	}
+}
+
+void
+path_sep_to_win32(char *path)
+{
+	char    *pos;
+
+	for (pos = path; *pos; pos++) {
+		if (*pos == _PATH_CHR_SEP_POSIX)
+			*pos = _PATH_CHR_SEP_WIN32;
 	}
 }
 
@@ -611,8 +622,20 @@ dog_user_command(char *const av[])
 {
     if (av == NULL || av[0] == NULL)
         return (-1);
+	if (strlen(av[0]) >= DOG_MAX_PATH)
+		return (-1);
 
 #ifdef DOG_LINUX
+	pbuf[0] = '\0';
+	(void)snprintf(pbuf, sizeof(pbuf),
+		"which %s > /dev/null 2>&1", av[0]);
+	if (system(pbuf) > 0) {
+		fprintf(stderr,
+			"dog: %s: command not found\n", av[0]);
+		fflush(stderr);
+		return (-1);
+	}
+
     pid_t pid = fork();
     if (pid < 0) {
         perror("fork failed");
@@ -621,11 +644,6 @@ dog_user_command(char *const av[])
 
     if (pid == 0) {
         execvp(av[0], av);
-        if (errno == ENOENT) {
-            fprintf(stderr, "dog: %s: command not found\n", av[0]);
-        } else {
-            fprintf(stderr, "dog: %s: %s\n", av[0], strerror(errno));
-        }
         _exit(127);
     }
 
@@ -1305,6 +1323,16 @@ int dog_find_path(const char *sef_path, const char *sef_name, const char *ignore
 	return (0);
 }
 
+int equals(const char *a, const char *b) {
+    while (*a && *b) {
+        if (tolower((unsigned char)*a) !=
+            tolower((unsigned char)*b))
+            return 0;
+        a++; b++;
+    }
+    return *a == *b;
+}
+
 #ifndef DOG_WINDOWS
 
 static int
@@ -1438,14 +1466,7 @@ _run_file_operation(
     char *s_src = strdup(src);
     char *s_dest = strdup(dest);
 
-	for (p = s_src; *p; p++) {
-			if (*p == _PATH_CHR_SEP_POSIX)
-				*p = _PATH_CHR_SEP_WIN32;
-		}
-	for (p = s_dest; *p; p++) {
-			if (*p == _PATH_CHR_SEP_POSIX)
-				*p = _PATH_CHR_SEP_WIN32;
-		}
+	path_sep_to_posix(s_src);
 
 	pbuf[0] = '\0';
 
@@ -1807,11 +1828,12 @@ dog_generate_toml_content(FILE *file, const char *dog_os_type,
 			*extension = '\0';
 	}
 
-	for (p = sef_path; *p; p++) {
-		if (*p == _PATH_CHR_SEP_WIN32)
-			*p = _PATH_CHR_SEP_POSIX;
-	}
-
+	#ifdef DOG_LINUX
+	path_sep_to_posix(sef_path);
+	#else
+	path_sep_to_win32(sef_path);
+	#endif
+	
 	if (is_running_in_container())
 		is_container = 1;
 	else if (getenv("WSL_INTEROP") || getenv("WSL_DISTRO_NAME"))
@@ -2001,7 +2023,6 @@ dog_configure_toml(void)
 	char          *ptr = NULL;
 	char appended_flags[3]          = { 0 };
 
-    static         io_compilers  dog_pc_sys;
     io_compilers   all_pc_field;
     io_compilers* pctx = &all_pc_field;
 
@@ -2052,19 +2073,20 @@ dog_configure_toml(void)
 		}
 	}
 
-	find_pawncc = dog_find_compiler(dog_os_type);
-	if (!find_pawncc) {
-		if (strcmp(dog_os_type, "windows") == 0)
-			find_pawncc = dog_find_path(".", "pawncc.exe", NULL);
-		else
-			find_pawncc = dog_find_path(".", "pawncc", NULL);
-	}
-
-	find_gamemodes = dog_find_path("gamemodes/", "*.pwn", NULL);
 	toml_file = fopen("watchdogs.toml", "r");
 	if (toml_file) {
 		fclose(toml_file);
 	} else {
+		find_pawncc = dog_find_compiler(dog_os_type);
+		if (!find_pawncc) {
+			if (strcmp(dog_os_type, "windows") == 0)
+				find_pawncc = dog_find_path(".", "pawncc.exe", NULL);
+			else
+				find_pawncc = dog_find_path(".", "pawncc", NULL);
+		}
+
+		find_gamemodes = dog_find_path("gamemodes/", "*.pwn", NULL);
+		
 		if (find_pawncc)
 			dog_check_pc_options(&compatibility, &optimized_lt);
 
@@ -2527,6 +2549,9 @@ skip_:
 	if (dogconfig.dog_pawncc_path == NULL)
 		dogconfig.dog_pawncc_path = strdup("");
 
+	if (dogconfig.dog_pawncc_path[0] != '\0')
+		return (0);
+
 	if (dir_exists("pawno") != 0 && dir_exists("qawno") != 0) {
 		ret = dog_find_path("pawno", ptr, NULL);
 		if (ret) {
@@ -2566,61 +2591,61 @@ skip_:
 		dogconfig.dog_pawncc_path = strdup(pbuf);
 		pc_configure_libpath();
 	} else {
-			pr_info(stdout,
-				"We couldn't find a suitable compiler here; "
-				"installing compiler v3.10.7.");
-			installing_pawncc = true;
-			if ((getenv("WSL_INTEROP") || getenv("WSL_DISTRO_NAME")) &&
-				strcmp(dogconfig.dog_toml_os_type, OS_SIGNAL_WINDOWS) == 0)
-			{
-				dog_download_file(
-				"https://github.com/pawn-lang/compiler/releases/download/v3.10.7/pawnc-3.10.7-windows.zip",
-				"pawncc-windows-37.zip");
-				return (0);
-			}
-			#ifdef DOG_WINDOWS
-				dog_download_file(
-				"https://github.com/pawn-lang/compiler/releases/download/v3.10.7/pawnc-3.10.7-windows.zip",
-				"pawncc-windows-37.zip"
-				);
-				return (0);
-			#endif
-			#if defined(DOG_ANDROID)
-				struct utsname u;
-
-				if (uname(&u) != 0) {
-					perror("uname");
-					return 1;
-				}
-				if (strcmp(u.machine, "aarch64") == 0) {
-					pr_info(stdout, "Downloading PawnCC for aarch64..");
-					dog_download_file(
-					"https://github.com/gskeleton/compiler/releases/download/v3.10.7/arm64-v8a.zip",
-					"pawncc-termux-37.zip"
-					);
-				} else if (strcmp(u.machine, "armv7l") == 0) {
-					pr_info(stdout, "Downloading PawnCC for armv7l..");
-					dog_download_file(
-					"https://github.com/gskeleton/compiler/releases/download/v3.10.7/armeabi-v7a.zip",
-					"pawncc-termux-37.zip"
-					);
-				} else {
-					pr_info(stdout, "Downloading PawnCC for aarch64..");
-					dog_download_file(
-					"https://github.com/gskeleton/compiler/releases/download/v3.10.7/arm64-v8a.zip",
-					"pawncc-termux-37.zip"
-					);
-				}
-
-				return (0);
-			#elif !defined(DOG_ANDROID) && defined(DOG_LINUX)
-				dog_download_file(
-				"https://github.com/gskeleton/gcompiler/releases/download/v3.10.7/pawnc-3.10.7-linux.tar.gz",
-				"pawncc-linux-37.tar.gz"
-				);
-				return (0);
-			#endif
+		pr_info(stdout,
+			"We couldn't find a suitable compiler here; "
+			"installing compiler v3.10.7.");
+		installing_pawncc = true;
+		if ((getenv("WSL_INTEROP") || getenv("WSL_DISTRO_NAME")) &&
+			strcmp(dogconfig.dog_toml_os_type, OS_SIGNAL_WINDOWS) == 0)
+		{
+			dog_download_file(
+			"https://github.com/pawn-lang/compiler/releases/download/v3.10.7/pawnc-3.10.7-windows.zip",
+			"pawncc-windows-37.zip");
+			return (0);
 		}
+		#ifdef DOG_WINDOWS
+			dog_download_file(
+			"https://github.com/pawn-lang/compiler/releases/download/v3.10.7/pawnc-3.10.7-windows.zip",
+			"pawncc-windows-37.zip"
+			);
+			return (0);
+		#endif
+		#if defined(DOG_ANDROID)
+			struct utsname u;
+
+			if (uname(&u) != 0) {
+				perror("uname");
+				return 1;
+			}
+			if (strcmp(u.machine, "aarch64") == 0) {
+				pr_info(stdout, "Downloading PawnCC for aarch64..");
+				dog_download_file(
+				"https://github.com/gskeleton/compiler/releases/download/v3.10.7/arm64-v8a.zip",
+				"pawncc-termux-37.zip"
+				);
+			} else if (strcmp(u.machine, "armv7l") == 0) {
+				pr_info(stdout, "Downloading PawnCC for armv7l..");
+				dog_download_file(
+				"https://github.com/gskeleton/compiler/releases/download/v3.10.7/armeabi-v7a.zip",
+				"pawncc-termux-37.zip"
+				);
+			} else {
+				pr_info(stdout, "Downloading PawnCC for aarch64..");
+				dog_download_file(
+				"https://github.com/gskeleton/compiler/releases/download/v3.10.7/arm64-v8a.zip",
+				"pawncc-termux-37.zip"
+				);
+			}
+
+			return (0);
+		#elif !defined(DOG_ANDROID) && defined(DOG_LINUX)
+			dog_download_file(
+			"https://github.com/gskeleton/gcompiler/releases/download/v3.10.7/pawnc-3.10.7-linux.tar.gz",
+			"pawncc-linux-37.tar.gz"
+			);
+			return (0);
+		#endif
+	}
 
 	return (0);
 }

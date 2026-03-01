@@ -308,7 +308,7 @@ tracker_discrepancy(const char* base,
 void
 tracking_username(CURL* curl, const char* username)
 {
-	CURLcode res;
+	CURLcode res = CURLE_REMOTE_ACCESS_DENIED;
 	struct memory_struct response;
 	struct curl_slist* headers = NULL;
 
@@ -339,8 +339,7 @@ tracking_username(CURL* curl, const char* username)
 				social_site_list[i].site_name,
 				url,
 				curl_easy_strerror(res));
-		}
-		else {
+		} else {
 			long status;
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE,
 				&status);
@@ -349,8 +348,7 @@ tracking_username(CURL* curl, const char* username)
 				println(stdout, "* [%s] %s -> FOUND (%ld)",
 					social_site_list[i].site_name, url,
 					status);
-			}
-			else {
+			} else {
 				println(stdout, "* [%s] %s -> NOT FOUND (%ld)",
 					social_site_list[i].site_name, url,
 					status);
@@ -648,8 +646,7 @@ static int setup_linux_library(void)
 				"Fetching " DOG_COL_YELLOW "%s " DOG_COL_DEFAULT "binary hex..", libpawnc_src);
 			(void)snprintf(_hexdump, sizeof(_hexdump),
 				"sh -c 'hexdump -C -n 128 %s'", libpawnc_src);
-			int not_fail = -2;
-			not_fail = system(_hexdump);
+			(void)system(_hexdump);
 		}
 	}
 

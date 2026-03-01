@@ -289,6 +289,9 @@ void  dog_free(void *ptr);
 
 bool fet_server_env(void);
 
+void path_sep_to_posix(char *path);
+void path_sep_to_win32(char *path);
+
 int dir_exists(const char *path);
 int path_exists(const char *path);
 int dir_writable(const char *path);
@@ -298,7 +301,6 @@ int file_same_file(const char *a, const char *b);
 int dog_dot_or_dotdot(const char *name);
 int is_binary_file(char *path);
 
-void path_sep_to_posix(char *path);
 const char *lookup_path_sep(const char *sep_path);
 const char *fet_filename(const char *path);
 char * fet_basename(const char *path);
@@ -321,6 +323,8 @@ void normalize_spaces(char *str);
 bool dog_kill_process(const char *process);
 
 int dog_find_path(const char *sef_path, const char *sef_name, const char *ignore_dir);
+
+int equals(const char *a, const char *b);
 
 int dog_sef_wcopy(const char *c_src, const char *c_dest);
 int dog_sef_wmv(const char *c_src, const char *c_dest);
