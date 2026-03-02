@@ -65,16 +65,16 @@ static void pc_detailed(const char* dog_output, int debug,
         unsigned long hash = crypto_djb2_hash_file(dog_output);
 
         len = snprintf(outbuf, sizeof(outbuf),
-            "Output: %s\nHeader : %dB  |  Total        : %dB\n"
-            "Code (static mem)   : %dB  |  hash (djb2)  : %#lx\n"
-            "Data (static mem)   : %dB\nStack (automatic)   : %dB\n",
+            "Output: %s\nHeader : %ldB  |  Total        : %ldB\n"
+            "Code (static mem)   : %ldB  |  hash (djb2)  : %#lx\n"
+            "Data (static mem)   : %ldB\nStack (automatic)   : %dlB\n",
             dog_output,
-            (int)header_size,
-            (int)total_size,
-            (int)code_size,
+            header_size,
+            total_size,
+            code_size,
             hash,
-            (int)data_size,
-            (int)stack_size);
+            data_size,
+            stack_size);
         if (len > 0)
             fwrite(outbuf, 1, len, stdout);
     }

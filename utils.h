@@ -150,6 +150,8 @@
 # define MAX_SEF_ENTRIES (200)
 # define MAX_SEF_PATH_SIZE (DOG_PATH_MAX)
 
+# define MAX(a,b) ((a) > (b) ? (a) : (b))
+
 # define TOML_TABLE_GENERAL "general"
 # define TOML_TABLE_COMPILER "compiler"
 # define TOML_TABLE_DEPENDENCIES "dependencies"

@@ -34,7 +34,7 @@ static char*   pc_back_slash = NULL;
 static char*   pc_last_slash = NULL;
 static char*   size_include_extra = NULL;
 static char*   procure_string_pos = NULL;
-bool           process_file_success = false;
+bool           spawn_succeeded = false;
 
 static void pc_show_tip(void) {
 	static const char* tip_options =
@@ -524,7 +524,7 @@ static void compiler_state_init(void) {
 	pre_start = (struct timespec){ 0 };
 	post_end = (struct timespec){ 0 };
 
-	process_file_success = false,
+	spawn_succeeded = false,
 		pc_retry_state = PC_RETRY_STATE_NONE;
 
 	fp = NULL, pc_last_slash = NULL,
@@ -809,9 +809,8 @@ skip_parent:
 				goto pc_done;
 			}
 
-			if (process_file_success == false)
-				dog_printfile(
-					".watchdogs/compiler.log");
+			if (spawn_succeeded == false)
+				dog_printfile(".watchdogs/compiler.log");
 		}
 	pc_done:
 		/* Check for compilation errors */
@@ -1182,9 +1181,8 @@ skip_parent:
 					goto pc_done2;
 				}
 
-				if (process_file_success == false)
-					dog_printfile(
-						".watchdogs/compiler.log");
+				if (spawn_succeeded == false)
+					dog_printfile(".watchdogs/compiler.log");
 			}
 
 		pc_done2:

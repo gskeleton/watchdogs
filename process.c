@@ -3,15 +3,15 @@
 #include "compiler.h"
 #include "process.h"
 
-char    pc_input[DOG_MAX_PATH] = { 0 };	/* Compiler command input buffer */
-char* pc_unix_token = NULL;	/* Unix token pointer for strtok */
-char* pc_unix_args[DOG_MAX_PATH] = { NULL };	/* Argument array for exec */
+static char*   pc_unix_args[DOG_MAX_PATH] = { NULL };
+static char    pbuf[DOG_PATH_MAX + 28] = { 0 };
+static char    pc_input[DOG_MAX_PATH] = { 0 };
+static char*   pc_unix_token = NULL;
 #ifdef DOG_WINDOWS
-static PROCESS_INFORMATION _PROCESS_INFO = { 0 };	/* Windows process information */
-static STARTUPINFO         _STARTUPINFO = { 0 };	/* Windows startup information */
-static SECURITY_ATTRIBUTES _ATTRIBUTES = { 0 };	/* Windows security attributes */
+static PROCESS_INFORMATION _PROCESS_INFO = { 0 };
+static STARTUPINFO         _STARTUPINFO = { 0 };
+static SECURITY_ATTRIBUTES _ATTRIBUTES = { 0 };
 #endif
-/* Initialize log file path based on platform */
 #ifdef DOG_WINDOWS
 #define COMPILER_LOG ".watchdogs\\compiler.log"
 #else
@@ -110,36 +110,34 @@ void dog_serv_init(char* input_path, char* pawncc_path) {
 #ifdef DOG_LINUX
 static
 void configure_line_parsing(void) {
-    char*   p = pc_input;
-    int     arg_count = 0;
-    char    current_token[DOG_MAX_PATH] = { 0 };
-    int     token_pos = 0;
-    int     inside_quotes = 0;
+    char  token[DOG_MAX_PATH] = { 0 };
+    int   cnt = 0, pos = 0, inside = 0;
+    char* p = pc_input;
     while (*p) {
         if (*p == '"') {
-            inside_quotes = !inside_quotes;
+            inside = !inside;
             p++;
             continue;
         }
-        if (*p == ' ' && !inside_quotes) {
-            if (token_pos > 0) {
-                current_token[token_pos] = '\0';
-                pc_unix_args[arg_count++]
-                    = strdup(current_token);
-                token_pos = 0;
+        if (*p == ' ' && !inside) {
+            if (pos > 0) {
+                token[pos] = '\0';
+                pc_unix_args[cnt++]
+                    = strdup(token);
+                pos = 0;
             }
             p++;
             continue;
         }
-        current_token[token_pos++]
+        token[pos++]
             = *p++;
     }
-    if (token_pos > 0) {
-        current_token[token_pos] = '\0';
-        pc_unix_args[arg_count++]
-            = strdup(current_token);
+    if (pos > 0) {
+        token[pos] = '\0';
+        pc_unix_args[cnt++]
+            = strdup(token);
     }
-    pc_unix_args[arg_count] = NULL;
+    pc_unix_args[cnt] = NULL;
 }
 #endif
 
@@ -691,7 +689,9 @@ int dog_exec_compiler_tasks(char* pawncc_path, char* input_path, char* output_pa
     int ret_compiler = 0;
 
     if (pc_full_includes == NULL)
-        pc_full_includes = "-i=\"pawno/include\" -i=\"qawno/include\" -i=\"gamemodes\"";
+        pc_full_includes = "-i=\"pawno/include\" "
+                           "-i=\"qawno/include\" "
+                           "-i=\"gamemodes\"";
 
     dog_serv_init(pawncc_path, input_path);
 
@@ -706,7 +706,10 @@ int dog_exec_compiler_tasks(char* pawncc_path, char* input_path, char* output_pa
     char* options = dogconfig.dog_toml_full_opt;
 
     /* Build compiler command line string */
-    ret_compiler = build_compiler_command(pawncc_path, input_path, output_path, options);
+    ret_compiler = build_compiler_command(pawncc_path,
+                                          input_path,
+                                          output_path,
+                                          options);
 
     if (ret_compiler < 0 || ret_compiler >= sizeof(pc_input)) {
         pr_error(stdout, "ret_compiler too long!");
@@ -741,7 +744,17 @@ void dog_exec_windows_server(char* binary) {
     (void)snprintf(pbuf, DOG_PATH_MAX, ".\\%s", binary);
 
     /* Create and run process */
-    if (!CreateProcessA(NULL, pbuf, NULL, NULL, TRUE, 0, NULL, NULL, &_STARTUPINFO, &_PROCESS_INFO)) {
+    if (!CreateProcessA(NULL,
+                        pbuf,
+                        NULL,
+                        NULL,
+                        TRUE,
+                        0,
+                        NULL,
+                        NULL,
+                        &_STARTUPINFO,
+                        &_PROCESS_INFO))
+    {
         fprintf(stdout, "failed to CreateProcessA..");
         minimal_debugging();
     }
@@ -756,17 +769,21 @@ void dog_exec_windows_server(char* binary) {
 void dog_exec_windows_server(char* binary) {
     return;
 }
-#endif
 
+#endif
 #ifdef DOG_LINUX
-// Linux server execution with pipe redirection
+// Linux server execution with pipe redirection using posix_spawn
 void dog_exec_linux_server(char* binary) {
     pid_t process_id;
+    int   ret, max_fd, stdout_fd, stderr_fd;
+    ssize_t br;
+    char *argv[] = {pbuf, NULL};
+    char *envp[] = {NULL};
 
-    char pbuf[DOG_PATH_MAX + 28];
+    pbuf[0] = '\0';
 
     /* Build full path */
-    (void)snprintf(pbuf, DOG_PATH_MAX, "%s%s%s",
+    (void)snprintf(pbuf, sizeof(pbuf), "%s%s%s",
         dog_procure_pwd(), _PATH_STR_SEP_POSIX, binary);
 
     int stdout_pipe[2], stderr_pipe[2];
@@ -777,96 +794,104 @@ void dog_exec_linux_server(char* binary) {
         return;
     }
 
-    process_id = fork();
-    if (process_id == 0) {
-        /* Child process: setup redirection */
+    /* Prepare posix_spawn file actions for redirection */
+    posix_spawn_file_actions_t file_actions;
+    posix_spawn_file_actions_init(&file_actions);
+
+    posix_spawn_file_actions_addclose(&file_actions,
+        stdout_pipe[0]);
+    posix_spawn_file_actions_addclose(&file_actions,
+        stderr_pipe[0]);
+
+    posix_spawn_file_actions_adddup2(&file_actions,
+                                     stdout_pipe[1],
+                                     STDOUT_FILENO);
+    posix_spawn_file_actions_adddup2(&file_actions,
+                                     stderr_pipe[1],
+                                     STDERR_FILENO);
+
+    posix_spawn_file_actions_addclose(&file_actions,
+        stdout_pipe[1]);
+    posix_spawn_file_actions_addclose(&file_actions,
+        stderr_pipe[1]);
+
+    ret = posix_spawn(&process_id, pbuf, &file_actions, NULL, argv, environ);
+
+    /* Clean up file actions */
+    posix_spawn_file_actions_destroy(&file_actions);
+
+    /* Close parent's pipe write ends */
+    close(stdout_pipe[1]);
+    close(stderr_pipe[1]);
+
+    if (ret != 0) {
+        /* Spawn failed */
+        errno = ret;
+        perror("posix_spawn failed");
         close(stdout_pipe[0]);
         close(stderr_pipe[0]);
-        dup2(stdout_pipe[1], STDOUT_FILENO);
-        dup2(stderr_pipe[1], STDERR_FILENO);
-        close(stdout_pipe[1]);
-        close(stderr_pipe[1]);
+        return;
+    }
 
-        /* Execute server */
-        execl(pbuf, pbuf, (char*)NULL);
+    /* Parent process: read output from pipes (same as before) */
+    stdout_fd = stdout_pipe[0];
+    stderr_fd = stderr_pipe[0];
+    max_fd = MAX(stdout_fd, stderr_fd) + 1;
+    fd_set readfds;
 
-        /* If we get here, exec failed */
-        perror("execl failed");
-        fprintf(stderr, "errno = %d\n", errno);
+    /* Monitor both pipes */
+    while (true) {
+        FD_ZERO(&readfds);
 
-        int child_status;
-        waitpid(process_id, &child_status, 0);
-        if (WIFEXITED(child_status)) {
-            fprintf(stdout,
-                "process exited with code %d\n",
-                WEXITSTATUS(child_status));
-        }
-        else if (WIFSIGNALED(child_status)) {
-            fprintf(stdout,
-                "process killed by signal %d\n",
-                WTERMSIG(child_status));
-        }
+        if (stdout_fd >= 0)
+            FD_SET(stdout_fd, &readfds);
+        if (stderr_fd >= 0)
+            FD_SET(stderr_fd, &readfds);
 
-        _exit(127);
-    } else if (process_id > 0) {
-        /* Parent process: read output from pipes */
-        close(stdout_pipe[1]);
-        close(stderr_pipe[1]);
-
-    #define MAX(a,b) ((a) > (b) ? (a) : (b))
-        int stdout_fd = stdout_pipe[0];
-        int stderr_fd = stderr_pipe[0];
-        ssize_t br;
-        int max_fd = MAX(stdout_fd, stderr_fd) + 1;
-
-        fd_set readfds;
-
-        pbuf[0] = '\0';
-
-        /* Monitor both pipes */
-        while (true) {
-            FD_ZERO(&readfds);
-
-            if (stdout_fd >= 0)
-                FD_SET(stdout_fd, &readfds);
-            if (stderr_fd >= 0)
-                FD_SET(stderr_fd, &readfds);
-
-            if (select(max_fd, &readfds, NULL, NULL, NULL) < 0) {
-                perror("select failed");
-                minimal_debugging();
-                break;
-            }
-
-            /* Read stdout */
-            if (stdout_fd >= 0 && FD_ISSET(stdout_fd, &readfds)) {
-                br = read(stdout_fd, pbuf, sizeof(pbuf) - 1);
-                if (br <= 0) {
-                    stdout_fd = -1;
-                } else {
-                    pbuf[br] = '\0';
-                    fprintf(stdout, "%s", pbuf);
-                }
-            }
-
-            /* Read stderr */
-            if (stderr_fd >= 0 && FD_ISSET(stderr_fd, &readfds)) {
-                br = read(stderr_fd, pbuf, sizeof(pbuf) - 1);
-                if (br <= 0) {
-                    stderr_fd = -1;
-                } else {
-                    pbuf[br] = '\0';
-                    fprintf(stderr, "%s", pbuf);
-                }
-            }
-
-            /* Exit when both pipes are closed */
-            if (stdout_fd < 0 && stderr_fd < 0) break;
+        if (select(max_fd, &readfds, NULL, NULL, NULL) < 0) {
+            perror("select failed");
+            minimal_debugging();
+            break;
         }
 
-        /* Cleanup */
-        close(stdout_pipe[0]);
-        close(stderr_pipe[0]);
+        if (stdout_fd >= 0 && FD_ISSET(stdout_fd, &readfds)) {
+            br = read(stdout_fd, pbuf, sizeof(pbuf) - 1);
+            if (br <= 0) {
+                stdout_fd = -1;
+            } else {
+                pbuf[br] = '\0';
+                fprintf(stdout, "%s", pbuf);
+            }
+        }
+        if (stderr_fd >= 0 && FD_ISSET(stderr_fd, &readfds)) {
+            br = read(stderr_fd, pbuf, sizeof(pbuf) - 1);
+            if (br <= 0) {
+                stderr_fd = -1;
+            } else {
+                pbuf[br] = '\0';
+                fprintf(stderr, "%s", pbuf);
+            }
+        }
+
+        if (stdout_fd < 0 && stderr_fd < 0) break;
+    }
+
+    /* Cleanup */
+    close(stdout_pipe[0]);
+    close(stderr_pipe[0]);
+
+    /* Optionally wait for child and check status */
+    int child_status;
+    waitpid(process_id, &child_status, 0);
+    if (WIFEXITED(child_status)) {
+        fprintf(stdout,
+            "process exited with code %d\n",
+            WEXITSTATUS(child_status));
+    }
+    else if (WIFSIGNALED(child_status)) {
+        fprintf(stdout,
+            "process killed by signal %d\n",
+            WTERMSIG(child_status));
     }
 }
 #else

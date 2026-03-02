@@ -68,7 +68,7 @@ extern bool pc_is_error,
     pc_missing_stdlib,
     pc_debug_options,
     pc_input_info,
-    process_file_success;
+    spawn_succeeded;
 
 int
 dog_exec_compiler(const char *arg,
