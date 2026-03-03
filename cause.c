@@ -82,11 +82,13 @@ static void pc_detailed(const char* dog_output, int debug,
     (void)putchar('\n');
 
     /* Show compiler version */
-    len = snprintf(outbuf, sizeof(outbuf),
-        "** Pawn Compiler %s - Copyright (c) 1997-2006, ITB CompuPhase\n",
-        pc_ver);
-    if (len > 0)
-        fwrite(outbuf, 1, len, stdout);
+    if (pc_ver[0] != '\0') {
+        len = snprintf(outbuf, sizeof(outbuf),
+            "** Pawn Compiler %s - Copyright (c) 1997-2006, ITB CompuPhase\n",
+            pc_ver);
+        if (len > 0)
+            fwrite(outbuf, 1, len, stdout);
+    }
 }
 
 void cause_pc_expl(const char* log_file, const char* dog_output, int debug)
