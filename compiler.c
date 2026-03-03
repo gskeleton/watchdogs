@@ -680,13 +680,16 @@ skip_parent:
 		|| (compile_args_val[0] == '.'
 			&& compile_args_val[1] == '\0')) {
 		if (compile_args_val[0] != '.') {
-			int ret = compiler_show_fzf_file_selector();
-			if (ret == -2) {
-				goto pc_end;
-			} else if (ret == 2) {
+			int ret = 4;
+			ret = compiler_show_fzf_file_selector();
+			switch(ret) {
+			case 0:
+			case 2:
 				goto answer_done;
-			} else if (ret == 3) {
+			case 3:
 				goto manual_configure;
+			case -2:
+				goto pc_end;
 			}
 		} else {
 			goto answer_done;
@@ -695,35 +698,37 @@ skip_parent:
 		static bool listing_shown = false;
 	manual_configure:
 		/* Show file listing for manual selection */
-		if (!listing_shown) {
-			listing_shown = true;
-			int tree_ret = -1;
-			tree_ret = system("tree > /dev/null 2>&1");
-			if (!tree_ret) {
-				if (path_exists(ANDROID_SHARED_DOWNLOADS_PATH)) {
-					(void)system(
-						"tree "
-						"-P \"*.p\" "
-						"-P \"*.pawn\" "
-						"-P \"*.pwn\" "
-						ANDROID_SHARED_DOWNLOADS_PATH);
-				} else {
-					(void)system("tree -P \"*.p\" -P \"*.pawn\" -P \"*.pwn\" .");
-				}
-			} else {
-			#ifdef DOG_LINUX
-				if (path_exists(ANDROID_SHARED_DOWNLOADS_PATH) == 1) {
-					(void)system("ls " ANDROID_SHARED_DOWNLOADS_PATH  " -R");
-				} else {
-					(void)system("ls . -R");
-				}
-			#else
-				(void)system("dir . -s");
-			#endif
-			}
+		if (listing_shown)
+			goto input_path;
+
+		listing_shown = true;
+		int tree_ret = -1;
+		tree_ret = system("tree > /dev/null 2>&1");
+		if (!tree_ret) {
+			if (path_access(ANDROID_SHARED_DOWNLOADS_PATH) == 1)
+				(void)system(
+					"tree "
+					"-P \"*.p\" "
+					"-P \"*.pawn\" "
+					"-P \"*.pwn\" "
+					ANDROID_SHARED_DOWNLOADS_PATH);
+			else
+				(void)system("tree -P \"*.p\" -P \"*.pawn\" -P \"*.pwn\" .");
+		} else {
+		#ifdef DOG_LINUX
+			if (path_exists(ANDROID_SHARED_DOWNLOADS_PATH) == 1)
+				(void)system("ls " ANDROID_SHARED_DOWNLOADS_PATH  " -R");
+			else
+				(void)system("ls . -R");
+		#else
+			(void)system("dir . -s");
+		#endif
 		}
-		print(
+	input_path:
+		printf(
 			" * Input examples such as:\n   bare.pwn main.pwn server.pwn\n"
+			"	default: %s\n",
+			dogconfig.dog_toml_serv_input
 		);
 		print_restore_color();
 		print(DOG_COL_CYAN ">"
@@ -862,7 +867,7 @@ skip_parent:
 		}
 	}
 	else {
-		/* Validate file ext */
+		/* Validate file extension */
 		if (strfind(compile_args_val, ".pwn", true) == false &&
 			strfind(compile_args_val, ".pawn", true) == false &&
 			strfind(compile_args_val, ".p", true) == false)
