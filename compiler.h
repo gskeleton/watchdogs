@@ -22,6 +22,8 @@ typedef struct {
     bool flag_clean; bool flag_fast;
 } io_compilers;
 
+extern io_compilers all_pc_field;
+
 typedef enum {
     BIT_FLAG_DEBUG = 1 << 0,
     BIT_FLAG_ASSEMBLER = 1 << 1,

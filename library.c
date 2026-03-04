@@ -14,47 +14,95 @@ static char
 library_options_list(const char* title, const char** items,
 	const char* keys, int counts)
 {
+	/* Validate input parameters */
+	if (title == NULL) {
+		pr_error(stdout, "library_options_list: title is NULL");
+		return (0);
+	} /* if */
+	
+	if (items == NULL) {
+		pr_error(stdout, "library_options_list: items array is NULL");
+		return (0);
+	} /* if */
+	
+	if (keys == NULL) {
+		pr_error(stdout, "library_options_list: keys string is NULL");
+		return (0);
+	} /* if */
+	
+	if (counts <= 0) {
+		pr_error(stdout, "library_options_list: counts %d is invalid", counts);
+		return (0);
+	} /* if */
+
+	/* Display title if provided */
 	if (title[0] != '\0') {
 		char pbuf[strlen(title) + 45 + 1];
 		int len = snprintf(pbuf, sizeof(pbuf),
 			"\033[1;33m== %s ==\033[0m\n", title);
-		fwrite(pbuf, 1, len, stdout);
-		fflush(stdout);
-	}
+		
+		if (len > 0 && len < (int)sizeof(pbuf)) {
+			fwrite(pbuf, 1, len, stdout);
+			fflush(stdout);
+		} /* if */
+	} /* if */
 
-	int	 i;
+	/* Display all options */
+	int i;
 	for (i = 0; i < counts; i++) {
-		char pbuf[DOG_PATH_MAX + 1];
+		char pbuf[DOG_PATH_MAX + 1] = {0};
+		
+		/* Validate item at index */
+		if (items[i] == NULL) {
+			pr_warning(stdout, "library_options_list: items[%d] is NULL", i);
+			continue;
+		} /* if */
+		
 		int len = snprintf(pbuf, sizeof(pbuf),
 			"  %c) %s\n", keys[i], items[i]);
-		fwrite(pbuf, 1, len, stdout);
-		fflush(stdout);
-	}
+			
+		if (len > 0 && len < (int)sizeof(pbuf)) {
+			fwrite(pbuf, 1, len, stdout);
+			fflush(stdout);
+		} /* if */
+	} /* for */
 
+	/* Interactive selection loop */
 	while (true) {
 		char* input = NULL;
+		char choice = '\0';
+		int k;
+		
 		print(DOG_COL_CYAN ">" DOG_COL_DEFAULT);
 		input = readline(" ");
-		if (!input)
+		
+		if (!input) {
+			pr_info(stdout, "library_options_list: readline returned NULL");
 			continue;
+		} /* if */
 
-		char	 choice = '\0';
+		/* Process single character input */
 		if (strlen(input) == 1) {
 			choice = input[0];
-			int	 k;
-			for (k = 0; k < counts; k++)
-				if (choice == keys[k] ||
-					choice == (keys[k] + 32))
-				{
+			
+			/* Search for matching key */
+			for (k = 0; k < counts; k++) {
+				if (choice == keys[k] || choice == (keys[k] + 32)) {
 					dog_free(input);
+					pr_info(stdout, "library_options_list: selected option %c", choice);
 					return (choice);
-				}
-		}
+				} /* if */
+			} /* for */
+		} /* if */
 
+		/* Invalid selection */
 		print("Invalid selection. Please try again.\n");
 		dog_free(input);
-	}
-}
+	} /* while */
+	
+	/* Should never reach here */
+	return (0);
+} /* library_options_list */
 
 static int
 pawncc_handle_termux_installation(void)
@@ -67,11 +115,18 @@ pawncc_handle_termux_installation(void)
 		"Pawncc 3.10.7   - stable"
 	};
 	const char	 keys[] = { 'A', 'B', 'C', 'D', 'E' };
+	int ret = 0;
+	char sel = 0;
+	const char* machine = NULL;
 
-	char	 sel = library_options_list("Select PawnCC Version",
-		items, keys, 5);
-	if (!sel)
+	/* Get user selection */
+	sel = library_options_list("Select PawnCC Version", items, keys, 5);
+	if (!sel) {
+		pr_error(stdout, "pawncc_handle_termux_installation: no selection made");
 		return (0);
+	} /* if */
+
+	pr_info(stdout, "pawncc_handle_termux_installation: selected %c", sel);
 
 	installing_pawncc = true;
 	installing_pawncc_linux = true;
@@ -79,155 +134,196 @@ pawncc_handle_termux_installation(void)
 #ifdef DOG_LINUX
 	struct utsname u;
 	if (uname(&u) != 0) {
-		perror("uname");
+		pr_error(stdout, "pawncc_handle_termux_installation: uname failed: %s", strerror(errno));
 		return 1;
-	}
-	const char
-		* machine = u.machine;
+	} /* if */
+	machine = u.machine;
 #else
-	const char
-		* machine = "unknown";
+	machine = "unknown";
+	pr_info(stdout, "pawncc_handle_termux_installation: not on Linux, machine set to unknown");
 #endif
+
+	pr_info(stdout, "pawncc_handle_termux_installation: machine architecture: %s", machine);
 
 	/* Download appropriate version based on architecture */
 	if (sel == 'A' || sel == 'a') {
-		if (path_exists("pawncc-termux-311.zip"))
+		/* Clean up existing files */
+		if (path_exists("pawncc-termux-311.zip") == 1) {
 			remove("pawncc-termux-311.zip");
-		if (path_exists("pawncc-termux-311"))
+			pr_info(stdout, "pawncc_handle_termux_installation: removed existing pawncc-termux-311.zip");
+		} /* if */
+		
+		if (path_exists("pawncc-termux-311") == 1) {
 			remove("pawncc-termux-311");
+			pr_info(stdout, "pawncc_handle_termux_installation: removed existing pawncc-termux-311");
+		} /* if */
+		
+		/* Download based on architecture */
 		if (strcmp(machine, "aarch64") == 0) {
 			pr_info(stdout, "Downloading PawnCC for aarch64..");
-			dog_download_file(
+			ret = dog_download_file(
 				"https://github.com/gskeleton/compiler/releases/download/v3.10.11/arm64-v8a.zip",
 				"pawncc-termux-311.zip"
 			);
-		}
-		else if (strcmp(machine, "armv7l") == 0) {
+		} else if (strcmp(machine, "armv7l") == 0) {
 			pr_info(stdout, "Downloading PawnCC for armv7l..");
-			dog_download_file(
+			ret = dog_download_file(
 				"https://github.com/gskeleton/compiler/releases/download/v3.10.11/armeabi-v7a.zip",
 				"pawncc-termux-311.zip"
 			);
-		}
-		else {
-			pr_info(stdout, "Downloading PawnCC for aarch64..");
-			dog_download_file(
+		} else {
+			pr_info(stdout, "Downloading PawnCC for aarch64 (default)..");
+			ret = dog_download_file(
 				"https://github.com/gskeleton/compiler/releases/download/v3.10.11/arm64-v8a.zip",
 				"pawncc-termux-311.zip"
 			);
-		}
+		} /* if */
 	}
 	else if (sel == 'B' || sel == 'b') {
-		if (path_exists("pawncc-termux-310.zip"))
+		/* Clean up existing files */
+		if (path_exists("pawncc-termux-310.zip") == 1) {
 			remove("pawncc-termux-310.zip");
-		if (path_exists("pawncc-termux-310"))
+			pr_info(stdout, "pawncc_handle_termux_installation: removed existing pawncc-termux-310.zip");
+		} /* if */
+		
+		if (path_exists("pawncc-termux-310") == 1) {
 			remove("pawncc-termux-310");
+			pr_info(stdout, "pawncc_handle_termux_installation: removed existing pawncc-termux-310");
+		} /* if */
+		
+		/* Download based on architecture */
 		if (strcmp(machine, "aarch64") == 0) {
 			pr_info(stdout, "Downloading PawnCC for aarch64..");
-			dog_download_file(
+			ret = dog_download_file(
 				"https://github.com/gskeleton/compiler/releases/download/v3.10.10/arm64-v8a.zip",
 				"pawncc-termux-310.zip"
 			);
-		}
-		else if (strcmp(machine, "armv7l") == 0) {
+		} else if (strcmp(machine, "armv7l") == 0) {
 			pr_info(stdout, "Downloading PawnCC for armv7l..");
-			dog_download_file(
+			ret = dog_download_file(
 				"https://github.com/gskeleton/compiler/releases/download/v3.10.10/armeabi-v7a.zip",
 				"pawncc-termux-310.zip"
 			);
-		}
-		else {
-			pr_info(stdout, "Downloading PawnCC for aarch64..");
-			dog_download_file(
+		} else {
+			pr_info(stdout, "Downloading PawnCC for aarch64 (default)..");
+			ret = dog_download_file(
 				"https://github.com/gskeleton/compiler/releases/download/v3.10.10/arm64-v8a.zip",
 				"pawncc-termux-310.zip"
 			);
-		}
+		} /* if */
 	}
 	else if (sel == 'C' || sel == 'c') {
-		if (path_exists("pawncc-termux-39.zip"))
+		/* Clean up existing files */
+		if (path_exists("pawncc-termux-39.zip") == 1) {
 			remove("pawncc-termux-39.zip");
-		if (path_exists("pawncc-termux-39"))
+			pr_info(stdout, "pawncc_handle_termux_installation: removed existing pawncc-termux-39.zip");
+		} /* if */
+		
+		if (path_exists("pawncc-termux-39") == 1) {
 			remove("pawncc-termux-39");
+			pr_info(stdout, "pawncc_handle_termux_installation: removed existing pawncc-termux-39");
+		} /* if */
+		
+		/* Download based on architecture */
 		if (strcmp(machine, "aarch64") == 0) {
 			pr_info(stdout, "Downloading PawnCC for aarch64..");
-			dog_download_file(
+			ret = dog_download_file(
 				"https://github.com/gskeleton/compiler/releases/download/v3.10.9/arm64-v8a.zip",
 				"pawncc-termux-39.zip"
 			);
-		}
-		else if (strcmp(machine, "armv7l") == 0) {
+		} else if (strcmp(machine, "armv7l") == 0) {
 			pr_info(stdout, "Downloading PawnCC for armv7l..");
-			dog_download_file(
+			ret = dog_download_file(
 				"https://github.com/gskeleton/compiler/releases/download/v3.10.9/armeabi-v7a.zip",
 				"pawncc-termux-39.zip"
 			);
-		}
-		else {
-			pr_info(stdout, "Downloading PawnCC for aarch64..");
-			dog_download_file(
+		} else {
+			pr_info(stdout, "Downloading PawnCC for aarch64 (default)..");
+			ret = dog_download_file(
 				"https://github.com/gskeleton/compiler/releases/download/v3.10.9/arm64-v8a.zip",
 				"pawncc-termux-39.zip"
 			);
-		}
+		} /* if */
 	}
 	else if (sel == 'D' || sel == 'd') {
-		if (path_exists("pawncc-termux-38.zip"))
+		/* Clean up existing files */
+		if (path_exists("pawncc-termux-38.zip") == 1) {
 			remove("pawncc-termux-38.zip");
-		if (path_exists("pawncc-termux-38"))
+			pr_info(stdout, "pawncc_handle_termux_installation: removed existing pawncc-termux-38.zip");
+		} /* if */
+		
+		if (path_exists("pawncc-termux-38") == 1) {
 			remove("pawncc-termux-38");
+			pr_info(stdout, "pawncc_handle_termux_installation: removed existing pawncc-termux-38");
+		} /* if */
+		
+		/* Download based on architecture */
 		if (strcmp(machine, "aarch64") == 0) {
 			pr_info(stdout, "Downloading PawnCC for aarch64..");
-			dog_download_file(
+			ret = dog_download_file(
 				"https://github.com/gskeleton/compiler/releases/download/v3.10.8/arm64-v8a.zip",
 				"pawncc-termux-38.zip"
 			);
-		}
-		else if (strcmp(machine, "armv7l") == 0) {
+		} else if (strcmp(machine, "armv7l") == 0) {
 			pr_info(stdout, "Downloading PawnCC for armv7l..");
-			dog_download_file(
+			ret = dog_download_file(
 				"https://github.com/gskeleton/compiler/releases/download/v3.10.8/armeabi-v7a.zip",
 				"pawncc-termux-38.zip"
 			);
-		}
-		else {
-			pr_info(stdout, "Downloading PawnCC for aarch64..");
-			dog_download_file(
+		} else {
+			pr_info(stdout, "Downloading PawnCC for aarch64 (default)..");
+			ret = dog_download_file(
 				"https://github.com/gskeleton/compiler/releases/download/v3.10.8/arm64-v8a.zip",
 				"pawncc-termux-38.zip"
 			);
-		}
+		} /* if */
 	}
 	else if (sel == 'E' || sel == 'e') {
-		if (path_exists("pawncc-termux-37.zip"))
+		/* Clean up existing files */
+		if (path_exists("pawncc-termux-37.zip") == 1) {
 			remove("pawncc-termux-37.zip");
-		if (path_exists("pawncc-termux-37"))
+			pr_info(stdout, "pawncc_handle_termux_installation: removed existing pawncc-termux-37.zip");
+		} /* if */
+		
+		if (path_exists("pawncc-termux-37") == 1) {
 			remove("pawncc-termux-37");
+			pr_info(stdout, "pawncc_handle_termux_installation: removed existing pawncc-termux-37");
+		} /* if */
+		
+		/* Download based on architecture */
 		if (strcmp(machine, "aarch64") == 0) {
 			pr_info(stdout, "Downloading PawnCC for aarch64..");
-			dog_download_file(
+			ret = dog_download_file(
 				"https://github.com/gskeleton/compiler/releases/download/v3.10.7/arm64-v8a.zip",
 				"pawncc-termux-37.zip"
 			);
-		}
-		else if (strcmp(machine, "armv7l") == 0) {
+		} else if (strcmp(machine, "armv7l") == 0) {
 			pr_info(stdout, "Downloading PawnCC for armv7l..");
-			dog_download_file(
+			ret = dog_download_file(
 				"https://github.com/gskeleton/compiler/releases/download/v3.10.7/armeabi-v7a.zip",
 				"pawncc-termux-37.zip"
 			);
-		}
-		else {
-			pr_info(stdout, "Downloading PawnCC for aarch64..");
-			dog_download_file(
+		} else {
+			pr_info(stdout, "Downloading PawnCC for aarch64 (default)..");
+			ret = dog_download_file(
 				"https://github.com/gskeleton/compiler/releases/download/v3.10.7/arm64-v8a.zip",
 				"pawncc-termux-37.zip"
 			);
-		}
+		} /* if */
 	}
+	else {
+		pr_warning(stdout, "pawncc_handle_termux_installation: unknown selection %c", sel);
+	} /* if */
 
+	/* Check download result */
+	if (ret != 0) {
+		pr_error(stdout, "pawncc_handle_termux_installation: download failed with code %d", ret);
+		return ret;
+	} /* if */
+
+	pr_info(stdout, "pawncc_handle_termux_installation: installation initiated successfully");
 	return (0);
-}
+} /* pawncc_handle_termux_installation */
 
 static int
 pawncc_handle_standard_installation(const char* platform)
@@ -235,39 +331,74 @@ pawncc_handle_standard_installation(const char* platform)
 	const char* versions[] = {
 		"PawnCC 3.10.11  - new",
 		"PawnCC 3.10.10  - new",
+		"PawnCC 3.10.7   - stable",
 		"PawnCC 3.10.7   - experimental"
 	};
-	const char	 keys[] = { 'A', 'B', 'C' };
+	const char	 keys[] = { 'A', 'B', 'C', 'D' };
 	const char* vernums[] = {
-		"3.10.11", "3.10.10", "3.10.7"
+		"3.10.11", "3.10.10", "3.10.7", "3.10.7"
 	};
+	int idx = -1;
+	char sel = 0;
+	const char* library_repo_base = NULL;
+	const char* archive_ext = NULL;
+	char url[512] = {0};
+	char filename[128] = {0};
+	int ret = 0;
 
+	/* Validate platform parameter */
+	if (platform == NULL) {
+		pr_error(stdout, "pawncc_handle_standard_installation: platform is NULL");
+		return (-1);
+	} /* if */
+
+	/* Check if platform is supported */
 	if (strcmp(platform, "linux") != 0 &&
 		strcmp(platform, "windows") != 0) {
 		pr_error(stdout, "Unsupported platform: %s", platform);
 		return (-1);
-	}
+	} /* if */
 
-	char	 sel = library_options_list("Select PawnCC Version",
-		versions, keys, 3);
-	if (!sel)
+	pr_info(stdout, "pawncc_handle_standard_installation: platform: %s", platform);
+
+	/* Get user selection */
+	sel = library_options_list("Select PawnCC Version", versions, keys, 4);
+	if (!sel) {
+		pr_error(stdout, "pawncc_handle_standard_installation: no selection made");
 		return (0);
+	} /* if */
 
-	int	 idx = -1;
-	if (sel >= 'A' && sel <= 'C')
+	/* Determine index from selection */
+	if (sel >= 'A' && sel <= 'D') {
 		idx = sel - 'A';
-	else if (sel >= 'a' && sel <= 'c')
+	} else if (sel >= 'a' && sel <= 'd') {
 		idx = sel - 'a';
-	if (idx < 0 || idx >= 3)
+	} /* if */
+	
+	if (idx < 0 || idx >= 4) {
+		pr_error(stdout, "pawncc_handle_standard_installation: invalid selection index %d", idx);
 		return (0);
+	} /* if */
 
-	const char* library_repo_base;
-	library_repo_base = "https://github.com/gskeleton/gcompiler";
+	pr_info(stdout, "pawncc_handle_standard_installation: selected index %d (%s)", idx, versions[idx]);
 
-	const char* archive_ext =
-		(strcmp(platform, "linux") == 0) ? "tar.gz" : "zip";
+	/* Set repository base based on version type */
+	if (idx == 3) {
+		library_repo_base = "https://github.com/gskeleton/pawn";
+		pr_info(stdout, "pawncc_handle_standard_installation: using experimental repo");
+	} else {
+		library_repo_base = "https://github.com/gskeleton/gcompiler";
+		pr_info(stdout, "pawncc_handle_standard_installation: using stable repo");
+	} /* if */
+	
+	/* Set archive extension based on platform */
+	if (strcmp(platform, "linux") == 0) {
+		archive_ext = "tar.gz";
+	} else {
+		archive_ext = "zip";
+	} /* if */
 
-	char	 url[512], filename[128];
+	/* Build URL and filename */
 	(void)snprintf(url, sizeof(url),
 		"%s/releases/download/v%s/pawnc-%s-%s.%s",
 		library_repo_base, vernums[idx], vernums[idx], platform,
@@ -276,66 +407,109 @@ pawncc_handle_standard_installation(const char* platform)
 	(void)snprintf(filename, sizeof(filename),
 		"pawnc-%s-%s.%s", vernums[idx], platform, archive_ext);
 
+	pr_info(stdout, "pawncc_handle_standard_installation: URL: %s", url);
+	pr_info(stdout, "pawncc_handle_standard_installation: filename: %s", filename);
+
+	/* Set installation flags */
 	installing_pawncc = true;
 	if (strcmp(platform, "linux") == 0) {
 		installing_pawncc_linux = true;
-	}
+		pr_info(stdout, "pawncc_handle_standard_installation: Linux installation flagged");
+	} /* if */
 
-	dog_download_file(url, filename);
+	/* Download file */
+	ret = dog_download_file(url, filename);
+	
+	if (ret != 0) {
+		pr_error(stdout, "pawncc_handle_standard_installation: download failed with code %d", ret);
+	} /* if */
 
-	return (0);
-}
+	return (ret);
+} /* pawncc_handle_standard_installation */
 
 int
 dog_install_pawncc(const char* platform)
 {
+	int ret = 0;
+	bool stat_false = !unit_selection_state;
+
+	pr_info(stdout, "dog_install_pawncc: starting installation for platform: %s", 
+	         platform ? platform : "NULL");
+
 	minimal_debugging();
 
-	bool	 stat_false
-		= !unit_selection_state;
-
+	/* Validate platform parameter */
 	if (!platform) {
 		pr_error(stdout, "Platform parameter is NULL");
-		if (stat_false)
+		if (stat_false) {
 			return (0);
+		} /* if */
 		return (-1);
-	}
+	} /* if */
 
+	/* Handle different platform types */
 	if (strcmp(platform, "termux") == 0) {
-		int	 ret = pawncc_handle_termux_installation();
+		pr_info(stdout, "dog_install_pawncc: handling Termux installation");
+		ret = pawncc_handle_termux_installation();
 
 	loop_ipcc:
-		if (stat_false)
+		if (stat_false) {
+			pr_info(stdout, "dog_install_pawncc: stat_false true, looping");
 			goto loop_ipcc;
-		else if (ret == 0)
+		} else if (ret == 0) {
+			pr_info(stdout, "dog_install_pawncc: Termux installation successful");
 			return (0);
-	}
-	else {
-		int	 ret = pawncc_handle_standard_installation(platform);
+		} /* if */
+	} else {
+		pr_info(stdout, "dog_install_pawncc: handling standard installation for %s", platform);
+		ret = pawncc_handle_standard_installation(platform);
 
 	loop_ipcc2:
-		if (stat_false)
+		if (stat_false) {
+			pr_info(stdout, "dog_install_pawncc: stat_false true, looping");
 			goto loop_ipcc2;
-		else if (ret == 0)
+		} else if (ret == 0) {
+			pr_info(stdout, "dog_install_pawncc: standard installation successful");
 			return (0);
-	}
+		} /* if */
+	} /* if */
 
-	return (0);
-}
+	pr_info(stdout, "dog_install_pawncc: installation completed with ret=%d", ret);
+	return (ret);
+} /* dog_install_pawncc */
 
 int
 dog_install_server(const char* platform)
 {
+	int ret = 0;
+	char sel = 0;
+	int idx = -1;
+	struct library_version_info* chosen = NULL;
+	const char* url = NULL;
+	const char* filename = NULL;
+
+	pr_info(stdout, "dog_install_server: starting server installation for platform: %s", 
+	         platform ? platform : "NULL");
+
 	minimal_debugging();
 
 	installing_pawncc = false;
 
+	/* Validate platform parameter */
+	if (platform == NULL) {
+		pr_error(stdout, "dog_install_server: platform is NULL");
+		return (-1);
+	} /* if */
+
+	/* Check if platform is supported */
 	if (strcmp(platform, "linux") != 0 &&
 		strcmp(platform, "windows") != 0 &&
 		strcmp(platform, "termux") != 0) {
 		pr_error(stdout, "Unsupported platform: %s", platform);
 		return (-1);
-	}
+	} /* if */
+
+	pr_info(stdout, "dog_install_server: platform %s is supported", platform);
 
 	/* Termux-specific server installation */
 	if (strcmp(platform, "termux") == 0) {
@@ -345,26 +519,43 @@ dog_install_server(const char* platform)
 		};
 		const char	 keys[] = { 'A', 'B' };
 
-		char	 sel = library_options_list("Select Server Version",
-			items, keys, 2);
-		if (!sel)
-			return (0);
+		pr_info(stdout, "dog_install_server: handling Termux server installation");
 
+		sel = library_options_list("Select Server Version", items, keys, 2);
+		if (!sel) {
+			pr_error(stdout, "dog_install_server: no selection made");
+			return (0);
+		} /* if */
+
+		/* Handle selection based on architecture */
 		if (sel == 'A' || sel == 'a') {
-			if (path_exists("omptermux.zip"))
+			pr_info(stdout, "dog_install_server: selected aarch64 version");
+			
+			if (path_exists("omptermux.zip") == 1) {
 				remove("omptermux.zip");
-			dog_download_file(
+				pr_info(stdout, "dog_install_server: removed existing omptermux.zip");
+			} /* if */
+			
+			ret = dog_download_file(
 				"https://github.com/gskeleton/omptermux/archive/refs/heads/aarch64.zip",
 				"omptermux.zip");
 		} else if (sel == 'B' || sel == 'b') {
-			if (path_exists("omptermux.zip"))
+			pr_info(stdout, "dog_install_server: selected arm32 version");
+			
+			if (path_exists("omptermux.zip") == 1) {
 				remove("omptermux.zip");
-			dog_download_file(
+				pr_info(stdout, "dog_install_server: removed existing omptermux.zip");
+			} /* if */
+			
+			ret = dog_download_file(
 				"https://github.com/gskeleton/omptermux/archive/refs/heads/arm32.zip",
 				"omptermux.zip");
-		}
+		} else {
+			pr_warning(stdout, "dog_install_server: unknown selection %c", sel);
+		} /* if */
+		
 		goto done;
-	}
+	} /* if */
 
 	/* Server version list for Linux/Windows */
 	const char* items[] = {
@@ -389,18 +580,28 @@ dog_install_server(const char* platform)
 		'M', 'N'
 	};
 
-	char	 sel = library_options_list("Select SA-MP / open.mp Server",
-		items, keys, 14);
-	if (!sel)
-		return (0);
+	pr_info(stdout, "dog_install_server: showing server selection menu for %s", platform);
 
-	int	 idx = -1;
-	if (sel >= 'A' && sel <= 'N')
-		idx = sel - 'A';
-	else if (sel >= 'a' && sel <= 'n')
-		idx = sel - 'a';
-	if (idx < 0 || idx >= 14)
+	/* Get user selection */
+	sel = library_options_list("Select SA-MP / open.mp Server", items, keys, 14);
+	if (!sel) {
+		pr_error(stdout, "dog_install_server: no selection made");
 		return (0);
+	} /* if */
+
+	/* Determine index from selection */
+	if (sel >= 'A' && sel <= 'N') {
+		idx = sel - 'A';
+	} else if (sel >= 'a' && sel <= 'n') {
+		idx = sel - 'a';
+	} /* if */
+	
+	if (idx < 0 || idx >= 14) {
+		pr_error(stdout, "dog_install_server: invalid selection index %d", idx);
+		return (0);
+	} /* if */
+
+	pr_info(stdout, "dog_install_server: selected index %d (%s)", idx, items[idx]);
 
 	/* Server version information */
 	struct library_version_info versions[] = {
@@ -560,15 +761,28 @@ dog_install_server(const char* platform)
 		}
 	};
 
-	struct library_version_info* chosen = &versions[idx];
+	/* Get chosen version */
+	chosen = &versions[idx];
 
 	/* Select appropriate URL based on platform */
-	const char* url = (strcmp(platform, "linux") == 0) ?
-		chosen->linux_url : chosen->windows_url;
-	const char* filename = (strcmp(platform, "linux") == 0) ?
-		chosen->linux_file : chosen->windows_file;
+	if (strcmp(platform, "linux") == 0) {
+		url = chosen->linux_url;
+		filename = chosen->linux_file;
+		pr_info(stdout, "dog_install_server: using Linux URL: %s", url);
+	} else {
+		url = chosen->windows_url;
+		filename = chosen->windows_file;
+		pr_info(stdout, "dog_install_server: using Windows URL: %s", url);
+	} /* if */
 
-	dog_download_file(url, filename);
+	/* Download the file */
+	ret = dog_download_file(url, filename);
+	
+	if (ret != 0) {
+		pr_error(stdout, "dog_install_server: download failed with code %d", ret);
+	} /* if */
+
 done:
-	return (0);
-}
+	pr_info(stdout, "dog_install_server: installation completed with ret=%d", ret);
+	return (ret);
+} /* dog_install_server */
