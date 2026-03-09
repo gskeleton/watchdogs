@@ -277,6 +277,7 @@ jobs:
       run: |
         $env:Path = "C:\tools\msys64\ucrt64\bin;C:\tools\msys64\usr\bin;$env:Path"
         mingw32-make windows
+        
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:

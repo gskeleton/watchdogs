@@ -35,52 +35,75 @@ cleanup_local_resources(char **ptr_command_prompt, char **ptr_command,
                        char **debug_server_ptr, char **args_ptr,
                        char **compile_target_ptr)
 {
+    int freed_count = 0;
+
     // ptr prompt free
     if (ptr_command_prompt && *ptr_command_prompt) {
         free(*ptr_command_prompt);
         *ptr_command_prompt = NULL;
-    }
+        freed_count++;
+    } /* if */
+    
     // ptr command free
     if (ptr_command && *ptr_command) {
         free(*ptr_command);
         *ptr_command = NULL;
-    }
+        freed_count++;
+    } /* if */
+    
     // title running info free
     if (title && *title) {
         free(*title);
         *title = NULL;
-    }
+        freed_count++;
+    } /* if */
+    
     // size command ptr free
     if (size_command_ptr && *size_command_ptr) {
         free(*size_command_ptr);
         *size_command_ptr = NULL;
-    }
+        freed_count++;
+    } /* if */
+    
     // platform free
     if (platform_ptr && *platform_ptr) {
         free(*platform_ptr);
         *platform_ptr = NULL;
-    }
+        freed_count++;
+    } /* if */
+    
     // signal free
     if (signal_ptr && *signal_ptr) {
         free(*signal_ptr);
         *signal_ptr = NULL;
-    }
+        freed_count++;
+    } /* if */
+    
     // debug server ptr free
     if (debug_server_ptr && *debug_server_ptr) {
         free(*debug_server_ptr);
         *debug_server_ptr = NULL;
-    }
+        freed_count++;
+    } /* if */
+    
     // args ptr free
     if (args_ptr && *args_ptr) {
         free(*args_ptr);
         *args_ptr = NULL;
-    }
+        freed_count++;
+    } /* if */
+    
     // compile target ptr free
     if (compile_target_ptr && *compile_target_ptr) {
         free(*compile_target_ptr);
         *compile_target_ptr = NULL;
-    }
-}
+        freed_count++;
+    } /* if */
+
+#if defined(_DBG_PRINT)
+    pr_info(stdout, "cleanup_local_resources: freed %d resources", freed_count);
+#endif
+} /* cleanup_local_resources */
 
 static
 void unit_show_help(const char *command)
@@ -167,48 +190,57 @@ void unit_show_help(const char *command)
         "Generate a compressed file (.zip/.tar.gz)." },
         { NULL, NULL, NULL, NULL }
     };
+    
+    int i;
 
+    /* Handle case with no specific command */
     if (command == NULL || *command == '\0') {
         printf("Usage: help <command>\n\n");
         printf("Commands:\n\n");
 
-        for (int i = 0; help_table[i].name; i++) {
-            printf("  %-12s @ %s\n",
-                help_table[i].name,
-                help_table[i].desc);
-        }
+        for (i = 0; help_table[i].name; i++) {
+            if (help_table[i].name != NULL) {
+                printf("  %-12s @ %s\n",
+                    help_table[i].name,
+                    help_table[i].desc);
+            } /* if */
+        } /* for */
 
         printf("\nType 'help <command>' for detailed info.\n");
         return;
-    }
+    } /* if */
 
-    for (int i = 0; help_table[i].name; i++) {
-        if (equals(command, help_table[i].name)) {
+    /* Search for specific command */
+    for (i = 0; help_table[i].name; i++) {
+        if (help_table[i].name != NULL && equals(command, help_table[i].name)) {
             printf("\n%sCommand:%s %s\n\n",
                 DOG_COL_CYAN,
                 DOG_COL_DEFAULT,
                 help_table[i].name);
             printf("Description:\n  %s\n\n",
-                help_table[i].desc);
+                help_table[i].desc ? help_table[i].desc : "(no description)");
             printf("Usage:\n  %s%s%s\n\n",
                 DOG_COL_CYAN,
-                help_table[i].usage,
+                help_table[i].usage ? help_table[i].usage : "(no usage)",
                 DOG_COL_DEFAULT);
             printf("%s\n\n",
-                help_table[i].detail);
+                help_table[i].detail ? help_table[i].detail : "(no details)");
             return;
-        }
-    }
+        } /* if */
+    } /* for */
 
-	print("help can't found for: '");
-	pr_color(stdout, DOG_COL_YELLOW, "%s", command);
-	print("'\n     Oops! That command doesn't exist. Try 'help' to see available commands.\n");
-}
+    /* Command not found */
+    print("help can't found for: '");
+    pr_color(stdout, DOG_COL_YELLOW, "%s", command);
+    print("'\n     Oops! That command doesn't exist. Try 'help' to see available commands.\n");
+} /* unit_show_help */
 
 static
 void unit_show_dog(void) {
-	if (path_exists(".watchdogs/notice") == 0) {
+    /* Check if notice should be shown */
+    if (path_exists(".watchdogs/notice") == 0) {
         print(" type: touch .watchdogs/notice | type nul > .watchdogs/notice for hide this message.\n");
+        
         #ifndef DOG_ANDROID
         static const char* dog_ascii =
             "\n                         \\/%%#z.     \\/.%%#z./   /,z#%%\\/\n"
@@ -235,50 +267,64 @@ void unit_show_dog(void) {
             "          \\77xx77/       \\77xx77/\n"
             "         `::::'         `::::'\n\n";
         #endif
-        fwrite(dog_ascii, 1, strlen(dog_ascii), stdout);
+        
+        if (dog_ascii != NULL) {
+            fwrite(dog_ascii, 1, strlen(dog_ascii), stdout);
+        } /* if */
+        
         print("Use \"help\" for more.\n");
-	}
-}
+    } /* if */
+} /* unit_show_dog */
 
 static
 void
 checkout_unit_rule(void)
 {
+    /* Handle compilation completion */
     if (compiling_gamemode == true) {
         compiling_gamemode = !compiling_gamemode;
         pr_info(stdout,
             "After compiling the script, type "
             DOG_COL_YELLOW "running " DOG_COL_DEFAULT "or "
             DOG_COL_YELLOW "pawnruns " DOG_COL_DEFAULT "to start your amx..");
+        pc_configure_libpath();
         dog_exec_compiler(NULL, NULL, NULL,
             NULL, NULL, NULL, NULL, NULL,
             NULL, NULL);
-    }
+    } /* if */
+    
+    /* Handle missing standard library */
     static bool rate_stdlib = false;
-    if (pc_missing_stdlib == true &&
-        rate_stdlib == false)
+    if (pc_missing_stdlib == true && rate_stdlib == false)
     {
         rate_stdlib = !rate_stdlib;
         (void)putchar('\n');
-        if (fet_server_env()==false) {
+        
+        /* Check server environment */
+        if (fet_server_env() == false) {
             pr_info(stdout,
                 "can't found sa-mp stdlib.. "
                 "installing...");
             pr_info(stdout,
                 "select version:\n\t1: 0.3.DL-R1 | 2: 0.3.7-R2-1-1");
+            
             char *version = readline("> ");
-            if (version[0] == '\0' || version[0] == '2') {
-                dog_install_depends(
-                    "gskeleton/samp-stdlib",
-                    "main",
-                    NULL);
-            } else {
-                dog_install_depends(
-                    "gskeleton/samp-stdlib",
-                    "0.3.dl",
-                    NULL);
-            }
-            dog_free(version);
+            
+            if (version != NULL) {
+                if (version[0] == '\0' || version[0] == '2') {
+                    dog_install_depends(
+                        "gskeleton/samp-stdlib",
+                        "main",
+                        NULL);
+                } else {
+                    dog_install_depends(
+                        "gskeleton/samp-stdlib",
+                        "0.3.dl",
+                        NULL);
+                } /* if */
+                
+                dog_free(version);
+            } /* if */
         } else {
             pr_info(stdout,
                 "can't found open.mp stdlib.. "
@@ -287,10 +333,11 @@ checkout_unit_rule(void)
                 "openmultiplayer/omp-stdlib",
                 "master",
                 NULL);
-        }
+        } /* if */
+        
         unit_ret_main("compile");
-    }
-}
+    } /* if */
+} /* checkout_unit_rule */
 
 static
 int
@@ -298,6 +345,7 @@ __command__(char *unit_pre_command)
 {
     unit_debugging(0);
     
+    /* Initialize timing structures */
     memset(&cmd_start, 0, sizeof(cmd_start));
     memset(&cmd_end, 0, sizeof(cmd_end));
 
@@ -315,81 +363,97 @@ __command__(char *unit_pre_command)
     char *debug_server = NULL;
     char *size_args = NULL;
     char *compile_target = NULL;
+    
+    int i;
 
+    /* Check unit rules */
     checkout_unit_rule();
 
+    /* Allocate command prompt buffer */
     ptr_command_prompt = dog_malloc(size_ptr_command);
     if (!ptr_command_prompt) {
+        pr_error(stdout, "__command__: failed to allocate command prompt buffer");
         ret_code = -1;
         goto cleanup;
-    }
+    } /* if */
     
+    /* Free any existing command */
     if (ptr_command) {
         free(ptr_command);
         ptr_command = NULL;
-    }
+    } /* if */
 
+    /* Initialize history and display welcome */
     static bool unit_initial = false;
     if (!unit_initial) {
         unit_initial = true;
         using_history();
         unit_show_dog();
-    }
+    } /* if */
     
+    /* Handle pre-command if provided */
     if (unit_pre_command && unit_pre_command[0] != '\0') {
         ptr_command = strdup(unit_pre_command);
         if (!ptr_command) {
+            pr_error(stdout, "__command__: failed to duplicate pre-command");
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
+        
         if (strfind(ptr_command, "812C397D", true) == 0) {
             printf("# %s\n", ptr_command);
-        }
+        } /* if */
     } else {
+        /* Interactive command input loop */
         while (true) {
             (void)snprintf(ptr_command_prompt, size_ptr_command, "# ");
             char *ptr_command_input = readline(ptr_command_prompt);
             fflush(stdout);
+            
             if (!ptr_command_input) {
+                pr_info(stdout, "__command__: readline returned NULL");
                 ret_code = 2;
                 goto cleanup;
-            }
+            } /* if */
             
             if (ptr_command_input[0] == '\0') {
                 free(ptr_command_input);
                 continue;
-            }
+            } /* if */
             
             ptr_command = strdup(ptr_command_input);
             free(ptr_command_input);
             
             if (!ptr_command) {
+                pr_error(stdout, "__command__: failed to duplicate command input");
                 ret_code = -1;
                 goto cleanup;
-            }
+            } /* if */
             break;
-        }
-    }
+        } /* while */
+    } /* if */
     
+    /* Add command to history */
     if (ptr_command && ptr_command[0] != '\0' &&
         strfind(ptr_command, "812C397D", true) == false) {
         if (history_length > 0) {
-            HIST_ENTRY *last
-                = history_get(history_length - 1);
+            HIST_ENTRY *last = history_get(history_length - 1);
             if (!last || strcmp(last->line, ptr_command) != 0) {
                 add_history(ptr_command);
-            }
+            } /* if */
         } else {
             add_history(ptr_command);
-        }
-    }
+        } /* if */
+    } /* if */
 
+    /* Find similar command for suggestions */
     command_similar = dog_find_near_command(ptr_command,
         unit_command_list, unit_command_len, &dist);
 
     unit_debugging(0);
     clock_gettime(CLOCK_MONOTONIC, &cmd_start);
     
+    /* Command processing - help */
     if (strncmp(ptr_command, "help", strlen("help")) == 0) {
         (void)dog_console_title("Watchdogs | @ help");
         char *args = ptr_command + strlen("help");
@@ -398,10 +462,13 @@ __command__(char *unit_pre_command)
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - exit */
     } else if (strcmp(ptr_command, "exit") == 0) {
+        pr_info(stdout, "__command__: exit command received");
         ret_code = 2;
         goto cleanup;
         
+    /* Command processing - sha1 */
     } else if (strncmp(ptr_command, "sha1", strlen("sha1")) == 0) {
         char *args = ptr_command + strlen("sha1");
         while (*args == ' ') ++args;
@@ -416,11 +483,14 @@ __command__(char *unit_pre_command)
                 printf("Crypto Output (sha1) : " DOG_COL_YELLOW);
                 crypto_print_hex(digest, sizeof(digest), 1);
                 print_restore_color();
-            }
+            } else {
+                pr_error(stdout, "__command__: sha1 hash generation failed");
+            } /* if */
         }
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - sha256 */
     } else if (strncmp(ptr_command, "sha256", strlen("sha256")) == 0) {
         char *args = ptr_command + strlen("sha256");
         while (*args == ' ') ++args;
@@ -435,11 +505,14 @@ __command__(char *unit_pre_command)
                 printf("Crypto Output (SHA256) : " DOG_COL_YELLOW);
                 crypto_print_hex(digest, sizeof(digest), 1);
                 print_restore_color();
-            }
+            } else {
+                pr_error(stdout, "__command__: sha256 hash generation failed");
+            } /* if */
         }
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - crc32 */
     } else if (strncmp(ptr_command, "crc32", strlen("crc32")) == 0) {
         char *args = ptr_command + strlen("crc32");
         while (*args == ' ') ++args;
@@ -448,7 +521,7 @@ __command__(char *unit_pre_command)
             println(stdout, "Usage: crc32 [<words>]");
         } else {
             uint32_t crc32_generate = crypto_generate_crc32(args, strlen(args));
-            char crc_str[11];
+            char crc_str[11] = {0};
             sprintf(crc_str, "%08X", crc32_generate);
             printf("         Crypto Input : " DOG_COL_YELLOW "%s\n", args);
             print_restore_color();
@@ -458,6 +531,7 @@ __command__(char *unit_pre_command)
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - djb2 */
     } else if (strncmp(ptr_command, "djb2", strlen("djb2")) == 0) {
         char *args = ptr_command + strlen("djb2");
         while (*args == ' ') ++args;
@@ -470,18 +544,22 @@ __command__(char *unit_pre_command)
                     DOG_COL_CYAN "%s - No such file or directory", args);
                 ret_code = -1;
                 goto cleanup;
-            }
+            } /* if */
+            
             unsigned long djb2_generate = crypto_djb2_hash_file(args);
             if (djb2_generate) {
                 printf("        Crypto Input : " DOG_COL_YELLOW "%s\n", args);
                 print_restore_color();
                 printf("Crypto Output (DJB2) : " DOG_COL_YELLOW "%#lx\n", djb2_generate);
                 print_restore_color();
-            }
+            } else {
+                pr_error(stdout, "__command__: djb2 hash generation failed");
+            } /* if */
         }
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - pbkdf2 */
     } else if (strncmp(ptr_command, "pbkdf2", strlen("pbkdf2")) == 0) {
         char *args = ptr_command + strlen("pbkdf2");
         while (*args == ' ') ++args;
@@ -489,8 +567,8 @@ __command__(char *unit_pre_command)
         if (*args == '\0') {
             println(stdout, "Usage: pbkdf2 [<password>]");
         } else {
-            unsigned char pbkdf_generate[32];
-            unsigned char stored_salt[16];
+            unsigned char pbkdf_generate[32] = {0};
+            unsigned char stored_salt[16] = {0};
 
             crypto_simple_rand_bytes(stored_salt, 16);
 
@@ -498,20 +576,21 @@ __command__(char *unit_pre_command)
 
             if (ret != 1) {
                 print("PBKDF2 Error\n");
-                goto pbkdf_done;
-            }
-
-            printf("        Crypto Input : " DOG_COL_YELLOW "%s\n", args);
-            char *hex_output = NULL;
-            crypto_convert_to_hex(pbkdf_generate, 32, &hex_output);
-            print_restore_color();
-            printf("Crypto Output (PBKDF2) : " DOG_COL_YELLOW "%s\n", hex_output);
-            free(hex_output);
+                pr_error(stdout, "__command__: pbkdf2 derivation failed");
+            } else {
+                printf("        Crypto Input : " DOG_COL_YELLOW "%s\n", args);
+                char *hex_output = NULL;
+                crypto_convert_to_hex(pbkdf_generate, 32, &hex_output);
+                print_restore_color();
+                printf("Crypto Output (PBKDF2) : " DOG_COL_YELLOW "%s\n", hex_output);
+                if (hex_output) free(hex_output);
+            } /* if */
         }
         pbkdf_done:
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - base64encode */
     } else if (strncmp(ptr_command, "base64encode", strlen("base64encode")) == 0) {
         char *args = ptr_command + strlen("base64encode");
         while (*args == ' ') ++args;
@@ -519,23 +598,35 @@ __command__(char *unit_pre_command)
         if (*args == '\0') {
             println(stdout, "Usage: base64encode [<file/text>]");
         } else {
+            /* Check if argument is a file */
             if (path_access(args) == 1) {
                 FILE *fp = fopen(args, "rb");
-                fseek(fp, 0, SEEK_END);
-                long size = ftell(fp);
-                rewind(fp);
-                unsigned char *buffer = dog_malloc(size);
-                fread(buffer, 1, size, fp);
-                fclose(fp);
+                if (fp != NULL) {
+                    fseek(fp, 0, SEEK_END);
+                    long size = ftell(fp);
+                    rewind(fp);
+                    
+                    unsigned char *buffer = dog_malloc(size);
+                    if (buffer != NULL) {
+                        fread(buffer, 1, size, fp);
+                        fclose(fp);
 
-                char *encoded = crypto_base64_encode(buffer, size);
-
-                printf("        Crypto Input : " DOG_COL_YELLOW "%s\n", args);
-                print_restore_color();
-                printf("Crypto Output (base64) : " DOG_COL_YELLOW "%s\n", encoded);
-
-                free(buffer);
-                free(encoded);
+                        char *encoded = crypto_base64_encode(buffer, size);
+                        if (encoded != NULL) {
+                            printf("        Crypto Input : " DOG_COL_YELLOW "%s\n", args);
+                            print_restore_color();
+                            printf("Crypto Output (base64) : " DOG_COL_YELLOW "%s\n", encoded);
+                            free(encoded);
+                        } /* if */
+                        
+                        free(buffer);
+                    } else {
+                        fclose(fp);
+                        pr_error(stdout, "__command__: failed to allocate buffer for file");
+                    } /* if */
+                } else {
+                    pr_error(stdout, "__command__: failed to open file: %s", args);
+                } /* if */
             } else {
                 char *encoded = crypto_base64_encode(
                     (const unsigned char *)args,
@@ -545,12 +636,14 @@ __command__(char *unit_pre_command)
                     printf("        Crypto Input : " DOG_COL_YELLOW "%s\n", args);
                     print_restore_color();
                     printf("Crypto Output (base64) : " DOG_COL_YELLOW "%s\n", encoded);
-                }
-            }
+                    free(encoded);
+                } /* if */
+            } /* if */
         }
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - base64decode */
     } else if (strncmp(ptr_command, "base64decode", strlen("base64decode")) == 0) {
         char *args = ptr_command + strlen("base64decode");
         while (*args == ' ') ++args;
@@ -560,19 +653,23 @@ __command__(char *unit_pre_command)
         } else {
             int decoded_len = 0;
             unsigned char *decoded = crypto_base64_decode(args, &decoded_len);
+            
             if (!decoded) {
                 println(stdout, "Invalid Base64 input!");
+                pr_error(stdout, "__command__: invalid base64 input");
             } else {
                 printf("        Crypto Input : " DOG_COL_YELLOW "%s\n", args);
                 print_restore_color();
                 printf("Crypto Output (text) : " DOG_COL_YELLOW "%.*s\n",
                     decoded_len, decoded);
                 free(decoded);
-            }
+            } /* if */
         }
 
         ret_code = -1;
         goto cleanup;
+        
+    /* Command processing - aesencrypt */
     } else if (strncmp(ptr_command, "aesencrypt", strlen("aesencrypt")) == 0) {
         char *args = ptr_command + strlen("aesencrypt");
         while (*args == ' ') ++args;
@@ -582,11 +679,13 @@ __command__(char *unit_pre_command)
         } else {
             AES_KEY key;
             uint8_t in[AES_BLOCK_SIZE] = {0};
-            uint8_t out[AES_BLOCK_SIZE];
+            uint8_t out[AES_BLOCK_SIZE] = {0};
             
             size_t len = strlen(args);
-            if (len > AES_BLOCK_SIZE)
+            if (len > AES_BLOCK_SIZE) {
                 len = AES_BLOCK_SIZE;
+                pr_info(stdout, "__command__: input truncated to %d bytes", AES_BLOCK_SIZE);
+            } /* if */
 
             memcpy(in, args, len);
 
@@ -596,14 +695,17 @@ __command__(char *unit_pre_command)
             print_restore_color();
             printf("Crypto Output (hex)  : " DOG_COL_YELLOW);
 
-            for (int i = 0; i < AES_BLOCK_SIZE; i++)
+            for (int i = 0; i < AES_BLOCK_SIZE; i++) {
                 printf("%02X", out[i]);
+            } /* for */
 
             (void)putchar('\n');
         }
 
         ret_code = -1;
         goto cleanup;
+        
+    /* Command processing - aesdecrypt */
     } else if (strncmp(ptr_command, "aesdecrypt", strlen("aesdecrypt")) == 0) {
         char *args = ptr_command + strlen("aesdecrypt");
         while (*args == ' ') ++args;
@@ -613,13 +715,14 @@ __command__(char *unit_pre_command)
         } else {
             AES_KEY key;
             uint8_t in[AES_BLOCK_SIZE] = {0};
-            uint8_t out[AES_BLOCK_SIZE];
+            uint8_t out[AES_BLOCK_SIZE] = {0};
 
             int bytes = hex_to_bytes(args, in, AES_BLOCK_SIZE);
             if (bytes <= 0) {
                 println(stdout, "Invalid hex input.");
+                pr_error(stdout, "__command__: invalid hex input for aesdecrypt");
                 goto cleanup;
-            }
+            } /* if */
 
             crypto_aes_decrypt(in, out, &key);
 
@@ -631,16 +734,23 @@ __command__(char *unit_pre_command)
 
         ret_code = -1;
         goto cleanup;
+        
+    /* Command processing - config */
     } else if (strcmp(ptr_command, "config") == 0) {
-        if (path_access("watchdogs.toml"))
+        if (path_access("watchdogs.toml") == 1) {
             remove("watchdogs.toml");
+            pr_info(stdout, "__command__: removed existing watchdogs.toml");
+        } /* if */
+        
         unit_debugging(1);
         print(DOG_COL_B_BLUE "");
         dog_printfile("watchdogs.toml");
         print(DOG_COL_DEFAULT "\n");
+        
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - replicate */
     } else if (strncmp(ptr_command, "replicate", strlen("replicate")) == 0) {
         (void)dog_console_title("Watchdogs | @ replicate depends");
         char *args = ptr_command + strlen("replicate");
@@ -650,14 +760,18 @@ __command__(char *unit_pre_command)
         
         size_args = strdup(args);
         if (!size_args) {
+            pr_error(stdout, "__command__: failed to duplicate args for replicate");
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
         
         char *store_branch = NULL;
         char *store_save = NULL;
         char *args2 = strtok(size_args, " ");
-        if (!args2 || strcmp(args2, ".") == 0) is_null_args = 1;
+        
+        if (!args2 || strcmp(args2, ".") == 0) {
+            is_null_args = 1;
+        } /* if */
         
         char *procure_args = strtok(args, " ");
         while (procure_args) {
@@ -667,30 +781,39 @@ __command__(char *unit_pre_command)
             } else if (strcmp(procure_args, "--save") == 0) {
                 procure_args = strtok(NULL, " ");
                 if (procure_args) store_save = procure_args;
-            }
+            } /* if */
             procure_args = strtok(NULL, " ");
-        }
+        } /* while */
         
         if (store_save && strcmp(store_save, ".") == 0) {
             static char *fet_pwd = NULL;
             fet_pwd = dog_procure_pwd();
             store_save = strdup(fet_pwd);
-        }
+        } /* if */
         
         free(size_args);
         size_args = NULL;
         
+        /* Execute replicate with appropriate parameters */
         if (is_null_args != 1) {
-            if (store_branch && store_save) dog_install_depends(args, store_branch, store_save);
-            else if (store_branch) dog_install_depends(args, store_branch, NULL);
-            else if (store_save) dog_install_depends(args, "main", store_save);
-            else dog_install_depends(args, "main", NULL);
+            if (store_branch && store_save) {
+                dog_install_depends(args, store_branch, store_save);
+            } else if (store_branch) {
+                dog_install_depends(args, store_branch, NULL);
+            } else if (store_save) {
+                dog_install_depends(args, "main", store_save);
+            } else {
+                dog_install_depends(args, "main", NULL);
+            } /* if */
         } else {
-            char errbuf[DOG_PATH_MAX];
-            toml_table_t *dog_toml_server_config;
+            char errbuf[DOG_PATH_MAX] = {0};
+            toml_table_t *dog_toml_server_config = NULL;
             FILE *fp = fopen("watchdogs.toml", "r");
-            dog_toml_server_config = toml_parse_file(fp, errbuf, sizeof(errbuf));
-            if (fp) fclose(fp);
+            
+            if (fp != NULL) {
+                dog_toml_server_config = toml_parse_file(fp, errbuf, sizeof(errbuf));
+                fclose(fp);
+            } /* if */
             
             if (!dog_toml_server_config) {
                 pr_error(stdout,
@@ -698,69 +821,71 @@ __command__(char *unit_pre_command)
                 minimal_debugging();
                 ret_code = 0;
                 goto cleanup;
-            }
+            } /* if */
             
-            toml_table_t *dog_depends;
-            dog_depends = toml_table_in(dog_toml_server_config, TOML_TABLE_DEPENDENCIES);
+            toml_table_t *dog_depends = toml_table_in(dog_toml_server_config, TOML_TABLE_DEPENDENCIES);
             char *expect = NULL;
             
-            if (!dog_depends) {
-                goto dog_depends_skip;
-            }
-
-            toml_array_t *dog_toml_packages = toml_array_in(dog_depends, "packages");
-            if (dog_toml_packages) {
-                int arr_sz = toml_array_nelem(dog_toml_packages);
-                for (int i = 0; i < arr_sz; i++) {
-                    toml_datum_t val = toml_string_at(dog_toml_packages, i);
-                    if (!val.ok) continue;
-                        
-                    if (!expect) {
-                        expect = dog_realloc(NULL, strlen(val.u.s) + 1);
-                        if (expect)
-                            (void)snprintf(expect, strlen(val.u.s) + 1, "%s", val.u.s);
-                    } else {
-                        char *tmp;
-                        size_t old_len = strlen(expect);
-                        size_t new_len = old_len + strlen(val.u.s) + 2;
+            if (dog_depends != NULL) {
+                toml_array_t *dog_toml_packages = toml_array_in(dog_depends, "packages");
+                if (dog_toml_packages != NULL) {
+                    int arr_sz = toml_array_nelem(dog_toml_packages);
+                    for (int i = 0; i < arr_sz; i++) {
+                        toml_datum_t val = toml_string_at(dog_toml_packages, i);
+                        if (!val.ok) continue;
                             
-                        tmp = dog_realloc(expect, new_len);
-                        if (tmp) {
-                            expect = tmp;
-                            (void)snprintf(expect + old_len,
-                                new_len - old_len, " %s", val.u.s);
-                        }
-                    }
-                        
-                    dog_free(val.u.s);
-                    val.u.s = NULL;
-                }
-            }
+                        if (!expect) {
+                            expect = dog_realloc(NULL, strlen(val.u.s) + 1);
+                            if (expect) {
+                                (void)snprintf(expect, strlen(val.u.s) + 1, "%s", val.u.s);
+                            } /* if */
+                        } else {
+                            char *tmp;
+                            size_t old_len = strlen(expect);
+                            size_t new_len = old_len + strlen(val.u.s) + 2;
+                                
+                            tmp = dog_realloc(expect, new_len);
+                            if (tmp) {
+                                expect = tmp;
+                                (void)snprintf(expect + old_len,
+                                    new_len - old_len, " %s", val.u.s);
+                            } /* if */
+                        } /* if */
+                            
+                        dog_free(val.u.s);
+                        val.u.s = NULL;
+                    } /* for */
+                } /* if */
+            } /* if */
 
         dog_depends_skip:
-            if (!expect) expect = strdup("");
+            if (!expect) {
+                expect = strdup("");
+            } /* if */
             
             dog_free(dogconfig.dog_toml_packages);
             dogconfig.dog_toml_packages = expect;
             
             printf("Trying to installing:\n   %s\n",
-                dogconfig.dog_toml_packages);
+                dogconfig.dog_toml_packages ? dogconfig.dog_toml_packages : "");
             
-            if (store_branch && store_save)
+            if (store_branch && store_save) {
                 dog_install_depends(dogconfig.dog_toml_packages, store_branch, store_save);
-            else if (store_branch)
+            } else if (store_branch) {
                 dog_install_depends(dogconfig.dog_toml_packages, store_branch, NULL);
-            else if (store_save)
+            } else if (store_save) {
                 dog_install_depends(dogconfig.dog_toml_packages, "main", store_save);
-            else
+            } else {
                 dog_install_depends(dogconfig.dog_toml_packages, "main", NULL);
+            } /* if */
             
             toml_free(dog_toml_server_config);
-        }
+        } /* if */
         
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - gamemode */
     } else if (strcmp(ptr_command, "gamemode") == 0) {
         (void)dog_console_title("Watchdogs | @ gamemode");
         
@@ -774,9 +899,10 @@ __command__(char *unit_pre_command)
         
         platform = readline("==> ");
         if (!platform) {
+            pr_info(stdout, "__command__: no platform selected");
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
         
         int platform_ret = -1;
         if (strfind(platform, "L", true)) {
@@ -792,7 +918,7 @@ __command__(char *unit_pre_command)
             pr_error(stdout, "Invalid platform selection. Input 'E/e' to exit");
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
         
         free(platform);
         platform = NULL;
@@ -800,11 +926,12 @@ __command__(char *unit_pre_command)
         if (platform_ret == 0) {
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
         
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - pawncc */
     } else if (strcmp(ptr_command, "pawncc") == 0) {
         (void)dog_console_title("Watchdogs | @ pawncc");
         
@@ -818,9 +945,10 @@ __command__(char *unit_pre_command)
         
         platform = readline("==> ");
         if (!platform) {
+            pr_info(stdout, "__command__: no platform selected");
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
         
         int platform_ret = -1;
         if (strfind(platform, "L", true)) {
@@ -836,7 +964,7 @@ __command__(char *unit_pre_command)
             pr_error(stdout, "Invalid platform selection. Input 'E/e' to exit");
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
         
         free(platform);
         platform = NULL;
@@ -844,11 +972,12 @@ __command__(char *unit_pre_command)
         if (platform_ret == 0) {
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
         
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - debug */
     } else if (strcmp(ptr_command, "debug") == 0) {
         (void)dog_console_title("Watchdogs | @ debug");
         dog_stop_server_tasks();
@@ -856,11 +985,13 @@ __command__(char *unit_pre_command)
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - 812C397D (internal) */
     } else if (strcmp(ptr_command, "812C397D") == 0) {
         dog_server_crash_check();
         ret_code = 3;
         goto cleanup;
         
+    /* Command processing - compile */
     } else if (strncmp(ptr_command, "compile", strlen("compile")) == 0 &&
                !isalpha((unsigned char)ptr_command[strlen("compile")])) {
         (void)dog_console_title("Watchdogs | @ compile | logging file: .watchdogs/compiler.log");
@@ -884,25 +1015,34 @@ __command__(char *unit_pre_command)
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - decompile */
     } else if (strncmp(ptr_command, "decompile", strlen("decompile")) == 0) {
         (void)dog_console_title("Watchdogs | @ decompile");
 
         char *args = ptr_command + strlen("decompile");
         while (*args == ' ') args++;
+        
         if (*args == '\0') {
             println(stdout, "Usage: decompile [<file.amx>]");
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
+        
         if (strfind(args, ".amx", true) == false) {
             println(stdout, "Usage: decompile [<file.amx>]");
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
 
-        char *p;
+        char *p = NULL;
         
         char *a_args = strdup(args);
+        if (a_args == NULL) {
+            pr_error(stdout, "__command__: failed to duplicate args for decompile");
+            ret_code = -1;
+            goto cleanup;
+        } /* if */
+        
         #ifdef DOG_LINUX
         path_sep_to_posix(a_args);
         #else
@@ -915,67 +1055,72 @@ __command__(char *unit_pre_command)
             dog_free(a_args);
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
 
         char *ptr = NULL;
         int   ret = 0;
+        
         if (strcmp(dogconfig.dog_toml_os_type, OS_SIGNAL_WINDOWS) == 0) {
             ptr = "pawndisasm.exe";
         } else if (strcmp(dogconfig.dog_toml_os_type, OS_SIGNAL_LINUX) == 0) {
             ptr = "pawndisasm";
-        }
+        } else {
+            pr_error(stdout, "__command__: unknown OS type for decompile");
+            dog_free(a_args);
+            ret_code = -1;
+            goto cleanup;
+        } /* if */
 
         _sef_restore();
 
+        /* Find pawndisasm in various locations */
         if (dir_exists("pawno") != 0 && dir_exists("qawno") != 0) {
             ret = dog_find_path("pawno", ptr, NULL);
-            if (ret) {
-                ;
-            } else {
-                ret = dog_find_path("qawno",
-                    ptr, NULL);
+            if (ret <= 0) {
+                ret = dog_find_path("qawno", ptr, NULL);
                 if (ret < 1) {
-                    ret = dog_find_path(".",
-                        ptr, NULL);
-                }
-            }
+                    ret = dog_find_path(".", ptr, NULL);
+                } /* if */
+            } /* if */
         } else if (dir_exists("pawno") != 0) {
             ret = dog_find_path("pawno", ptr, NULL);
-            if (ret) {
-                ;
-            } else {
-                ret = dog_find_path(".",
-                    ptr, NULL);
-            }
+            if (ret <= 0) {
+                ret = dog_find_path(".", ptr, NULL);
+            } /* if */
         } else if (dir_exists("qawno") != 0) {
             ret = dog_find_path("qawno", ptr, NULL);
-            if (ret) {
-                ;
-            } else {
-                ret = dog_find_path(".",
-                    ptr, NULL);
-            }
+            if (ret <= 0) {
+                ret = dog_find_path(".", ptr, NULL);
+            } /* if */
         } else {
             ret = dog_find_path(".", ptr, NULL);
-        }
-        if (ret) {
-
+        } /* if */
+        
+        if (ret > 0) {
             if (is_binary_file(dogconfig.dog_sef_found_list[0]) == false) {
                 dog_free(a_args);
                 ret_code = -1;
                 goto cleanup;
-            }
+            } /* if */
 
             char *args2 = strdup(a_args);
+            if (args2 == NULL) {
+                dog_free(a_args);
+                ret_code = -1;
+                goto cleanup;
+            } /* if */
+            
             char *dot_amx = strstr(args2, ".amx");
-            if (dot_amx)
-                {
-                    *dot_amx = '\0';
-                }
+            if (dot_amx) {
+                *dot_amx = '\0';
+            } /* if */
+            
             pbuf[0] = '\0';
             (void)snprintf(pbuf, sizeof(pbuf), "%s.asm", args2);
             dog_free(args2);
-            char s_argv[DOG_PATH_MAX * 3];
+            
+            char s_argv[DOG_PATH_MAX * 3] = {0};
+            
             #ifdef DOG_LINUX
                 char *executor = "sh -c";
                 (void)snprintf(s_argv, sizeof(s_argv), "%s '%s %s %s'",
@@ -989,18 +1134,23 @@ __command__(char *unit_pre_command)
                     dogconfig.dog_sef_found_list[0],
                     a_args, pbuf);
             #endif
-            int ret = system(s_argv);
-            if (!ret) println(stdout, "%s", pbuf);
+            
+            int sys_ret = system(s_argv);
+            if (sys_ret == 0) {
+                println(stdout, "%s", pbuf);
+            } /* if */
+            
             (void)dog_console_title(s_argv);
         } else {
             print("\033[1;31merror:\033[0m pawndisasm/pawncc (our compiler) not found\n"
                 "  \033[2mhelp:\033[0m install it before continuing\n");
-        }
+        } /* if */
+        
         dog_free(a_args);
-
         ret_code = -1;
         goto cleanup;
 
+    /* Command processing - pawnruns */
     } else if (strncmp(ptr_command, "pawnruns", strlen("pawnruns")) == 0) {
         (void)dog_console_title("Watchdogs | @ pawnruns");
 
@@ -1008,31 +1158,46 @@ __command__(char *unit_pre_command)
 
         char *args = ptr_command + strlen("pawnruns");
         while (*args == ' ') args++;
+        
         if (*args == '\0') {
             empty_args = !empty_args;
             goto pawnruns_empty_check;
-        }
+        } /* if */
+        
         if (strfind(args, ".amx", true) == false) {
             println(stdout, "Usage: pawnruns [<file.amx>]");
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
     
         char *a_args = NULL;
+        
     pawnruns_empty_check:
         if (empty_args) {
-            if (path_exists(dogconfig.dog_toml_serv_output)) {
+            if (path_exists(dogconfig.dog_toml_serv_output) == 1) {
                 a_args = strdup(dogconfig.dog_toml_serv_output);
+                if (a_args == NULL) {
+                    pr_error(stdout, "__command__: failed to duplicate output path");
+                    ret_code = -1;
+                    goto cleanup;
+                } /* if */
                 goto pawnruns_next;
             } else {
                 println(stdout, "Usage: pawnruns [<file.amx>]");
                 ret_code = -1;
                 goto cleanup;
-            }
-        }
+            } /* if */
+        } /* if */
+        
         a_args = strdup(args);
+        if (a_args == NULL) {
+            pr_error(stdout, "__command__: failed to duplicate args for pawnruns");
+            ret_code = -1;
+            goto cleanup;
+        } /* if */
     
-        char *p;
+        char *p = NULL;
+        
     pawnruns_next:
         #ifdef DOG_LINUX
         path_sep_to_posix(a_args);
@@ -1046,58 +1211,56 @@ __command__(char *unit_pre_command)
             dog_free(a_args);
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
 
         char *ptr = NULL;
         int   ret = 0;
+        
         if (strcmp(dogconfig.dog_toml_os_type, OS_SIGNAL_WINDOWS) == 0) {
             ptr = "pawnruns.exe";
         } else if (strcmp(dogconfig.dog_toml_os_type, OS_SIGNAL_LINUX) == 0) {
             ptr = "pawnruns";
-        }
+        } else {
+            pr_error(stdout, "__command__: unknown OS type for pawnruns");
+            dog_free(a_args);
+            ret_code = -1;
+            goto cleanup;
+        } /* if */
 
         _sef_restore();
 
+        /* Find pawnruns in various locations */
         if (dir_exists("pawno") != 0 && dir_exists("qawno") != 0) {
             ret = dog_find_path("pawno", ptr, NULL);
-            if (ret) {
-                ;
-            } else {
-                ret = dog_find_path("qawno",
-                    ptr, NULL);
+            if (ret <= 0) {
+                ret = dog_find_path("qawno", ptr, NULL);
                 if (ret < 1) {
-                    ret = dog_find_path(".",
-                        ptr, NULL);
-                }
-            }
+                    ret = dog_find_path(".", ptr, NULL);
+                } /* if */
+            } /* if */
         } else if (dir_exists("pawno") != 0) {
             ret = dog_find_path("pawno", ptr, NULL);
-            if (ret) {
-                ;
-            } else {
-                ret = dog_find_path(".",
-                    ptr, NULL);
-            }
+            if (ret <= 0) {
+                ret = dog_find_path(".", ptr, NULL);
+            } /* if */
         } else if (dir_exists("qawno") != 0) {
             ret = dog_find_path("qawno", ptr, NULL);
-            if (ret) {
-                ;
-            } else {
-                ret = dog_find_path(".",
-                    ptr, NULL);
-            }
+            if (ret <= 0) {
+                ret = dog_find_path(".", ptr, NULL);
+            } /* if */
         } else {
             ret = dog_find_path(".", ptr, NULL);
-        }
-        if (ret) {
-
+        } /* if */
+        
+        if (ret > 0) {
             if (is_binary_file(dogconfig.dog_sef_found_list[0]) == false) {
                 dog_free(a_args);
                 ret_code = -1;
                 goto cleanup;
-            }
+            } /* if */
 
             pbuf[0] = '\0';
+            
             #ifdef DOG_LINUX
                 char *executor = "sh -c";
                 (void)snprintf(pbuf, sizeof(pbuf), "%s '%s %s'",
@@ -1111,50 +1274,59 @@ __command__(char *unit_pre_command)
                     dogconfig.dog_sef_found_list[0],
                     a_args);
             #endif
-            int ret = system(pbuf);
+            
+            int sys_ret = system(pbuf);
             (void)dog_console_title(pbuf);
         } else {
             print("\033[1;31merror:\033[0m pawnruns/pawncc (our compiler) not found\n"
                 "  \033[2mhelp:\033[0m install it before continuing\n");
-        }
+        } /* if */
+        
         dog_free(a_args);
-
         ret_code = -1;
         goto cleanup;
 
+    /* Command processing - running */
     } else if (strcmp(ptr_command, "running") == 0) {
         static bool init_load_cfg = false;
         sigint_handler = 0;
         dog_stop_server_tasks();
         
-        char *binary = dogconfig.dog_toml_server_binary,
-             *config = dogconfig.dog_toml_server_config;
+        char *binary = dogconfig.dog_toml_server_binary;
+        char *config = dogconfig.dog_toml_server_config;
 
-        if (!path_access(binary)) {
+        if (!binary || path_access(binary) == 0) {
             pr_error(stdout, "can't locate SA-MP/open.mp binary file!");
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
+        
         if (is_binary_file(binary) == false) {
             ret_code = -1;
             goto cleanup;
-        }
-        if (!path_access(config)) {
+        } /* if */
+        
+        if (!config || path_access(config) == 0) {
             pr_warning(stdout, "can't locate %s - config file!",
-                config);
+                config ? config : "(null)");
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
+        
         if (init_load_cfg == false) {
             init_load_cfg = true;
             dog_printfile(config);
-        }
+        } /* if */
+        
         if (path_exists(dogconfig.dog_toml_server_logs) == 1) {
             remove(dogconfig.dog_toml_server_logs);
-        }
-        if (dir_exists(".watchdogs") == 0) MKDIR(".watchdogs");
+        } /* if */
         
-        char title[DOG_PATH_MAX];
+        if (dir_exists(".watchdogs") == 0) {
+            MKDIR(".watchdogs");
+        } /* if */
+        
+        char title[DOG_PATH_MAX] = {0};
         (void)snprintf(title, DOG_PATH_MAX,
                 "Watchdogs | @ running | config: %s | "
                 "CTRL + C to stop. | \"debug\" to debugging",
@@ -1167,8 +1339,11 @@ __command__(char *unit_pre_command)
         #endif
         
         struct sigaction sa;
-        if (path_access("announce") == 1)
+        
+        if (path_access("announce") == 1) {
             __set_default_access("announce");
+        } /* if */
+        
         __set_default_access(binary);
 
         sa.sa_handler = unit_sigint_handler;
@@ -1178,7 +1353,7 @@ __command__(char *unit_pre_command)
         if (sigaction(SIGINT, &sa, NULL) == -1) {
             perror("sigaction");
             exit(EXIT_FAILURE);
-        }
+        } /* if */
         
         #ifdef DOG_WINDOWS
         dog_exec_windows_server(binary);
@@ -1190,20 +1365,23 @@ __command__(char *unit_pre_command)
         putchar('\n');
 
         (void)signal(SIGINT, SIG_DFL);
-        sigint_handler
-            = !sigint_handler;
+        sigint_handler = !sigint_handler;
 
         print("\x1b[32m==> create debugging?\x1b[0m\n");
         debug_server = readline("   answer (y/n): ");
-        if (debug_server && (debug_server[0] == '\0' ||
-            strcmp(debug_server, "Y") == 0 ||
-            strcmp(debug_server, "y") == 0)) {
-            unit_ret_main("debug");
-        }
+        
+        if (debug_server) {
+            if (debug_server[0] == '\0' ||
+                strcmp(debug_server, "Y") == 0 ||
+                strcmp(debug_server, "y") == 0) {
+                unit_ret_main("debug");
+            } /* if */
+        } /* if */
         
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - compiles */
     } else if (strncmp(ptr_command, "compiles", strlen("compiles")) == 0) {
         (void)dog_console_title("Watchdogs | @ compiles");
         
@@ -1215,25 +1393,29 @@ __command__(char *unit_pre_command)
             dog_exec_compiler(NULL, ".", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
             dog_configure_toml();
             
-            if (!pc_is_error) unit_ret_main("running");
+            if (!pc_is_error) {
+                unit_ret_main("running");
+            } /* if */
         } else {
             dog_exec_compiler(NULL, args2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
             dog_configure_toml();
             
             if (!pc_is_error) {
                 unit_ret_main("running");
-            }
-        }
+            } /* if */
+        } /* if */
         
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - stop */
     } else if (strcmp(ptr_command, "stop") == 0) {
         (void)dog_console_title("Watchdogs | @ stop");
         dog_stop_server_tasks();
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - restart */
     } else if (strcmp(ptr_command, "restart") == 0) {
         (void)dog_console_title("Watchdogs | @ restart");
         dog_stop_server_tasks();
@@ -1241,6 +1423,7 @@ __command__(char *unit_pre_command)
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - tracker */
     } else if (strncmp(ptr_command, "tracker", strlen("tracker")) == 0) {
         char *args = ptr_command + strlen("tracker");
         while (*args == ' ') ++args;
@@ -1249,35 +1432,40 @@ __command__(char *unit_pre_command)
             println(stdout, "Usage: tracker [<name>]");
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
         
         CURL *curl;
         curl_global_init(CURL_GLOBAL_DEFAULT);
         curl = curl_easy_init();
+        
         if (!curl) {
             fprintf(stderr, "Curl initialization failed!\n");
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
         
         int variation_count = 0;
-        char variations[MAX_VARIATIONS][MAX_USERNAME_LEN];
+        char variations[MAX_VARIATIONS][MAX_USERNAME_LEN] = {{0}};
+        
         tracker_discrepancy(args, variations, &variation_count);
         
         printf("[TRACKER] Search base: %s\n", args);
         printf("[TRACKER] Generated %d Variations\n\n", variation_count);
         
         for (int i = 0; i < variation_count; i++) {
-            printf("=== TRACKING ACCOUNTS: %s ===\n", variations[i]);
-            tracking_username(curl, variations[i]);
-            (void)putchar('\n');
-        }
+            if (variations[i][0] != '\0') {
+                printf("=== TRACKING ACCOUNTS: %s ===\n", variations[i]);
+                tracking_username(curl, variations[i]);
+                (void)putchar('\n');
+            } /* if */
+        } /* for */
         
         curl_easy_cleanup(curl);
         curl_global_cleanup();
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - compress */
     } else if (strncmp(ptr_command, "compress", strlen("compress")) == 0) {
         char *args = ptr_command + strlen("compress");
         while (*args == ' ') args++;
@@ -1288,10 +1476,11 @@ __command__(char *unit_pre_command)
                    "compress --file myfolder/ --output myarchive.tar.gz --type gz\n");
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
         
         char *store_input = NULL, *store_output = NULL, *store_type = NULL;
         char *procure_args = strtok(args, " ");
+        
         while (procure_args) {
             if (strcmp(procure_args, "--file") == 0) {
                 procure_args = strtok(NULL, " ");
@@ -1302,9 +1491,9 @@ __command__(char *unit_pre_command)
             } else if (strcmp(procure_args, "--type") == 0) {
                 procure_args = strtok(NULL, " ");
                 if (procure_args) store_type = procure_args;
-            }
+            } /* if */
             procure_args = strtok(NULL, " ");
-        }
+        } /* while */
         
         if (!store_input || !store_output || !store_type) {
             print("Missing arguments!\n");
@@ -1313,67 +1502,83 @@ __command__(char *unit_pre_command)
                    "compress --file myfolder/ --output myarchive.tar.gz --type gz\n");
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
         
         CompressionFormat fmt;
-        if (strcmp(store_type, "zip") == 0) fmt = COMPRESS_ZIP;
-        else if (strcmp(store_type, "tar") == 0) fmt = COMPRESS_TAR;
-        else if (strcmp(store_type, "gz") == 0) fmt = COMPRESS_TAR_GZ;
-        else if (strcmp(store_type, "bz2") == 0) fmt = COMPRESS_TAR_BZ2;
-        else if (strcmp(store_type, "xz") == 0) fmt = COMPRESS_TAR_XZ;
-        else {
+        
+        if (strcmp(store_type, "zip") == 0) {
+            fmt = COMPRESS_ZIP;
+        } else if (strcmp(store_type, "tar") == 0) {
+            fmt = COMPRESS_TAR;
+        } else if (strcmp(store_type, "gz") == 0) {
+            fmt = COMPRESS_TAR_GZ;
+        } else if (strcmp(store_type, "bz2") == 0) {
+            fmt = COMPRESS_TAR_BZ2;
+        } else if (strcmp(store_type, "xz") == 0) {
+            fmt = COMPRESS_TAR_XZ;
+        } else {
             printf("Unknown type: %s\n", store_type);
             print("Supported: zip, tar, gz, bz2, xz\n");
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
         
         const char *procure_items[] = { store_input };
         int ret = compress_to_archive(store_output, procure_items, 1, fmt);
+        
         if (ret == 0) {
             pr_info(stdout, "Converter file/folder to "
             "archive (Compression) successfully: %s\n", store_output);
         } else {
             pr_error(stdout, "Compression failed!\n");
             minimal_debugging();
-        }
+        } /* if */
         
         ret_code = -1;
         goto cleanup;
         
+    /* Command processing - watchdogs/dog */
     } else if (strcmp(ptr_command, "watchdogs") == 0 || strcmp(ptr_command, "dog") == 0) {
         unit_show_dog();
         ret_code = -1;
         goto cleanup;
         
-    } else if (strcmp(ptr_command, command_similar) != 0 && dist <= 2) {
+    /* Command processing - similar command suggestion */
+    } else if (command_similar != NULL && strcmp(ptr_command, command_similar) != 0 && dist <= 2) {
         (void)dog_console_title("Watchdogs | @ undefined");
         println(stdout, "watchdogs: '%s' is not valid watchdogs command. See 'help'.", ptr_command);
         println(stdout, "   but did you mean '%s'?", command_similar);
         goto trying;
         
+    /* Command processing - fallback */
     } else {
     trying:
         size_t command_len = strlen(ptr_command) + DOG_PATH_MAX;
         char *command2 = dog_malloc(command_len);
+        
         if (!command2) {
+            pr_error(stdout, "__command__: failed to allocate command buffer");
             ret_code = -1;
             goto cleanup;
-        }
+        } /* if */
         
         (void)snprintf(command2, command_len, "%s", ptr_command);
         
-        char *argv[32];
+        char *argv[32] = {0};
         int argc = 0;
         char *p = strtok(command2, " ");
-        while (p && argc < sizeof(argv) - 1) {
+        
+        while (p && argc < (int)(sizeof(argv) - 1)) {
             argv[argc++] = p;
             p = strtok(NULL, " ");
-        }
+        } /* while */
+        
         argv[argc] = NULL;
         
         int ret = dog_user_command(argv);
-        if (ret) dog_console_title("Watchdogs | @ command not found");
+        if (ret) {
+            dog_console_title("Watchdogs | @ command not found");
+        } /* if */
         
         dog_free(command2);
 
@@ -1381,48 +1586,69 @@ __command__(char *unit_pre_command)
             ret_code = -2;
         } else {
             ret_code = -1;
-        }
+        } /* if */
+        
         goto cleanup;
-    }
+    } /* if */
 
 cleanup:
+    /* Clean up all allocated resources */
     cleanup_local_resources(&ptr_command_prompt, &ptr_command, &title,
                            &size_command, &platform, &pointer_signalA,
                            &debug_server, &size_args, &compile_target);
+
+#if defined(_DBG_PRINT)
+    pr_info(stdout, "__command__: returning with code %d", ret_code);
+#endif
     return (ret_code);
-}
+} /* __command__ */
 
 void
 unit_ret_main(void *unit_pre_command)
 {
     int ret = -3;
+
+#if defined(_DBG_PRINT)
+    pr_info(stdout, "unit_ret_main: entering with pre_command=%s", 
+             unit_pre_command ? (char*)unit_pre_command : "NULL");
+#endif
+    /* Handle pre-command if provided */
     if (unit_pre_command != NULL) {
         char *procure_command_argv = strdup((char *)unit_pre_command);
         if (procure_command_argv) {
             ret = __command__(procure_command_argv);
             free(procure_command_argv);
-        }
+        } else {
+            pr_error(stdout, "unit_ret_main: failed to duplicate pre-command");
+        } /* if */
+        
         clock_gettime(CLOCK_MONOTONIC, &cmd_end);
+        
         if (ret == -2 || ret == 3) {
             return;
-        }
+        } /* if */
+        
         return;
-    }
+    } /* if */
 
+    /* Main interactive loop */
 loop_main:
     ret = __command__(NULL);
+    
     if (ret == -1) {
         clock_gettime(CLOCK_MONOTONIC, &cmd_end);
         command_dur = ((double)(cmd_end.tv_sec - cmd_start.tv_sec)) +
                       ((double)(cmd_end.tv_nsec - cmd_start.tv_nsec)) / 1e9;
         pr_color(stdout, DOG_COL_CYAN, " <I> (interactive) Finished At %.3fs\n", command_dur);
         goto loop_main;
+        
     } else if (ret == 2) {
         clock_gettime(CLOCK_MONOTONIC, &cmd_end);
         (void)dog_console_title("Terminal.");
         
         clear_history();
         
+        /* Free all configuration resources */
         if (dogconfig.dog_ptr_samp) { free(dogconfig.dog_ptr_samp); dogconfig.dog_ptr_samp = NULL; }
         if (dogconfig.dog_ptr_omp) { free(dogconfig.dog_ptr_omp); dogconfig.dog_ptr_omp = NULL; }
         if (dogconfig.dog_pawncc_path) { free(dogconfig.dog_pawncc_path); dogconfig.dog_pawncc_path = NULL; }
@@ -1438,14 +1664,17 @@ loop_main:
         if (pc_full_includes) { free(pc_full_includes); pc_full_includes = NULL; }
         
         exit(EXIT_SUCCESS);
+        
     } else if (ret == -2) {
         clock_gettime(CLOCK_MONOTONIC, &cmd_end);
         goto loop_main;
+        
     } else if (ret == 3) {
         clock_gettime(CLOCK_MONOTONIC, &cmd_end);
+        
     } else {
         goto basic_end;
-    }
+    } /* if */
 
 basic_end:
     clock_gettime(CLOCK_MONOTONIC, &cmd_end);
@@ -1453,43 +1682,63 @@ basic_end:
                  ((double)(cmd_end.tv_nsec - cmd_start.tv_nsec)) / 1e9;
     pr_color(stdout, DOG_COL_CYAN, " <I> (interactive) Finished At %.3fs\n", command_dur);
     goto loop_main;
-}
+} /* unit_ret_main */
 
 int
 main(int argc, char *argv[])
 {
+    int ret = 0;
+    int i;
+    
+    /* Disable stdout buffering */
     setvbuf(stdout, NULL, _IONBF, 0);
-
+    
+    /* Handle command line arguments */
     if (argc > 1) {
-        int i;
         size_t unit_total_len = 0;
 
-        for (i = 1; i < argc; ++i)
-            unit_total_len += strlen(argv[i]) + 1;
+        /* Calculate total length needed for all arguments */
+        for (i = 1; i < argc; ++i) {
+            if (argv[i] != NULL) {
+                unit_total_len += strlen(argv[i]) + 1;
+            } /* if */
+        } /* for */
 
+        /* Allocate buffer for concatenated arguments */
         char *unit_size_prompt = dog_malloc(unit_total_len);
-        if (!unit_size_prompt)
+        if (!unit_size_prompt) {
+            pr_error(stdout, "main: failed to allocate argument buffer");
             return (0);
+        } /* if */
 
+        /* Concatenate all arguments with spaces */
         char *ptr = unit_size_prompt;
         for (i = 1; i < argc; ++i) {
-            if (i > 1)
-                *ptr++ = ' ';
-            size_t len = strlen(argv[i]);
-            memcpy(ptr, argv[i], len);
-            ptr += len;
-        }
+            if (argv[i] != NULL) {
+                if (i > 1) {
+                    *ptr++ = ' ';
+                } /* if */
+                
+                size_t len = strlen(argv[i]);
+                memcpy(ptr, argv[i], len);
+                ptr += len;
+            } /* if */
+        } /* for */
+        
         *ptr = '\0';
-
+        
+        /* Execute with provided arguments */
         unit_ret_main(unit_size_prompt);
 
+        /* Clean up */
         dog_free(unit_size_prompt);
         unit_size_prompt = NULL;
 
         return (0);
     } else {
+        /* Interactive mode */
         unit_ret_main(NULL);
-    }
+    } /* if */
 
     return (0);
-}
+} /* main */

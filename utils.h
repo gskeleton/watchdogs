@@ -324,6 +324,9 @@ void normalize_spaces(char *str);
 
 bool dog_kill_process(const char *process);
 
+void
+pc_configure_libpath(void);
+
 int dog_find_path(const char *sef_path, const char *sef_name, const char *ignore_dir);
 
 int equals(const char *a, const char *b);

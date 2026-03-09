@@ -3,6 +3,7 @@ FULL_VERSION   = DOG-260101
 TARGET        ?= watchdogs
 OUTPUT        ?= $(TARGET)
 TARGET_NAME    = Watchdogs
+SHELL 		  := /bin/bash
 CC            ?= clang
 CFLAGS         = -O2 -pipe
 LDFLAGS        = -lm -lcurl -lreadline -lhistory -larchive
@@ -45,23 +46,23 @@ init:
 			mingw-w64-ucrt-x86_64-readline \
 			mingw-w64-ucrt-x86_64-libarchive \
 			procps-ng; \
-	elif echo "$$UNAME_S" | grep -qi "Linux" && [ -d "/data/data/com.termux" ]; then \
-		echo "==> Using apt (Termux)"; \
-		apt -o Acquire::Queue-Mode=access -o Acquire::Retries=3 update -y && \
-		export DEBIAN_FRONTEND=noninteractive \
-		apt -o Dpkg::Use-Pty=0 install -y --no-install-recommends \
-			unstable-repo x11-repo ndk-sysroot coreutils binutils procps clang curl tree fzf \
-			libarchive readline; \
-	elif echo "$$UNAME_S" | grep -qi "Linux"; then \
-		if command -v apt >/dev/null 2>&1; then \
-			echo "==> Using apt (Debian/Ubuntu)"; \
-			dpkg --add-architecture i386 2>/dev/null || true; \
+		elif echo "$$UNAME_S" | grep -qi "Linux" && [ -d "/data/data/com.termux" ]; then \
+			echo "==> Using apt (Termux)"; \
 			apt -o Acquire::Queue-Mode=access -o Acquire::Retries=3 update -y && \
-			export DEBIAN_FRONTEND=noninteractive \
+			DEBIAN_FRONTEND=noninteractive \
 			apt -o Dpkg::Use-Pty=0 install -y --no-install-recommends \
-				build-essential curl procps clang lld make binutils fzf \
-				libcurl4-openssl-dev libatomic1 libreadline-dev libarchive-dev \
-				zlib1g-dev libc6:i386 libstdc++6:i386 libcurl4:i386; \
+				unstable-repo x11-repo ndk-sysroot coreutils binutils procps clang curl tree fzf \
+				libarchive readline; \
+		elif echo "$$UNAME_S" | grep -qi "Linux"; then \
+			if command -v apt >/dev/null 2>&1; then \
+				echo "==> Using apt (Debian/Ubuntu)"; \
+				dpkg --add-architecture i386 2>/dev/null || true; \
+				apt -o Acquire::Queue-Mode=access -o Acquire::Retries=3 update -y && \
+				DEBIAN_FRONTEND=noninteractive \
+				apt -o Dpkg::Use-Pty=0 install -y --no-install-recommends \
+					build-essential curl procps clang lld make binutils fzf \
+					libcurl4-openssl-dev libatomic1 libreadline-dev libarchive-dev \
+					zlib1g-dev libc6:i386 libstdc++6:i386 libcurl4:i386; \
 		elif command -v dnf >/dev/null 2>&1 || command -v dnf5 >/dev/null 2>&1; then \
 			echo "==> Using dnf/dnf5 (Fedora/RHEL/AlmaLinux/Rocky Linux)"; \
 			if [ -f /etc/almalinux-release ] || [ -f /etc/rocky-release ] || [ -f /etc/redhat-release ]; then \
