@@ -760,6 +760,9 @@ dog_exec_compiler(const char* __UNUSED__  args, char* compile_args_val,
 	size_t	       fet_sef_ent = 0;
 	int            len = 0;
 	int            ret = 1;
+
+	/* setenv for libpawnc.so (GNU/Linux) */
+	pc_configure_libpath();
 	
 	/* Calculate SEF entries count */
 	fet_sef_ent = sizeof(dogconfig.dog_sef_found_list) /

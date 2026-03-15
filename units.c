@@ -287,7 +287,6 @@ checkout_unit_rule(void)
             "After compiling the script, type "
             DOG_COL_YELLOW "running " DOG_COL_DEFAULT "or "
             DOG_COL_YELLOW "pawnruns " DOG_COL_DEFAULT "to start your amx..");
-        pc_configure_libpath();
         dog_exec_compiler(NULL, NULL, NULL,
             NULL, NULL, NULL, NULL, NULL,
             NULL, NULL);

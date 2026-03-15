@@ -3010,7 +3010,6 @@ skip_compiler:
 		(void)snprintf(pbuf, sizeof(pbuf), "%s",
 		    dogconfig.dog_sef_found_list[0]);
 		dogconfig.dog_pawncc_path = strdup(pbuf);
-		pc_configure_libpath();
 	} else {
 		pr_info(stdout,
 		    "We couldn't find a suitable compiler here; "
