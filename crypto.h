@@ -18,19 +18,19 @@ extern "C" {
 #define SHA256_DIGEST_SIZE 32
 
 typedef struct {
-        uint32_t state[8];
-        uint64_t count;
-        uint8_t buffer[SHA256_BLOCK_SIZE];
+  uint32_t state[8];
+  uint64_t count;
+  uint8_t buffer[SHA256_BLOCK_SIZE];
 } SHA256_CTX;
 
 typedef struct {
-        uint32_t rd_key[60];
-        int rounds;
+  uint32_t rd_key[60];
+  int rounds;
 } AES_KEY;
 typedef struct {
-        uint32_t state[5];
-        uint32_t count[2];
-        uint8_t buffer[64];
+  uint32_t state[5];
+  uint32_t count[2];
+  uint8_t buffer[64];
 } SHA1_CTX;
 
 uint32_t rotr(uint32_t x, int n);

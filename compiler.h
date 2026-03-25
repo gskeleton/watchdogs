@@ -1,7 +1,7 @@
 #ifndef COMPILER_H
 #define COMPILER_H
 
-#include "utils.h"
+#include "obj.h"
 
 #define ANDROID_SHARED_DOWNLOADS_PATH  \
     "../storage/shared/Download"
@@ -11,41 +11,30 @@
 #define PC_RETRY_STATE_FINAL (2)
 
 typedef struct {
-    char *output;
-    char direct_path[DOG_PATH_MAX];
-    char file_name_buf[DOG_PATH_MAX];
-    char input_path[DOG_PATH_MAX];
-    char temp_path[DOG_PATH_MAX];
-    bool flag_detailed; bool flag_assembly;
-    bool flag_compat; bool flag_compact;
-    bool flag_prolix; bool flag_debug;
-    bool flag_clean; bool flag_fast;
+  char *output;
+  char direct_path[DOG_PATH_MAX];
+  char file_name_buf[DOG_PATH_MAX];
+  char input_path[DOG_PATH_MAX];
+  char temp_path[DOG_PATH_MAX];
+  _Bool flag_detailed; _Bool flag_assembly;
+  _Bool flag_compat; _Bool flag_compact;
+  _Bool flag_prolix; _Bool flag_debug;
+  _Bool flag_clean; _Bool flag_fast;
 } io_compilers;
 
-extern io_compilers all_pc_field;
-
-typedef enum {
-    BIT_FLAG_DEBUG = 1 << 0,
-    BIT_FLAG_ASSEMBLER = 1 << 1,
-    BIT_FLAG_COMPAT = 1 << 2,
-    BIT_FLAG_PROLIX = 1 << 3,
-    BIT_FLAG_COMPACT = 1 << 4,
-    BIT_FLAG_TIME = 1 << 5
-} CompilerFlags;
+_EXTRN io_compilers all_pc_field;
 
 typedef struct {
-    int flag;
-    const char *option;
-    size_t len;
+  int flag;
+  const char *option;
+  size_t len;
 } CompilerOption;
 
 typedef struct {
-    const char *full_name;
-    const char *short_name;
-    bool *flag_ptr;
+  const char *full_name;
+  const char *short_name;
+  _Bool *flag_ptr;
 } OptionMap;
-
-extern const CompilerOption object_opt[];
 
 #ifdef DOG_WINDOWS
 
@@ -62,15 +51,17 @@ typedef struct {
 
 #endif
 
-extern struct
+_EXTRN const CompilerOption object_opt[];
+_EXTRN struct
 timespec pre_start,post_end;
-extern char *pc_full_includes;
-extern char pc_include_path[DOG_PATH_MAX];
-extern bool pc_is_error,
-    pc_missing_stdlib,
-    pc_debug_options,
-    pc_input_info,
-    spawn_succeeded;
+_EXTRN char *pc_full_includes;
+_EXTRN char pc_include_path[DOG_PATH_MAX];
+_EXTRN _Bool pc_is_error,
+  pc_debug_options,
+  pc_input_info,
+  spawn_succeeded;
+
+typedef enum { BIT_FLAG_DEBUG = 1 << 0, BIT_FLAG_ASSEMBLER = 1 << 1, BIT_FLAG_COMPAT = 1 << 2, BIT_FLAG_PROLIX = 1 << 3, BIT_FLAG_COMPACT = 1 << 4, BIT_FLAG_TIME = 1 << 5 } CompilerFlags;
 
 int
 dog_exec_compiler(const char *arg,

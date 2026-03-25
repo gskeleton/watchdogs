@@ -9,7 +9,6 @@ if [ ! -d "storage" ]; then
   termux-setup-storage
 fi
 
-echo "When you are asked to provide an answer in the Dialog, please just press Enter twice without changing anything."
 termux-change-repo
 
 apt update -y

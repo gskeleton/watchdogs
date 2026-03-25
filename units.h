@@ -1,10 +1,11 @@
 #ifndef WATCHDOGS
 #define WATCHDOGS
 
-#include "utils.h"
+#include "obj.h"
 
-extern bool unit_selection_state;
-extern const char*watchdogs_release;
+_EXTRN _Bool unit_selection_state;
+_EXTRN const char*watchdogs_release;
+
 void unit_ret_main(void *prefilled_command);
 
 #endif

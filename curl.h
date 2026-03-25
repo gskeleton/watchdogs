@@ -1,23 +1,23 @@
 #ifndef CURL_H
 #define CURL_H
 
-#include "utils.h"
+#include "obj.h"
 
 struct buf {
-	    char *data;
-	    size_t len;
-		size_t allocated;
+  char *data;
+  size_t len;
+  size_t allocated;
 };
 
 struct package_curl_buffer {
-        char *data;
-        size_t size;
+  char *data;
+  size_t size;
 };
 
 struct memory_struct {
-		char *memory;
-		size_t size;
-		size_t allocated;
+  char *memory;
+  size_t size;
+  size_t allocated;
 };
 
 #define MAX_NUM_SITES (80)
@@ -26,8 +26,8 @@ struct memory_struct {
 #define USERNAME_PLACEHOLDER "%s"
 
 typedef struct {
-    const char *site_name;
-    const char *url_template;
+  const char *site_name;
+  const char *url_template;
 } SocialSite;
 
 static const SocialSite social_site_list[MAX_NUM_SITES] = {
@@ -64,7 +64,7 @@ static const SocialSite social_site_list[MAX_NUM_SITES] = {
 { NULL, NULL }
 };
 
-extern bool compiling_gamemode;
+_EXTRN _Bool compiling_gamemode;
 
 void curl_verify_cacert_pem(CURL *curl);
 
@@ -80,10 +80,6 @@ void tracker_discrepancy(const char *base,
                          char variations[][MAX_USERNAME_LEN],
                          int *variation_count);
 void tracking_username(CURL* curl, const char* username);
-
-int package_url_checking(const char* url, const char* github_token);
-int
-package_http_get_content(const char* url, const char* github_token, char** out_html);
 
 int dog_download_file(const char *url, const char *fname);
 

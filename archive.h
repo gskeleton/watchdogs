@@ -1,13 +1,7 @@
 #ifndef ARCHIVE_H
 #define ARCHIVE_H
 
-typedef enum {
-    COMPRESS_ZIP,
-    COMPRESS_TAR,
-    COMPRESS_TAR_GZ,
-    COMPRESS_TAR_BZ2,
-    COMPRESS_TAR_XZ
-} CompressionFormat;
+typedef enum { COMPRESS_ZIP, COMPRESS_TAR, COMPRESS_TAR_GZ, COMPRESS_TAR_BZ2, COMPRESS_TAR_XZ } CompressionFormat;
 
 int compress_to_archive(const char *archive_path, 
                         const char **file_paths, 
