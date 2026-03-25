@@ -123,28 +123,3 @@ compiles .        # Compile and run server.pwn
 compiles.         # Same as above
 compiles server.pwn
 ```
-
----
-
-## Dependency Installer
-
-### Install from `watchdogs.toml`
-```bash
-replicate .       # Install all dependencies
-replicate.
-```
-
-### Install Specific Repository
-```bash
-replicate repo/user                    # Latest version
-replicate repo/user?v1.1               # Specific tag
-replicate repo/user?newer               # Latest tag
-replicate repo/user --branch master     # Specific branch
-```
-
-### Install to Custom Location
-```bash
-replicate repo/user --save .                    # Root directory
-replicate repo/user --save ../parent/myproj     # Parent directory
-replicate repo/user --save myfolder/myproj       # Subdirectory
-```

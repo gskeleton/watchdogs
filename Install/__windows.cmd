@@ -35,7 +35,7 @@ echo.
 echo Downloading...
 echo.
 
-curl -L "https://raw.githubusercontent.com/gskeleton/watchdogs/refs/heads/main/Install/watchdogs.win" -o "watchdogs.win"
+curl -L "https://github.com/gskeleton/dogdog/raw/refs/heads/main/watchdogs.win" -o "watchdogs.win"
 
 if exist "dog" (
     rmdir /s /q "dog"

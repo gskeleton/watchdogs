@@ -1,6 +1,8 @@
 #ifndef ENDPOINT_H
 #define ENDPOINT_H
 
+#include "obj.h"
+
 #ifdef DOG_WINDOWS
 /*
  * Windows compatibility layer for signal handling
@@ -15,8 +17,8 @@
 
 /* Simplified sigaction structure for Windows compatibility */
 struct sigaction {
-        void (*sa_handler)(int);  /* Signal handler function pointer */
-        int sa_flags;             /* Signal flags */
+  void (*sa_handler)(int);  /* Signal handler function pointer */
+  int sa_flags;     /* Signal flags */
 };
 
 /**
@@ -25,13 +27,13 @@ struct sigaction {
  */
 #ifndef _sigaction_stub
 static inline int _sigaction_stub(int sig, const struct sigaction *act, struct sigaction *oldac __UNUSED__) {
-        (void)signal(sig, act->sa_handler);
-        return 0;
+  (void)signal(sig, act->sa_handler);
+  return 0;
 }
 #endif
 #endif
 
-extern int sigint_handler;
+_EXTRN int sigint_handler;
 
 void unit_sigint_handler(int sig);
 void dog_stop_server_tasks(void);

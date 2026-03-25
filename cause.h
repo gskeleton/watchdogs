@@ -1,10 +1,11 @@
 #ifndef CAUSE_H
 #define CAUSE_H
 
-typedef struct {
-        char *cs_t;
-        char *cs_i;
-} causeExplanation;
+#include "obj.h"
+
+typedef struct { char *cs_t; char *cs_i; } causeExplanation;
+
+void cause_pc_expl(const char *log_file,const char *dog_output,int debug);
 
 #define COMPILER_DT_PICK000001 "expected token"
 #define COMPILER_DT_PICK000002 "only a single statement"
@@ -151,7 +152,7 @@ typedef struct {
 #define COMPILER_DT_SEL0000042 "Storage class specifiers combined illegally (e.g., `public static`, `forward native`). Each storage class has compatibility rules. The declaration specifier parser validates specifier combinations according to language grammar."
 #define COMPILER_DT_SEL0000043 "Character constant numeric value outside valid 0-255 range (8-bit character set). Pawn uses unsigned 8-bit characters. Integer character constants, escape sequences, or multibyte characters must fit in 8 bits for portability across all Pawn implementations."
 #define COMPILER_DT_SEL0000044 "In mixed argument passing, positional arguments appear after named arguments. Syntax requires all positional arguments first, then named arguments (`func(1, 2, .param=3)`). The parser's argument list processing enforces this ordering for unambiguous binding."
-#define COMPILER_DT_SEL0000046 "Array declaration lacks size specifier and initializer, making size indeterminate. Array types must have known size at declaration time (except for extern incomplete arrays). The type constructor cannot create array type with unspecified bound."
+#define COMPILER_DT_SEL0000046 "Array declaration lacks size specifier and initializer, making size indeterminate. Array types must have known size at declaration time (except for _EXTRN incomplete arrays). The type constructor cannot create array type with unspecified bound."
 #define COMPILER_DT_SEL0000047 "Array assignment between arrays of different sizes. For array assignment, source and destination must have identical size (number of elements). The type compatibility checker for assignment verifies array dimension equality."
 #define COMPILER_DT_SEL0000048 "Array operation (arithmetic, comparison) between arrays of different dimensions. Element-wise operations require identical shape. The array operation validator checks dimension compatibility before generating element-wise code."
 #define COMPILER_DT_SEL0000049 "Backslash-newline sequence appears outside valid context (preprocessor directive or string literal). Line continuation only permitted in: #define macros, #include paths, and string literals. The preprocessor's line splicing logic detected illegal continuation."
@@ -183,9 +184,7 @@ typedef struct {
 #define COMPILER_DT_SEL0000071 "Function-like macro invoked with insufficient arguments. Each parameter in macro definition must correspond to actual argument. Check macro invocation against its definition parameter count."
 #define COMPILER_DT_SEL0000072 "Function-like macro invoked with excess arguments beyond parameter list. Extra arguments are ignored but indicate likely error. Verify macro definition matches usage pattern."
 #define COMPILER_DT_SEL0000038 "Trailing tokens after preprocessor directive. Preprocessor directives must occupy complete logical line (except line continuation). Common with stray semicolons or comments on `#include` lines."
-#define COMPILER_DT_SEL0000421 "It looks like there’s a mismatch between the forward declaration and the public function, possibly a typo? For instance, it's written as OnplayerClickMap when it should be OnPlayerClickMap here."
+#define COMPILER_DT_SEL0000421 "It looks like there's a mismatch between the forward declaration and the public function, possibly a typo? For instance, it's written as OnplayerClickMap when it should be OnPlayerClickMap here."
 #define COMPILER_DT_SEL0000091 "Have you made sure you're using the latest SA-MP or open.mp stdlib? Get them here: https://github.com/pawn-lang/samp-stdlib : https://github.com/pawn-lang/pawn-stdlib"
-
-void cause_pc_expl(const char *log_file,const char *dog_output,int debug);
 
 #endif
